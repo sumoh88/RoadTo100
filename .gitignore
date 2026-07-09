@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Simulator archives (redundant with source code)
+simulator.zip
+simulator.7z
+simulator.tar
+
+# Godot local symlink
+Godot3
+
+# Qwen Code IDE config
+.qwen/
