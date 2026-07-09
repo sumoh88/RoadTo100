@@ -2,14 +2,28 @@
 __pycache__/
 *.pyc
 *.pyo
+*.pyw
 
-# Simulator archives (redundant with source code)
-simulator.zip
-simulator.7z
-simulator.tar
+# Archivi simulatori / build (ridondanti rispetto al codice sorgente)
+*.zip
+*.7z
+*.tar
+*.gz
 
-# Godot local symlink
-Godot3
+# Sistema operativo / editor
+.DS_Store
+Thumbs.db
 
-# Qwen Code IDE config
+# IDE / editor
+.vscode/
+
+# Continue / Qwen Code IDE config
+.continue/index/
 .qwen/
+
+# Godot
+.godot/
+export_presets.cfg
+
+# Symlink locale Godot
+Godot3
