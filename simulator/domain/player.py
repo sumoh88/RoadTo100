@@ -7,13 +7,13 @@ in the current game state. It does not contain game-specific rules.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 from .card import Card
 from .hand import Hand
 
 
-@dataclass(slots=True)
+@dataclass
 class Player:
     """Represents a player in a generic card-game domain.
 
@@ -27,7 +27,7 @@ class Player:
     player_id: str
     name: str = ""
     hand: Hand = field(default_factory=Hand)
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
     def receive_card(self, card: Card) -> None:
         """Add a card to the player's hand.
@@ -37,7 +37,7 @@ class Player:
         """
         self.hand.add_card(card)
 
-    def receive_cards(self, cards: list[Card]) -> None:
+    def receive_cards(self, cards: List[Card]) -> None:
         """Add multiple cards to the player's hand.
 
         Args:

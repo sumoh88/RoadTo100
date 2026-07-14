@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional
 
 from .card import Card
 from .deck import Deck
@@ -23,7 +23,7 @@ class GamePhase(Enum):
     FINISHED = "finished"
 
 
-@dataclass(slots=True)
+@dataclass
 class Game:
     """Represents the current state of a card-game session.
 
@@ -39,14 +39,14 @@ class Game:
         metadata: Additional arbitrary state for future extensibility.
     """
 
-    players: list[Player] = field(default_factory=list)
+    players: List[Player] = field(default_factory=list)
     deck: Deck = field(default_factory=Deck)
-    discard_pile: list[Card] = field(default_factory=list)
+    discard_pile: List[Card] = field(default_factory=list)
     current_player_index: Optional[int] = None
     turn_number: int = 0
     phase: GamePhase = GamePhase.SETUP
     winner: Optional[Player] = None
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
     def add_player(self, player: Player) -> None:
         """Add a player to the game state.
@@ -56,7 +56,7 @@ class Game:
         """
         self.players.append(player)
 
-    def add_players(self, players: list[Player]) -> None:
+    def add_players(self, players: List[Player]) -> None:
         """Add multiple players to the game state.
 
         Args:

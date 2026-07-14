@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import List, Optional
+
 from simulator.domain.action import Action
 from simulator.domain.game import Game, GamePhase
 from simulator.domain.ruleset import RuleSet
@@ -28,7 +30,7 @@ class SampleRuleSet(RuleSet):
         else:
             game.set_current_player(None)
 
-    def get_available_actions(self, game: Game) -> list[Action]:
+    def get_available_actions(self, game: Game) -> List[Action]:
         if game.phase is not GamePhase.PLAYING or game.current_player() is None:
             return []
         return [Action(action_type="draw_and_play")]
@@ -69,7 +71,7 @@ class SampleRuleSet(RuleSet):
                 return True
         return False
 
-    def get_winner(self, game: Game):
+    def get_winner(self, game: Game) -> Optional[Player]:
         for player in game.players:
             score = int(player.metadata.get("score", 0))
             if score >= int(game.metadata.get("target_score", TARGET_SCORE)):
@@ -80,7 +82,7 @@ class SampleRuleSet(RuleSet):
 class SampleActionController(ActionController):
     """Always choose the only action available in the sample game."""
 
-    def select_action(self, game: Game, available_actions: list[Action]) -> Action:
+    def select_action(self, game: Game, available_actions: List[Action]) -> Action:
         if not available_actions:
             return Action(action_type="draw_and_play")
         return available_actions[0]

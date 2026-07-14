@@ -3,9 +3,25 @@
 from __future__ import annotations
 
 from enum import Enum
+from typing import Union
 
 from simulator.domain.card import Card
 
+from .card_database import (
+    CARD_89_COPIES,
+    GOLD_VALUES,
+    IMBROGLIO_COPIES,
+    INCREMENT_COPIES_PER_VALUE,
+    INCREMENT_VALUES,
+    JOLLY_COPIES,
+    PLUS11_COPIES,
+    make_89_card,
+    make_gold_card,
+    make_imbroglio_card,
+    make_increment_card,
+    make_jolly_card,
+    make_plus11_card,
+)
 from .config import CARD_COLORS
 
 
@@ -19,7 +35,7 @@ class CardType(str, Enum):
     SPECIAL = "special"
 
 
-def build_card(card_id: str, name: str, value: int | None = None, card_type: CardType | str = CardType.INCREMENT, color: str | None = None) -> Card:
+def build_card(card_id: str, name: str, value: int = None, card_type: Union[CardType, str] = CardType.INCREMENT, color: str = None) -> Card:
     """Create a generic card for RoadTo100."""
     if isinstance(card_type, CardType):
         resolved_type = card_type.value
@@ -37,70 +53,20 @@ def build_card(card_id: str, name: str, value: int | None = None, card_type: Car
     )
 
 
-def build_deck() -> list[Card]:
-    """Create a deck with increment cards and Jolly cards for the base flow."""
-    cards: list[Card] = []
-    for value in range(1, 11):
-        for copy_index in range(3):
-            cards.append(
-                build_card(
-                    card_id=f"increment_{value}_{copy_index}",
-                    name=f"+{value}",
-                    value=value,
-                    card_type=CardType.INCREMENT,
-                    color="orange",
-                )
-            )
-
-    cards.append(
-        build_card(
-            card_id="jolly_1",
-            name="Jolly",
-            value=None,
-            card_type=CardType.JOLLY,
-            color="orange",
-        )
-    )
-
-    for gold_value in [12, 23, 34, 45, 56, 67, 78]:
-        cards.append(
-            build_card(
-                card_id=f"gold_{gold_value}",
-                name=str(gold_value),
-                value=gold_value,
-                card_type=CardType.GOLD,
-                color="gold",
-            )
-        )
-
-    cards.append(
-        build_card(
-            card_id="imbroglio_1",
-            name="Imbroglio",
-            value=None,
-            card_type=CardType.IMBROGLIO,
-            color="green",
-        )
-    )
-
-    cards.append(
-        build_card(
-            card_id="special_89",
-            name="89",
-            value=89,
-            card_type=CardType.SPECIAL,
-            color="purple",
-        )
-    )
-
-    cards.append(
-        build_card(
-            card_id="special_plus11",
-            name="+11",
-            value=11,
-            card_type=CardType.SPECIAL,
-            color="red",
-        )
-    )
-
+def build_deck() -> list:
+    """Build the full 60-card deck for RoadTo100."""
+    cards = []
+    for value in INCREMENT_VALUES:
+        for copy_index in range(INCREMENT_COPIES_PER_VALUE):
+            cards.append(make_increment_card(value, copy_index))
+    for copy_index in range(JOLLY_COPIES):
+        cards.append(make_jolly_card(copy_index))
+    for value in GOLD_VALUES:
+        cards.append(make_gold_card(value))
+    for copy_index in range(CARD_89_COPIES):
+        cards.append(make_89_card(copy_index))
+    for copy_index in range(PLUS11_COPIES):
+        cards.append(make_plus11_card(copy_index))
+    for copy_index in range(IMBROGLIO_COPIES):
+        cards.append(make_imbroglio_card(copy_index))
     return cards

@@ -7,10 +7,10 @@ concrete behaviors while reusing a common representation.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Dict
 
 
-@dataclass(slots=True)
+@dataclass
 class Action:
     """Represents an abstract action that a player may perform.
 
@@ -20,4 +20,4 @@ class Action:
     """
 
     action_type: str
-    parameters: dict[str, Any] = field(default_factory=dict)
+    parameters: Dict[str, Any] = field(default_factory=dict)

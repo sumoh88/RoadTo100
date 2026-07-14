@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import List, Optional
 
 from simulator.domain.action import Action
 from simulator.domain.card import Card
@@ -77,7 +77,7 @@ class RoadTo100RuleSet(RuleSet):
         else:
             game.set_current_player(None)
 
-    def get_available_actions(self, game: Game) -> list[Action]:
+    def get_available_actions(self, game: Game) -> List[Action]:
         """Return available play actions for increment cards and Jolly cards."""
         current_player = game.current_player()
         if current_player is None:
@@ -88,7 +88,7 @@ class RoadTo100RuleSet(RuleSet):
             if advantage_player_id is not None and current_player.player_id != advantage_player_id:
                 return []
 
-        actions: list[Action] = []
+        actions: List[Action] = []
         if bool(game.metadata.get("advantage_turn", False)):
             advantage_player_id = game.metadata.get("advantage_player_id")
             if advantage_player_id is not None and current_player.player_id != advantage_player_id:

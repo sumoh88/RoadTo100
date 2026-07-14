@@ -8,7 +8,7 @@ any card game.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import List, Optional
 
 from .action import Action
 from .game import Game
@@ -28,7 +28,7 @@ class RuleSet(ABC):
         """Initialize the game state before the main simulation loop begins."""
 
     @abstractmethod
-    def get_available_actions(self, game: Game) -> list[Action]:
+    def get_available_actions(self, game: Game) -> List[Action]:
         """Return the actions currently available to the active player."""
 
     @abstractmethod

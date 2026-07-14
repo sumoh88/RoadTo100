@@ -8,12 +8,12 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass, field
-from typing import Iterable, Optional
+from typing import Iterable, List, Optional
 
 from .card import Card
 
 
-@dataclass(slots=True)
+@dataclass
 class Deck:
     """Represents a deck of cards.
 
@@ -21,7 +21,7 @@ class Deck:
         cards: The cards currently contained in the deck.
     """
 
-    cards: list[Card] = field(default_factory=list)
+    cards: List[Card] = field(default_factory=list)
 
     def __len__(self) -> int:
         """Return the number of cards in the deck."""
@@ -59,7 +59,7 @@ class Deck:
             return None
         return self.cards.pop()
 
-    def draw_many(self, count: int) -> list[Card]:
+    def draw_many(self, count: int) -> List[Card]:
         """Draw multiple cards from the deck.
 
         Args:
@@ -68,7 +68,7 @@ class Deck:
         Returns:
             A list of drawn cards.
         """
-        drawn: list[Card] = []
+        drawn: List[Card] = []
         for _ in range(min(count, len(self.cards))):
             drawn.append(self.draw())
         return drawn

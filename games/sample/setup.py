@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Tuple
+
 from simulator.domain.game import Game
 from simulator.domain.player import Player
 from simulator.engine.simulator import Simulator
@@ -21,7 +23,7 @@ def build_game() -> Game:
     return game
 
 
-def run_sample() -> tuple[Game, Simulator]:
+def run_sample() -> Tuple[Game, Simulator]:
     """Create and run the sample game through the public engine API."""
     game = build_game()
     ruleset = SampleRuleSet()

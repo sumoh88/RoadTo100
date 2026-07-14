@@ -7,12 +7,12 @@ It does not encode any rule about how cards may be used.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Iterable, Optional
+from typing import Iterable, List, Optional
 
 from .card import Card
 
 
-@dataclass(slots=True)
+@dataclass
 class Hand:
     """Represents the cards currently held by a player.
 
@@ -20,7 +20,7 @@ class Hand:
         cards: The cards currently in the hand.
     """
 
-    cards: list[Card] = field(default_factory=list)
+    cards: List[Card] = field(default_factory=list)
 
     def __len__(self) -> int:
         """Return the number of cards in the hand."""

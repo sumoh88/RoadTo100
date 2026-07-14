@@ -28,7 +28,7 @@ class SimulationTerminationReason(Enum):
     ERROR = "error"
 
 
-@dataclass(slots=True)
+@dataclass
 class SimulationResult:
     """Represents the outcome of a completed simulation.
 
@@ -46,7 +46,7 @@ class SimulationResult:
     completed: bool
     termination_reason: SimulationTerminationReason
     turns_completed: int
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 class Simulator:

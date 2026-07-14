@@ -8,10 +8,10 @@ rules or game-specific behavior.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 
-@dataclass(slots=True)
+@dataclass
 class Card:
     """Represents a single card in a generic card-game domain.
 
@@ -27,4 +27,4 @@ class Card:
     name: str = ""
     value: Optional[int] = None
     color: Optional[str] = None
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
