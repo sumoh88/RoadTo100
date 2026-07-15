@@ -302,8 +302,9 @@ class RoadTo100RuleSet(RuleSet):
             return
 
         card = action.parameters.get("card")
-        if not isinstance(card, Card):
-            return
+        if action.action_type != RESET_HAND_ACTION:
+            if not isinstance(card, Card):
+                return
 
         if action.action_type == RESET_HAND_ACTION:
             cards_to_reset = list(current_player.hand.cards)
