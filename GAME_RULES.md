@@ -210,16 +210,29 @@ Quando viene giocata:
 - il giocatore ottiene il Giro di Vantaggio.
 
 La carta viene posizionata nel Piatto.
+La carta 89 è una Carta Speciale di colore Viola. Quando una regola fa riferimento alle Carte Gold, la carta 89 è considerata una Carta Gold, salvo diversa indicazione.
 
 ---
 
 ### Carta +11
 
-tipo: Rossa.
+Tipo: Rossa.
 
-Aggiunge 11 al Piatto.
+Se viene giocata normalmente, aggiunge 11 al Piatto.
 
-Durante un Giro di Vantaggio, il giocatore che utilizza la carta +11 vince immediatamente la partita.
+Se viene giocata immediatamente dopo una Carta Gold (12, 23, 34, 45, 56, 67 o 78), assume il valore della Carta Gold successiva:
+
+12 → 23
+23 → 34
+34 → 45
+45 → 56
+56 → 67
+67 → 78
+78 → 89
+
+Se in questo modo assume il valore 89, viene attivato il Giro di Vantaggio.
+
+Durante un Giro di Vantaggio, la carta +11 può essere giocata come se fosse una Carta Arancione e assegna immediatamente la vittoria al giocatore che la utilizza.
 
 ---
 
@@ -230,13 +243,12 @@ Il Giro di Vantaggio inizia esclusivamente quando viene giocata la carta 89, il 
 Durante il Giro di Vantaggio:
 
 - soltanto il giocatore in Vantaggio può vincere;
-- tutti i giocatori possono giocare esclusivamente Carte Arancioni e Carte Rosse (+11).
+- possono essere giocate esclusivamente Carte Arancioni.
 
 Eccezione:
+La carta +11 può essere giocata come una Carta Arancione e assegna immediatamente la vittoria al giocatore che la gioca.
 
-La carta +11 assegna immediatamente la vittoria al giocatore che la utilizza.
-
-Il Giro di Vantaggio termina quando il giocatore in Vantaggio termina il proprio turno.
+Il Giro di Vantaggio termina quando il giocatore in Vantaggio termina il proprio prossimo turno.
 
 ---
 
@@ -282,3 +294,47 @@ Queste carte non fanno parte del Mazzo.
 Servono esclusivamente a rappresentare graficamente il valore corrente del Piatto.
 
 Nel videogioco saranno rappresentate da una singola carta dinamica.
+
+---
+
+# Rimescolare il Mazzo
+
+Il Mazzo viene mescolato esclusivamente nelle seguenti situazioni:
+
+- all’inizio della partita, prima della distribuzione delle carte;
+- quando una o più carte vengono rimesse nel Mazzo, ad esempio durante un Cambio Carta o per effetto di una regola speciale del Giro di Vantaggio;
+- quando le carte rimaste nel Mazzo non sono sufficienti a completare una pesca.
+
+Non deve essere mescolato in altri momenti.
+
+## Carte rimesse nel Mazzo
+
+Quando una regola richiede di rimettere una o più carte nel Mazzo:
+
+- le carte indicate vengono rimosse dalla mano o dalla zona in cui si trovano;
+- vengono inserite nel Mazzo;
+- il Mazzo viene mescolato;
+- il giocatore pesca il numero di carte previsto dalla regola.
+
+## Mazzo insufficiente durante una pesca
+
+Se il Mazzo contiene alcune carte, ma non abbastanza per completare la pesca:
+
+- vengono pescate tutte le carte ancora disponibili nel Mazzo;
+- gli Scarti vengono utilizzati per ricostituire il Mazzo, lasciando fuori l’ultima carta giocata;
+- vengono aggiunte al Mazzo anche le eventuali carte che la regola ha richiesto di rimettere al suo interno;
+- il nuovo Mazzo viene mescolato;
+- vengono pescate le carte mancanti per completare la pesca.
+
+Esempio: un giocatore deve cambiare tre carte, ma nel Mazzo ne rimangono soltanto due. Pesca prima le due carte disponibili. Il Mazzo viene quindi ricostituito con gli Scarti, esclusa l’ultima carta giocata, e con le carte restituite dal giocatore; viene mescolato e il giocatore pesca la terza carta.
+
+## Mazzo completamente esaurito
+
+Se il Mazzo è già vuoto quando deve iniziare una pesca:
+
+- gli Scarti vengono utilizzati per ricostituire il Mazzo, lasciando fuori l’ultima carta giocata;
+- vengono aggiunte le eventuali carte che devono essere rimesse nel Mazzo;
+- il Mazzo viene mescolato;
+- la pesca viene eseguita normalmente.
+
+Le Carte Gold presenti sul Piatto o comunque escluse dagli Scarti non vengono utilizzate per ricostituire il Mazzo.
