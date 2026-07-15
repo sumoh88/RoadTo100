@@ -1,5 +1,6 @@
 """Action definitions for the RoadTo100 game skeleton."""
 
+import random
 from typing import List
 
 from simulator.domain.action import Action
@@ -24,4 +25,4 @@ class RoadTo100ActionController(ActionController):
     def select_action(self, game: Game, available_actions: List[Action]) -> Action:
         if not available_actions:
             return RoadTo100Action(action_type=PLAY_CARD_ACTION)
-        return available_actions[0]
+        return random.choice(available_actions)

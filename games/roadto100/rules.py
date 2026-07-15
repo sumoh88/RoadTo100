@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import random
 from typing import List, Optional
 
 from simulator.domain.action import Action
@@ -42,6 +43,29 @@ class RoadTo100RuleSet(RuleSet):
         """Return whether the provided card is the +11 special card."""
         return str(card.metadata.get("card_type", "")).lower() == "special" and card.name == "+11"
 
+    @staticmethod
+    def _reshuffle_discard_into_deck(game: Game) -> None:
+        """Move discard cards (except the last) back to deck, then shuffle.
+
+        Gold cards on the plateau are never in the discard pile, so no
+        special filtering is needed here.
+        """
+        if len(game.discard_pile) <= 1:
+            return
+        last = game.discard_pile.pop()
+        cards = list(game.discard_pile)
+        game.discard_pile.clear()
+        game.discard_pile.append(last)
+        game.deck.add_cards(cards)
+        game.deck.shuffle()
+
+    @staticmethod
+    def _draw_or_reshuffle(game: Game) -> Optional[Card]:
+        """Draw a card, reshuffling discard into deck if the deck is empty."""
+        if game.deck.is_empty() and game.discard_pile:
+            RoadTo100RuleSet._reshuffle_discard_into_deck(game)
+        return game.deck.draw()
+
     def _matching_gold_card(self, player: Player, plateau_value: int) -> Optional[Card]:
         """Return a matching Gold card from the player's hand, if present."""
         for card in player.hand.cards:
@@ -67,8 +91,9 @@ class RoadTo100RuleSet(RuleSet):
             player.metadata["score"] = 0
 
         if game.players:
-            game.current_player_index = 0
-            game.set_current_player(game.players[0])
+            game.deck.shuffle()
+            game.current_player_index = random.randrange(len(game.players))
+            game.set_current_player(game.players[game.current_player_index])
             for _ in range(INITIAL_HAND_SIZE):
                 for player in game.players:
                     card = game.deck.draw()
@@ -139,6 +164,12 @@ class RoadTo100RuleSet(RuleSet):
                 actions.append(RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": card}))
             elif card.value is not None:
                 actions.append(RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": card}))
+
+        for card in current_player.hand.cards:
+            actions.append(
+                RoadTo100Action(action_type=CHANGE_CARD_ACTION, parameters={"card": card})
+            )
+
         return actions
 
     def validate_action(self, game: Game, action: Action) -> bool:
@@ -165,6 +196,9 @@ class RoadTo100RuleSet(RuleSet):
         if action.action_type == REVEAL_GOLD_ACTION:
             plateau_value = int(game.metadata.get("piatto", 0))
             return isinstance(card, Card) and current_player.has_card(card) and self._is_gold_card(card) and card.value == plateau_value
+
+        if action.action_type == CHANGE_CARD_ACTION:
+            return isinstance(card, Card) and current_player.has_card(card)
 
         if self._is_jolly_card(card):
             selected_value = action.parameters.get("selected_value")
@@ -206,7 +240,7 @@ class RoadTo100RuleSet(RuleSet):
                 game.deck.add_card(card)
             game.deck.shuffle()
             for _ in range(3):
-                drawn_card = game.deck.draw()
+                drawn_card = self._draw_or_reshuffle(game)
                 if drawn_card is not None:
                     current_player.receive_card(drawn_card)
             game.metadata["turn_phase"] = "action"
@@ -216,13 +250,26 @@ class RoadTo100RuleSet(RuleSet):
             current_player.play_card(card)
             game.deck.add_card(card)
             game.deck.shuffle()
-            drawn_card = game.deck.draw()
+            drawn_card = self._draw_or_reshuffle(game)
+            if drawn_card is not None:
+                current_player.receive_card(drawn_card)
+            game.metadata["turn_phase"] = "action"
+            return
+
+        if action.action_type == CHANGE_CARD_ACTION:
+            current_player.play_card(card)
+            game.deck.add_card(card)
+            game.deck.shuffle()
+            drawn_card = self._draw_or_reshuffle(game)
             if drawn_card is not None:
                 current_player.receive_card(drawn_card)
             game.metadata["turn_phase"] = "action"
             return
 
         current_player.play_card(card)
+
+        if not self._is_gold_card(card) and not self._is_special_89_card(card):
+            game.discard_pile.append(card)
 
         if self._is_jolly_card(card):
             chosen_value = int(action.parameters.get("selected_value", 1))
@@ -257,7 +304,7 @@ class RoadTo100RuleSet(RuleSet):
             game.winner = current_player
 
         game.metadata["turn_phase"] = "action"
-        drawn_card = game.deck.draw()
+        drawn_card = self._draw_or_reshuffle(game)
         if drawn_card is not None:
             current_player.receive_card(drawn_card)
 
