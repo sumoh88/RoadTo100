@@ -27,3 +27,5 @@ export_presets.cfg
 
 # Symlink locale Godot
 Godot3
+*.import
+.import/
