@@ -234,24 +234,23 @@ func _build_plateau_visual_stack(game_state):
 	# Step 1: Classify each card and compute running piatto
 	var segments = []  # [{card, piatto_after, is_gold}]
 	var running = 0
+	var last_is_gold = false
 
 	for c in raw_cards:
 		var ct = str(c.metadata.get("card_type", "")).to_lower()
 		var is_gold = ct == "gold"
 		var is_89 = ct == "special" and c.name == "89"
+		var is_gold_or_89 = is_gold or is_89
 
-		if is_gold or is_89:
+		if is_gold_or_89:
 			running = c.value if c.value != null else 0
 		elif ct == "increment":
 			running += c.value if c.value != null else 0
 		elif ct == "jolly":
-			# Jolly's chosen value not stored in card. Approx with 5 (mid-range).
 			running += 5
 		elif ct == "imbroglio":
-			# Imbroglio's delta not stored in card. No change (delta may be neg/pos).
 			pass
 		elif ct == "special" and c.name == "+11":
-			# +11 adds 11, or follows gold chain. Use 11 as default.
 			running += 11
 		else:
 			running += c.value if c.value != null else 0
@@ -259,10 +258,11 @@ func _build_plateau_visual_stack(game_state):
 		segments.append({
 			"card": _card_to_dict(c),
 			"piatto_after": running,
-			"is_gold_or_89": is_gold or is_89,
+			"is_gold_or_89": is_gold_or_89,
 		})
+		last_is_gold = is_gold_or_89
 
-	# Step 2: Build visual stack
+	# Step 2: Build visual stack from segments
 	var visual = [{"type": "plate", "value": 0}]
 	var gold_count = 0
 
@@ -281,22 +281,22 @@ func _build_plateau_visual_stack(game_state):
 					# Add new carta Piatto above the last Gold
 					visual.append({"type": "plate", "value": seg["piatto_after"]})
 
-	# Step 3: Ensure last item reflects the game state's current piatto.
-	# If the last card played was a Gold/89, the card face IS the top visual
-	# element — do NOT add a redundant plate with the same value on top.
-	if visual.size() > 0 and segments.size() > 0:
-		var last_seg_is_gold = segments[segments.size() - 1]["is_gold_or_89"]
-		if not last_seg_is_gold:
-			# Last card was non-Gold: ensure a final plate
+	# Step 3: Finalize top of the stack based on the LAST CARD PLAYED.
+	# If the last card was a Gold/89, the card face IS the top — no trailing plate.
+	# If the last card was non-Gold, ensure a final plate with the current value.
+	if visual.size() > 0:
+		if last_is_gold:
+			# Last card was Gold/89: card face is the top visual element.
+			# If there's a trailing plate (from a previous non-gold update),
+			# remove it so the Gold is truly on top.
+			if visual[visual.size() - 1]["type"] == "plate":
+				visual.pop_back()
+		else:
+			# Last card was non-Gold: ensure a final plate.
 			if visual[visual.size() - 1]["type"] == "card":
 				visual.append({"type": "plate", "value": current_piatto})
 			elif visual[visual.size() - 1]["type"] == "plate":
 				visual[visual.size() - 1]["value"] = current_piatto
-		# Last card was Gold/89: card face remains the top element — no plate added.
-	elif visual.size() > 0:
-		# No cards played yet: update initial plate value
-		if visual[visual.size() - 1]["type"] == "plate":
-			visual[visual.size() - 1]["value"] = current_piatto
 
 	return visual
 

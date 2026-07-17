@@ -8,10 +8,12 @@ const PLATE_TEXTURE = preload("res://imgs/plate.png")
 # Per-seat data: {layer: Control, rotation_deg: int}
 var _resolver = null
 var _value_label = null
+var _value_layer = null   # static ValueLayer — hidden, replaced by dynamic plate labels
 var _draw_pile_count = null
 var _discard_top = null
 var _permanent_layer = null
 var _permanent_back = null
+var _plateau_value_card = null  # static Plate.png from scene — hidden, replaced by dynamic plates
 var _opp_seats = []  # [{layer, rotation_deg}, ...]
 
 func _ready():
@@ -28,6 +30,16 @@ func _ready():
 			_permanent_layer = _ch(pl, "PermanentCardsLayer")
 			if _permanent_layer != null:
 				_permanent_back = _ch(_permanent_layer, "PermanentCardBack")
+			# Hide the static PlateauValueCard — dynamic plates inside
+			# _permanent_layer now handle the visual representation.
+			_plateau_value_card = _ch(pl, "PlateauValueCard")
+			if _plateau_value_card != null:
+				_plateau_value_card.visible = false
+			# Hide the static ValueLayer — its Label duplicates the value
+			# shown by dynamic plate labels and appears on top of Gold cards.
+			_value_layer = _ch(pl, "ValueLayer")
+			if _value_layer != null:
+				_value_layer.visible = false
 		_draw_pile_count = _ch(_ch(brd, "DrawPile"), "CountLabel")
 		var dp = _ch(brd, "DiscardPile")
 		if dp != null: _discard_top = _ch(dp, "TopCard")
