@@ -8,6 +8,58 @@
 
 config_version=4
 
+_global_script_classes=[ {
+"base": "Reference",
+"class": "CardData",
+"language": "GDScript",
+"path": "res://engine/CardData.gd"
+}, {
+"base": "Reference",
+"class": "CardDatabase",
+"language": "GDScript",
+"path": "res://engine/CardDatabase.gd"
+}, {
+"base": "Reference",
+"class": "Deck",
+"language": "GDScript",
+"path": "res://engine/Deck.gd"
+}, {
+"base": "Node",
+"class": "GameConstants",
+"language": "GDScript",
+"path": "res://engine/GameConstants.gd"
+}, {
+"base": "Reference",
+"class": "GameState",
+"language": "GDScript",
+"path": "res://engine/GameState.gd"
+}, {
+"base": "Reference",
+"class": "Hand",
+"language": "GDScript",
+"path": "res://engine/Hand.gd"
+}, {
+"base": "Node",
+"class": "LocalGameEngine",
+"language": "GDScript",
+"path": "res://engine/LocalGameEngine.gd"
+}, {
+"base": "Reference",
+"class": "PlayerData",
+"language": "GDScript",
+"path": "res://engine/PlayerData.gd"
+} ]
+_global_script_class_icons={
+"CardData": "",
+"CardDatabase": "",
+"Deck": "",
+"GameConstants": "",
+"GameState": "",
+"Hand": "",
+"LocalGameEngine": "",
+"PlayerData": ""
+}
+
 [application]
 
 config/name="Road To 100"

@@ -1,0 +1,14 @@
+[gd_scene format=2]
+
+[ext_resource path="res://tests/rules_test.gd" type="Script" id=1]
+[ext_resource path="res://engine/GameConstants.gd" type="Script" id=2]
+[ext_resource path="res://engine/CardData.gd" type="Script" id=3]
+[ext_resource path="res://engine/Deck.gd" type="Script" id=4]
+[ext_resource path="res://engine/Hand.gd" type="Script" id=5]
+[ext_resource path="res://engine/PlayerData.gd" type="Script" id=6]
+[ext_resource path="res://engine/GameState.gd" type="Script" id=7]
+[ext_resource path="res://engine/CardDatabase.gd" type="Script" id=8]
+[ext_resource path="res://engine/RoadTo100Rules.gd" type="Script" id=9]
+
+[node name="RulesTest" type="Node"]
+script = ExtResource( 1 )
