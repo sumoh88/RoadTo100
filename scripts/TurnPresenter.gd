@@ -2,12 +2,18 @@ extends Node
 # TurnPresenter — manages HUD labels, buttons, popups.
 # Does NOT contain game rules.
 
+signal play_pressed
+signal change_pressed
+signal cancel_pressed
+
 var _turn_label = null
 var _instruction_label = null
 var _advantage_label = null
 var _play_button = null
 var _change_button = null
+var _cancel_button = null
 var _game_over_popup = null
+
 
 func _ready():
 	var m = _node_up("Main")
@@ -20,19 +26,48 @@ func _ready():
 		_advantage_label = _child(hud, "AdvantageLabel")
 		var p = _child(hud, "ActionPanel")
 		if p != null:
-			_play_button = _child(p, "PlayButton"); _change_button = _child(p, "ChangeButton")
+			_play_button = _child(p, "PlayButton")
+			_change_button = _child(p, "ChangeButton")
+			_cancel_button = _child(p, "CancelButton")
+			if _play_button != null:
+				_play_button.connect("pressed", self, "_on_play")
+			if _change_button != null:
+				_change_button.connect("pressed", self, "_on_change")
+			if _cancel_button != null:
+				_cancel_button.connect("pressed", self, "_on_cancel")
 	var ol = _child(m, "OverlayLayer")
 	if ol != null: _game_over_popup = _child(ol, "GameOverPopup")
+
 
 func _node_up(name):
 	var p = get_parent()
 	while p != null and p.name != name: p = p.get_parent()
 	return p
+
+
 func _child(p, name):
 	if p == null: return null
 	for c in p.get_children():
 		if c.name == name: return c
 	return null
+
+
+func _on_play():
+	emit_signal("play_pressed")
+
+
+func _on_change():
+	emit_signal("change_pressed")
+
+
+func _on_cancel():
+	emit_signal("cancel_pressed")
+
+
+func show_tip(msg):
+	if _instruction_label != null:
+		_instruction_label.text = msg
+
 
 func apply_snapshot(s):
 	if s == null: return
@@ -65,6 +100,7 @@ func apply_snapshot(s):
 	if _play_button != null: _play_button.disabled = !hp
 	if _change_button != null: _change_button.disabled = !hc
 	if _game_over_popup != null and w != null and !_game_over_popup.visible: _game_over_popup.popup()
+
 
 func diagnose():
 	print("Turn: turn=" + str(_turn_label != null) + " instr=" + str(_instruction_label != null) + " adv=" + str(_advantage_label != null) + " play=" + str(_play_button != null) + " go=" + str(_game_over_popup != null))

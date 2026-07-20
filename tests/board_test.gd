@@ -24,8 +24,11 @@ func _ready():
 	get_tree().quit(0)
 
 func _a(cond, msg):
-	if cond: passed += 1
-	else: failed += 1; msgs.append(msg)
+	if cond:
+		passed += 1
+	else:
+		failed += 1
+		msgs.append(msg)
 	return cond
 
 # Helper: build a BoardPresenter with injected nodes
@@ -321,7 +324,7 @@ func _t6_opponent_centering():
 		_a(top_first.rect_position.x == -17, "top center x=-17, got " + str(top_first.rect_position.x))
 
 	# For Left seat (90° rotation), same sx calculation applies
-	# Left seat width = 158 (same as Top from rect_size)
+	# Player 3 has hand_count=2 (index 1 in opponents)
 	var left_layer = layers[1]
 	var left_first = null
 	for c in left_layer.get_children():
@@ -329,7 +332,8 @@ func _t6_opponent_centering():
 			left_first = c
 			break
 	if left_first != null:
-		var left_sx = (left_layer.rect_size.x - (3 * 60 + 2 * 6)) / 2.0
+		var left_hand_count = 2
+		var left_sx = (left_layer.rect_size.x - (left_hand_count * 60 + (left_hand_count - 1) * 6)) / 2.0
 		_a(left_first.rect_position.x == left_sx, "left center x=" + str(left_sx) + ", got " + str(left_first.rect_position.x))
 
 	# With just 1 card: total = 60

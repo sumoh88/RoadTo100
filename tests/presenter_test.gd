@@ -205,6 +205,290 @@ func _test_hand_presenter_snapshot():
 
 
 # ===========================================================================
+# 5b. HandPresenter — card_selected signal from CardFace click
+# ===========================================================================
+
+var _test_captured_card_id = ""
+
+func _on_test_card_selected(card_id):
+	_test_captured_card_id = card_id
+
+
+func _test_hand_card_selected_signal():
+	var hp = load("res://scripts/HandPresenter.gd").new()
+	var layer = Control.new()
+	layer.rect_size = Vector2(800, 300)
+	hp._cards_layer = layer
+
+	var snap = {
+		"local_player_id": "p1",
+		"players": [
+			{"id": "p1", "name": "Me", "hand_count": 2,
+			 "hand": [
+				{"card_id": "inc1", "name": "+5", "value": 5, "color": "arancione", "card_type": "increment"},
+				{"card_id": "gold12", "name": "12", "value": 12, "color": "dorato", "card_type": "gold"},
+			 ]},
+			{"id": "p2", "name": "Other", "hand_count": 3, "hand": []},
+		],
+	}
+	hp.apply_snapshot(snap)
+
+	# CardFace must have been created
+	var cf = null
+	if hp._card_faces.size() > 0:
+		cf = hp._card_faces[0]
+	var ok1 = _assert(cf != null, "card face created")
+
+	# Connect to card_selected signal
+	_test_captured_card_id = ""
+	hp.connect("card_selected", self, "_on_test_card_selected")
+
+	# Simulate a click on the first CardFace via _gui_input
+	if cf != null:
+		var event = InputEventMouseButton.new()
+		event.button_index = 1
+		event.pressed = true
+		cf._gui_input(event)
+
+		var o2 = _assert(_test_captured_card_id == "inc1", "card_selected emitted with correct ID: " + _test_captured_card_id)
+		ok1 = ok1 and o2
+
+		# Click the second card
+		_test_captured_card_id = ""
+		var cf2 = hp._card_faces[1]
+		cf2._gui_input(event)
+		var o3 = _assert(_test_captured_card_id == "gold12", "second card click: " + _test_captured_card_id)
+		ok1 = ok1 and o3
+
+	hp.disconnect("card_selected", self, "_on_test_card_selected")
+	hp.free()
+	return "  HP card_selected signal:  " + ("[PASS]\n" if ok1 else "[FAIL]\n")
+
+
+# ===========================================================================
+# 5c. HandPresenter — set_selected visual highlight
+# ===========================================================================
+
+func _test_hand_set_selected():
+	var hp = load("res://scripts/HandPresenter.gd").new()
+	var layer = Control.new()
+	layer.rect_size = Vector2(800, 300)
+	hp._cards_layer = layer
+
+	var snap = {
+		"local_player_id": "p1",
+		"players": [
+			{"id": "p1", "name": "Me", "hand_count": 2,
+			 "hand": [
+				{"card_id": "c1", "name": "+1", "value": 1, "color": "arancione", "card_type": "increment"},
+				{"card_id": "c2", "name": "+2", "value": 2, "color": "arancione", "card_type": "increment"},
+			 ]},
+			{"id": "p2", "name": "Other", "hand_count": 3, "hand": []},
+		],
+	}
+	hp.apply_snapshot(snap)
+
+	var c1 = hp._card_faces[0]
+	var c2 = hp._card_faces[1]
+	var orig_y1 = c1.rect_position.y
+	var orig_y2 = c2.rect_position.y
+
+	# Select c1 — should rise (y decreases)
+	hp.set_selected("c1")
+	var o1 = _assert(c1.rect_position.y < orig_y1, "c1 rose: y " + str(c1.rect_position.y) + " < " + str(orig_y1))
+	var o2 = _assert(c2.rect_position.y == orig_y2, "c2 unchanged: " + str(c2.rect_position.y))
+
+	# Select c2 — c1 returns, c2 rises
+	hp.set_selected("c2")
+	var o3 = _assert(c1.rect_position.y == orig_y1, "c1 returned: " + str(c1.rect_position.y))
+	var o4 = _assert(c2.rect_position.y < orig_y2, "c2 rose: " + str(c2.rect_position.y))
+
+	# clear_selection — both return
+	hp.clear_selection()
+	var o5 = _assert(c1.rect_position.y == orig_y1, "c1 back after clear: " + str(c1.rect_position.y))
+	var o6 = _assert(c2.rect_position.y == orig_y2, "c2 back after clear: " + str(c2.rect_position.y))
+
+	hp.free()
+	return "  HP set/clear selection:   " + ("[PASS]\n" if (o1 and o2 and o3 and o4 and o5 and o6) else "[FAIL]\n")
+
+
+# ===========================================================================
+# 5d. HandPresenter — get_selected_card_id
+# ===========================================================================
+
+func _test_hand_get_selected_id():
+	var hp = load("res://scripts/HandPresenter.gd").new()
+	var layer = Control.new()
+	layer.rect_size = Vector2(800, 300)
+	hp._cards_layer = layer
+
+	var snap = {
+		"local_player_id": "p1",
+		"players": [
+			{"id": "p1", "name": "Me", "hand_count": 1,
+			 "hand": [{"card_id": "c1", "name": "+1", "value": 1, "color": "arancione", "card_type": "increment"}]},
+			{"id": "p2", "name": "Other", "hand_count": 3, "hand": []},
+		],
+	}
+	hp.apply_snapshot(snap)
+
+	var o1 = _assert(hp.get_selected_card_id() == "", "no selection initially: '" + hp.get_selected_card_id() + "'")
+	hp.set_selected("c1")
+	var o2 = _assert(hp.get_selected_card_id() == "c1", "selected: " + hp.get_selected_card_id())
+	hp.clear_selection()
+	var o3 = _assert(hp.get_selected_card_id() == "", "cleared: '" + hp.get_selected_card_id() + "'")
+
+	hp.free()
+	return "  HP get_selected_card_id:  " + ("[PASS]\n" if (o1 and o2 and o3) else "[FAIL]\n")
+
+
+# ===========================================================================
+# 5f. HandPresenter — apply_snapshot preserves selection if card still exists
+# ===========================================================================
+
+func _test_hand_selection_survives_snapshot():
+	var hp = load("res://scripts/HandPresenter.gd").new()
+	var layer = Control.new()
+	layer.rect_size = Vector2(800, 300)
+	hp._cards_layer = layer
+
+	var snap1 = {
+		"local_player_id": "p1",
+		"players": [
+			{"id": "p1", "name": "Me", "hand_count": 2,
+			 "hand": [
+				{"card_id": "c1", "name": "+1", "value": 1, "color": "arancione", "card_type": "increment"},
+				{"card_id": "c2", "name": "+2", "value": 2, "color": "arancione", "card_type": "increment"},
+			 ]},
+			{"id": "p2", "name": "Other", "hand_count": 3, "hand": []},
+		],
+	}
+	hp.apply_snapshot(snap1)
+
+	var c1 = hp._card_faces[0]
+	var c2 = hp._card_faces[1]
+	var orig_y1 = c1.rect_position.y
+	var orig_y2 = c2.rect_position.y
+
+	# Select c1
+	hp.set_selected("c1")
+	var selected_before = _assert(hp.get_selected_card_id() == "c1", "selected c1 before snapshot")
+
+	# apply_snapshot with same cards — c1 should stay selected and raised
+	hp.apply_snapshot(snap1)
+
+	# After snapshot: new CardFace instances, check selection preserved
+	var ncf1 = hp._card_faces[0]
+	var ncf2 = hp._card_faces[1]
+	var o1 = _assert(hp.get_selected_card_id() == "c1", "selection preserved after snapshot")
+	var o2 = _assert(ncf1.rect_position.y < ncf2.rect_position.y, "c1 still raised: y1=" + str(ncf1.rect_position.y) + " y2=" + str(ncf2.rect_position.y))
+	var o3 = _assert(ncf2.rect_position.y == orig_y2, "c2 unchanged: " + str(ncf2.rect_position.y))
+
+	# Now snapshot WITHOUT c1 — selection should clear
+	var snap2 = {
+		"local_player_id": "p1",
+		"players": [
+			{"id": "p1", "name": "Me", "hand_count": 1,
+			 "hand": [
+				{"card_id": "c3", "name": "+3", "value": 3, "color": "arancione", "card_type": "increment"},
+			 ]},
+			{"id": "p2", "name": "Other", "hand_count": 3, "hand": []},
+		],
+	}
+	hp.apply_snapshot(snap2)
+	var o4 = _assert(hp.get_selected_card_id() == "", "selection cleared when card gone")
+
+	hp.free()
+	return "  HP selection surv snapshot:" + ("[PASS]\n" if (selected_before and o1 and o2 and o3 and o4) else "[FAIL]\n")
+
+
+func _test_hand_no_duplicate_connections():
+	var hp = load("res://scripts/HandPresenter.gd").new()
+	var layer = Control.new()
+	layer.rect_size = Vector2(800, 300)
+	hp._cards_layer = layer
+
+	var snap = {
+		"local_player_id": "p1",
+		"players": [
+			{"id": "p1", "name": "Me", "hand_count": 1,
+			 "hand": [{"card_id": "c1", "name": "+1", "value": 1, "color": "arancione", "card_type": "increment"}]},
+			{"id": "p2", "name": "Other", "hand_count": 3, "hand": []},
+		],
+	}
+
+	# Apply snapshot twice (simulates two game state updates)
+	hp.apply_snapshot(snap)
+	hp.apply_snapshot(snap)
+
+	# Each apply_snapshot calls _clear() which frees old CardFace instances,
+	# then creates new ones with fresh signal connections.
+	# Only one CardFace should exist (since hand has 1 card).
+	var card_count = hp._card_faces.size()
+	var o1 = _assert(card_count == 1, "1 card after 2 apply_snapshot: " + str(card_count))
+
+	# Simulate click — should emit exactly once
+	_test_captured_card_id = ""
+	hp.connect("card_selected", self, "_on_test_card_selected")
+
+	var cf = hp._card_faces[0]
+	var event = InputEventMouseButton.new()
+	event.button_index = 1
+	event.pressed = true
+	cf._gui_input(event)
+
+	var o2 = _assert(_test_captured_card_id == "c1", "single emission: " + _test_captured_card_id)
+
+	hp.disconnect("card_selected", self, "_on_test_card_selected")
+	hp.free()
+	return "  HP no duplicate connects: " + ("[PASS]\n" if (o1 and o2) else "[FAIL]\n")
+
+
+# ===========================================================================
+# 5g. TurnPresenter — button signal emission
+# ===========================================================================
+
+func _test_turn_play_signal():
+	var tp = load("res://scripts/TurnPresenter.gd").new()
+
+	_capture_emit = false
+	tp.connect("play_pressed", self, "_on_capture_emit")
+	tp._on_play()
+	var ok = _assert(_capture_emit, "play_pressed emitted on _on_play()")
+	tp.disconnect("play_pressed", self, "_on_capture_emit")
+	tp.free()
+	return "  TP play_pressed signal:    " + ("[PASS]\n" if ok else "[FAIL]\n")
+
+
+var _capture_emit = false
+func _on_capture_emit():
+	_capture_emit = true
+
+func _test_turn_change_signal():
+	var tp = load("res://scripts/TurnPresenter.gd").new()
+
+	_capture_emit = false
+	tp.connect("change_pressed", self, "_on_capture_emit")
+	tp._on_change()
+	var ok = _assert(_capture_emit, "change_pressed emitted on _on_change()")
+	tp.disconnect("change_pressed", self, "_on_capture_emit")
+	tp.free()
+	return "  TP change_pressed signal:  " + ("[PASS]\n" if ok else "[FAIL]\n")
+
+
+func _test_turn_cancel_signal():
+	var tp = load("res://scripts/TurnPresenter.gd").new()
+
+	_capture_emit = false
+	tp.connect("cancel_pressed", self, "_on_capture_emit")
+	tp._on_cancel()
+	var ok = _assert(_capture_emit, "cancel_pressed emitted on _on_cancel()")
+	tp.disconnect("cancel_pressed", self, "_on_capture_emit")
+	tp.free()
+	return "  TP cancel_pressed signal:  " + ("[PASS]\n" if ok else "[FAIL]\n")
+
+
+# ===========================================================================
 # 6. TurnPresenter — label updates
 # ===========================================================================
 
@@ -371,6 +655,14 @@ func _run_all():
 	out += _test_cardface_creation()
 	out += _test_board_presenter_piatto()
 	out += _test_hand_presenter_snapshot()
+	out += _test_hand_card_selected_signal()
+	out += _test_hand_set_selected()
+	out += _test_hand_get_selected_id()
+	out += _test_hand_no_duplicate_connections()
+	out += _test_hand_selection_survives_snapshot()
+	out += _test_turn_play_signal()
+	out += _test_turn_change_signal()
+	out += _test_turn_cancel_signal()
 	out += _test_turn_presenter_labels()
 	out += _test_winner_all_players()
 	out += _test_no_auto_start()
