@@ -616,9 +616,9 @@ func _test_no_auto_start():
 	var dd = load("res://scripts/DebugDemo.gd").new()
 	# After _ready, should NOT be running
 	var not_running = _assert(!dd.running, "demo not running after ready")
-	# No engine created yet
-	var no_engine = _assert(dd.engine == null, "no engine after ready")
-	return "  No auto-start:         " + ("[PASS]\n" if (not_running and no_engine) else "[FAIL]\n")
+	# No GC reference yet (not parented)
+	var no_gc = _assert(dd._gc == null, "no GameController after ready")
+	return "  No auto-start:         " + ("[PASS]\n" if (not_running and no_gc) else "[FAIL]\n")
 
 
 # ===========================================================================

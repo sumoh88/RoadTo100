@@ -4,6 +4,11 @@ extends Node
 # Manages interface states, coordinates presenters, and drives
 # the GameStateProvider.
 #
+# Signals:
+#   action_applied(result) — fired after each completed action (for debug/demo)
+
+signal action_applied(result)
+#
 # States (in order of progression):
 #   WAITING_FOR_STATE  — initial, no game loaded
 #   READY_FOR_INPUT    — waiting for player action
@@ -89,6 +94,20 @@ func get_last_snapshot():
 
 func get_selected_card_id():
 	return _selected_card_id
+
+
+func get_last_events():
+	return _last_events
+
+
+func perform_action(action_dict):
+	"""Send an action directly through the provider (for debug/auto-demo use).
+	Bypasses user input flow. Returns after the synchronous action cycle."""
+	if _provider == null:
+		print("[GC] ERROR: No provider set")
+		return
+	_state = State.ACTION_PENDING
+	_provider.send_action(action_dict)
 
 
 # ---------------------------------------------------------------------------
@@ -390,6 +409,7 @@ func _on_game_started(snapshot):
 func _on_action_completed(result):
 	_last_snapshot = result.get("snapshot", null)
 	_last_events = result.get("events", [])
+	emit_signal("action_applied", result)
 	_apply_snapshot(_last_snapshot)
 	if _last_snapshot != null and _last_snapshot.get("winner", null) != null:
 		_clear_selection()

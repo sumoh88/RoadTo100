@@ -1,104 +1,38 @@
 extends Node
 
 # Debug/Development tool — Automatic 4-player demo.
-# Connects to real presenters in Main.tscn and verifies visual updates.
+# Routes all game logic through GameController (parent node).
+# Demo only: chooses actions from available_actions, calls
+# GameController.perform_action() to execute them.
 
-signal game_started(snapshot)
-signal action_completed(result)
-
-var _LocalGameEngine = load("res://engine/LocalGameEngine.gd")
-
-var engine = null
+var _gc = null
 var timer = null
 var running = false
 var turn_count = 0
 var max_demo_turns = 1000
 var step_delay_ms = 1000
 
-# Explicit presenter references (set from _ready via explicit paths)
-var _board = null
-var _hand = null
-var _turn = null
-
 # Stats
 var stats = {"play_card":0,"change_card":0,"reveal_gold":0,"reset_hand":0,"advantage_turns":0}
 
 
 func _ready():
+	_gc = get_parent()
 	timer = Timer.new()
 	timer.one_shot = true
 	timer.wait_time = step_delay_ms / 1000.0
 	timer.connect("timeout", self, "_on_timer_timeout")
 	add_child(timer)
 
-	# Find presenters via their sibling relationship to Main
-	# DebugDemo is at: Main/GameController/DebugDemo
-	# Presenters are at: Main/BoardPresenter, Main/HandPresenter, Main/TurnPresenter
-	var main_node = get_node("../../")  # Main
-	if main_node == null:
-		print("[Demo] CRITICAL: Cannot find Main node!")
-		return
+	if _gc != null and _gc.has_signal("action_applied"):
+		_gc.connect("action_applied", self, "_on_gc_action_applied")
 
-	for c in main_node.get_children():
-		var name = c.name
-		if name == "BoardPresenter":
-			_board = c
-		elif name == "HandPresenter":
-			_hand = c
-		elif name == "TurnPresenter":
-			_turn = c
-
-	# Diagnostic: report what was found
 	print("\n===== DEMO DIAGNOSTIC =====")
-	print("Main node: " + str(main_node) + " (children: " + str(main_node.get_child_count()) + ")")
-	for c in main_node.get_children():
-		var script = c.get_script()
-		var has_script = script != null
-		var has_update = false
-		if has_script:
-			has_update = c.has_method("apply_snapshot")
-		var sc_name = ""
-		if has_script:
-			sc_name = script.resource_path
-		print("  child: " + c.name + " script=" + str(has_script) + " has_update=" + str(has_update) + " path=" + sc_name)
-
-	if _board != null:
-		print("[Demo] BoardPresenter found: " + str(_board))
-		var bp_path = _board.get_path()
-		print("[Demo]   path: " + str(bp_path))
-		# Call a diagnostic method to check internal refs
-		if _board.has_method("diagnose"):
-			_board.diagnose()
-		else:
-			print("[Demo]   WARNING: BoardPresenter has no diagnose() method")
+	if _gc != null:
+		print("[Demo] GameController: " + str(_gc) + " path=" + str(_gc.get_path()))
 	else:
-		print("[Demo] CRITICAL: BoardPresenter not found!")
-
-	if _hand != null:
-		print("[Demo] HandPresenter found: " + str(_hand))
-		var hp_path = _hand.get_path()
-		print("[Demo]   path: " + str(hp_path))
-		if _hand.has_method("diagnose"):
-			_hand.diagnose()
-		else:
-			print("[Demo]   WARNING: HandPresenter has no diagnose() method")
-	else:
-		print("[Demo] CRITICAL: HandPresenter not found!")
-
-	if _turn != null:
-		print("[Demo] TurnPresenter found: " + str(_turn))
-		var tp_path = _turn.get_path()
-		print("[Demo]   path: " + str(tp_path))
-		if _turn.has_method("diagnose"):
-			_turn.diagnose()
-		else:
-			print("[Demo]   WARNING: TurnPresenter has no diagnose() method")
-	else:
-		print("[Demo] CRITICAL: TurnPresenter not found!")
-
+		print("[Demo] CRITICAL: GameController not found!")
 	print("===========================\n")
-
-	# Demo starts only via button press (DemoButton) or F10 key — no auto-start.
 
 
 func _schedule_next_step():
@@ -108,47 +42,130 @@ func _schedule_next_step():
 	timer.start()
 
 
-func _update_presenters(snapshot, label):
-	"""Update all presenters and print diagnostic of real node state."""
-	if _board != null and _board.has_method("apply_snapshot"):
-		_board.apply_snapshot(snapshot)
-	if _hand != null and _hand.has_method("apply_snapshot"):
-		_hand.apply_snapshot(snapshot)
-	if _turn != null and _turn.has_method("apply_snapshot"):
-		_turn.apply_snapshot(snapshot)
+func start_demo():
+	if running:
+		print("[Demo] Already running.")
+		return
+	if _gc == null:
+		print("[Demo] CRITICAL: No GameController reference.")
+		return
 
-	# Real node state check (only for first update and periodically)
-	if randi() % 10 == 0 or label == "first":
-		_diagnose_real_state(snapshot, label)
+	print("\n========== DEMO AUTOMATICA ==========")
+	running = true
+	turn_count = 0
+	stats = {"play_card":0,"change_card":0,"reveal_gold":0,"reset_hand":0,"advantage_turns":0}
 
-
-func _diagnose_real_state(snapshot, label):
-	"""Print the actual state of UI nodes after an update."""
-	var out = "[Demo] UI state [" + label + "]:"
-	if _board != null and _board.has_method("_diagnose_nodes"):
-		out += _board._diagnose_nodes()
-	if _hand != null and _hand.has_method("_diagnose_nodes"):
-		out += _hand._diagnose_nodes()
-	if _turn != null and _turn.has_method("_diagnose_nodes"):
-		out += _turn._diagnose_nodes()
-	print(out)
-
-
-# ----- Engine signal handlers -----
-
-func _on_engine_game_started(snapshot):
-	print("\n[Demo] Game started — 4 players")
-	_update_presenters(snapshot, "first")
+	_gc.start_game(4)
 	_schedule_next_step()
 
 
-func _on_engine_action_completed(result):
+func stop_demo():
+	if not running: return
+	running = false
+	timer.stop()
+	print("[Demo] Stopped.")
+
+
+func _on_timer_timeout():
+	if not running or _gc == null:
+		return
+
+	var state = _gc.get_state()
+
+	# Handle WAITING_FOR_CHOICE — gold reveal popup or value choice
+	if state == 3:
+		var snap = _gc.get_last_snapshot()
+		if snap != null:
+			for a in snap.get("available_actions", []):
+				if a.get("action_type", "") == "reveal_gold":
+					# Answer Yes to gold reveal
+					_gc.perform_action({"action_type": "reveal_gold", "card_id": a.get("card_id", "")})
+					_schedule_next_step()
+					return
+		# Value choice (Jolly/Imbroglio) or unknown — retry later
+		_schedule_next_step()
+		return
+
+	# Only act when ready for input
+	if state != 1 and state != 2:
+		if state == 7:  # GAME_OVER — done
+			return
+		_schedule_next_step()  # Retry later
+		return
+
+	var snapshot = _gc.get_last_snapshot()
+	if snapshot == null:
+		_schedule_next_step()
+		return
+
+	var acts = snapshot.get("available_actions", [])
+	if acts.empty():
+		_schedule_next_step()
+		return
+
+	# Detect gold reveal in available_actions before GC opens popup
+	for a in acts:
+		if a.get("action_type", "") == "reveal_gold":
+			_gc.perform_action({"action_type": "reveal_gold", "card_id": a.get("card_id", "")})
+			_schedule_next_step()
+			return
+
+	var action = _choose_action(acts)
+	if action == null:
+		_schedule_next_step()
+		return
+
+	var at = action.get("action_type", "")
+	var cid = action.get("card_id", "")
+
+	if at == "play_card" or at == "change_card":
+		var action_dict = {"action_type": at, "card_id": cid}
+
+		# Handle Jolly/Imbroglio: pick first available value from choices
+		var choices = action.get("choices", [])
+		if choices.size() > 0:
+			var params = choices[0].get("parameters", {})
+			for k in params.keys():
+				action_dict[k] = params[k]
+
+		_gc.perform_action(action_dict)
+
+	elif at == "reset_hand":
+		_gc.perform_action({"action_type": "reset_hand"})
+
+	_schedule_next_step()
+
+
+func _choose_action(acts):
+	if acts.empty():
+		return null
+	# Prefer play_card, then change_card, then reset_hand
+	for p in ["play_card", "change_card", "reset_hand"]:
+		var cs = []
+		for a in acts:
+			if a["action_type"] == p:
+				cs.append(a)
+		if not cs.empty():
+			return cs[randi() % cs.size()]
+	return acts[0]
+
+
+func _input(event):
+	if event is InputEventKey and event.pressed and event.scancode == KEY_F10:
+		if running: stop_demo()
+		else: start_demo()
+
+
+# ---------------------------------------------------------------------------
+# GC signal relay — track events for per-turn stats
+# ---------------------------------------------------------------------------
+
+func _on_gc_action_applied(result):
 	var snapshot = result["snapshot"]
-	var events = result["events"]
+	var events = result.get("events", [])
 	turn_count += 1
 
-	_update_presenters(snapshot, "turn" + str(turn_count))
-
+	# Print turn summary
 	var event_summary = []
 	for e in events:
 		var es = e["type"]
@@ -157,6 +174,7 @@ func _on_engine_action_completed(result):
 		event_summary.append(es)
 	print("[Demo] Turn " + str(snapshot["turn_number"]) + " — " + PoolStringArray(event_summary).join(", "))
 
+	# Track stats
 	for e in events:
 		var t = e["type"]
 		if t == "card_played": stats["play_card"] += 1
@@ -165,49 +183,12 @@ func _on_engine_action_completed(result):
 		elif t == "hand_reset": stats["reset_hand"] += 1
 		elif t == "advantage_started": stats["advantage_turns"] += 1
 
-	if snapshot["winner"] != null:
+	# Handle game over
+	if snapshot.get("winner", null) != null:
 		_on_game_won(snapshot)
 		return
 	if turn_count >= max_demo_turns:
 		stop_demo()
-		return
-	_schedule_next_step()
-
-
-func _on_engine_action_rejected(msg):
-	print("[Demo] Action rejected: " + str(msg))
-	_schedule_next_step()
-
-
-func _on_timer_timeout():
-	if not running or engine == null:
-		return
-	var snapshot = engine._build_snapshot()
-	var action = _choose_action(snapshot)
-	if action == null:
-		stop_demo()
-		return
-	engine.send_action(_build_engine_action(action))
-
-
-func _choose_action(snapshot):
-	var acts = snapshot["available_actions"]
-	if acts.empty(): return null
-	for p in ["reveal_gold","play_card","change_card","reset_hand"]:
-		var cs = []
-		for a in acts:
-			if a["action_type"] == p: cs.append(a)
-		if !cs.empty(): return cs[randi() % cs.size()]
-	return acts[0]
-
-
-func _build_engine_action(pa):
-	var a = {"action_type": pa["action_type"]}
-	if pa.has("card_id"): a["card_id"] = pa["card_id"]
-	if pa.has("choices") and !pa["choices"].empty():
-		var ch = pa["choices"][0]
-		for k in ch["parameters"].keys(): a[k] = ch["parameters"][k]
-	return a
 
 
 func _on_game_won(snapshot):
@@ -220,39 +201,4 @@ func _on_game_won(snapshot):
 		" adv=" + str(stats["advantage_turns"]))
 	print("========================================\n")
 
-	_update_presenters(snapshot, "gameover")
 	running = false
-
-
-func start_demo():
-	if running:
-		print("[Demo] Already running.")
-		return
-	print("\n========== DEMO AUTOMATICA ==========")
-	running = true
-	turn_count = 0
-	stats = {"play_card":0,"change_card":0,"reveal_gold":0,"reset_hand":0,"advantage_turns":0}
-
-	engine = _LocalGameEngine.new()
-	engine.connect("game_started", self, "_on_engine_game_started")
-	engine.connect("action_completed", self, "_on_engine_action_completed")
-	engine.connect("action_rejected", self, "_on_engine_action_rejected")
-	engine.start_game(4)
-
-
-func stop_demo():
-	if not running: return
-	running = false
-	timer.stop()
-	print("[Demo] Stopped.")
-	if engine != null:
-		engine.disconnect("game_started", self, "_on_engine_game_started")
-		engine.disconnect("action_completed", self, "_on_engine_action_completed")
-		engine.disconnect("action_rejected", self, "_on_engine_action_rejected")
-		engine = null
-
-
-func _input(event):
-	if event is InputEventKey and event.pressed and event.scancode == KEY_F10:
-		if running: stop_demo()
-		else: start_demo()
