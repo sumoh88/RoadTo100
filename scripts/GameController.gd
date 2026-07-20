@@ -245,7 +245,7 @@ func _on_play_pressed():
 					vals.append(v)
 			_open_value_choice("Imbroglio", vals)
 		else:
-			_send_action({"action_type": "play_card", "card_id": _selected_card_id})
+			perform_action({"action_type": "play_card", "card_id": _selected_card_id})
 	elif _state == State.READY_FOR_INPUT:
 		if _turn != null and _turn.has_method("show_tip"):
 			_turn.show_tip("Seleziona prima una carta")
@@ -253,7 +253,7 @@ func _on_play_pressed():
 
 func _on_change_pressed():
 	if _state == State.CARD_SELECTED and _selected_card_id != "":
-		_send_action({"action_type": "change_card", "card_id": _selected_card_id})
+		perform_action({"action_type": "change_card", "card_id": _selected_card_id})
 	elif _state == State.READY_FOR_INPUT:
 		if _turn != null and _turn.has_method("show_tip"):
 			_turn.show_tip("Seleziona prima una carta")
@@ -263,11 +263,6 @@ func _on_cancel_pressed():
 	if _state == State.CARD_SELECTED:
 		_clear_selection()
 		_state = State.READY_FOR_INPUT
-
-
-func _send_action(action):
-	_state = State.ACTION_PENDING
-	_provider.send_action(action)
 
 
 # ---------------------------------------------------------------------------
@@ -313,8 +308,7 @@ func _on_value_chosen(value):
 	_pending_action_type = ""
 	_pending_card_id = ""
 	_pending_valid_values = []
-	_state = State.ACTION_PENDING
-	_provider.send_action(action)
+	perform_action(action)
 
 
 func _on_value_cancel():
@@ -376,8 +370,7 @@ func _on_gold_reveal_yes():
 	_pending_action_type = ""
 	_pending_card_id = ""
 	_pending_valid_values = []
-	_state = State.ACTION_PENDING
-	_provider.send_action(action)
+	perform_action(action)
 
 
 func _on_gold_reveal_no():

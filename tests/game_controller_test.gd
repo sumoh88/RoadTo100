@@ -967,6 +967,71 @@ func _test_input_ignored_during_anim():
 	return "  Input ignored ANIMATING:   " + ("[PASS]\n" if (o1 and o2 and o3 and o4) else "[FAIL]\n")
 
 
+# ===========================================================================
+# Step 7 — End-to-end GUI input flow (real HandPresenter + CardFace)
+# ===========================================================================
+
+func _test_real_click_to_action():
+	# Setup: GC + mock provider + mock turn/board + REAL HandPresenter
+	var gc = GameController.new()
+	var mp = MockProvider.new()
+	mp.auto_emit_game_started = false
+	gc.set_provider(mp)
+	add_child(gc)
+
+	# Real HandPresenter with a synthetic cards layer
+	var HandPresenter = load("res://scripts/HandPresenter.gd")
+	var hp = HandPresenter.new()
+	var layer = Control.new()
+	layer.rect_size = Vector2(800, 300)
+	hp._cards_layer = layer
+	gc._hand = hp
+	hp.connect("card_selected", gc, "_on_card_selected")
+
+	# Mock TurnPresenter for button signals
+	var tp = MockPresenter.new()
+	gc._turn = tp
+	tp.connect("play_pressed", gc, "_on_play_pressed")
+
+	# Minimal snapshot with one card in hand
+	var snap = _make_hand_snapshot([
+		{"card_id":"c1","name":"+5","value":5,"color":"arancione","card_type":"increment"},
+	])
+	mp.emit_signal("game_started", snap)
+	var was_ready = _assert_eq(gc.get_state(), 1, "READY_FOR_INPUT after start")
+
+	# Step 1: Simulate CardFace click via _gui_input
+	var cf = null
+	var card_faces = hp._card_faces
+	if card_faces.size() > 0:
+		cf = card_faces[0]
+		var event = InputEventMouseButton.new()
+		event.button_index = 1
+		event.pressed = true
+		cf._gui_input(event)
+
+	var o1 = _assert(cf != null, "CardFace created in hand")
+	var o2 = _assert_eq(gc.get_state(), 2, "CARD_SELECTED after CardFace click")
+	var o3 = _assert_eq(gc.get_selected_card_id(), "c1", "selected card_id = c1")
+
+	# Step 2: Simulate PlayButton press
+	tp.emit_signal("play_pressed")
+
+	var o4 = _assert(mp.send_action_called, "send_action called via perform_action")
+	var o5 = _assert_eq(mp.last_send_action_dict.get("action_type"), "play_card", "action_type = play_card")
+	var o6 = _assert_eq(mp.last_send_action_dict.get("card_id"), "c1", "card_id = c1")
+
+	# Cleanup
+	remove_child(gc)
+	gc.free()
+	mp.free()
+	hp.free()
+	tp.free()
+	layer.free()  # frees CardFace children too
+
+	return "  Real click-to-action:      " + ("[PASS]\n" if (was_ready and o1 and o2 and o3 and o4 and o5 and o6) else "[FAIL]\n")
+
+
 func _run_all():
 	var out = ""
 	out += "========================================\n"
@@ -1018,6 +1083,8 @@ func _run_all():
 	out += _test_animating_state()
 	out += _test_anim_finishes_ready()
 	out += _test_input_ignored_during_anim()
+	out += "--- Step 7: GUI input flow ---\n"
+	out += _test_real_click_to_action()
 
 	out += "\n--- Summary ---\n"
 	out += "  Assertions passed: " + str(passed) + "\n"
