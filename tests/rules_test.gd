@@ -157,6 +157,14 @@ func _run_all():
 	out += _test_plus11_during_gdv()
 	tests_run += 1
 
+	# --- TestCard89SetsPiatto ---
+	out += _test_89_sets_piatto_from_0()
+	tests_run += 1
+	out += _test_89_sets_piatto_from_11()
+	tests_run += 1
+	out += _test_89_sets_piatto_from_50()
+	tests_run += 1
+
 	# --- TestDeckReconstitution ---
 	out += _test_draw_cards_reconstitutes()
 	tests_run += 1
@@ -411,6 +419,65 @@ func _test_plus11_during_gdv():
 		return "  +11 during GdV win:  [PASS]\n"
 	else:
 		return "  +11 during GdV win:  [FAIL]\n"
+
+
+# ---------------------------------------------------------------------------
+# 89 card must SET the piatto to 89 (not add 89)
+# ---------------------------------------------------------------------------
+func _run_89_asserts(piatto_before):
+	var rules = Rules.new()
+	var c89 = card89(0)
+	var p = PlayerData.new("p1", "P1")
+	
+	var game = make_game(
+		[p],
+		[increment_card(1, 0)],
+		null,
+		{
+			"piatto": piatto_before,
+			"plateau_cards": [],
+			"advantage_turn": false,
+			"advantage_player_id": null,
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+	p.receive_card(c89)
+
+	var action = {"action_type": "play_card", "card": c89}
+	rules.apply_action(game, action)
+
+	var piatto_ok = _assert_eq(game.metadata["piatto"], 89,
+		"89 piatto " + str(piatto_before), "expected piatto=89")
+	var gdv_ok = _assert_true(game.metadata.get("advantage_turn", false),
+		"89 GdV " + str(piatto_before), "advantage_turn should be true")
+	var adv_ok = _assert_eq(game.metadata.get("advantage_player_id", null), "p1",
+		"89 adv player " + str(piatto_before), "expected p1")
+	var winner_ok = _assert_true(game.winner == null,
+		"89 no win " + str(piatto_before), "winner should be null")
+
+	return piatto_ok and gdv_ok and adv_ok and winner_ok
+
+func _test_89_sets_piatto_from_0():
+	if _run_89_asserts(0):
+		_test("89 piatto from 0")
+		return "  89 piatto 0 -> 89:    [PASS]\n"
+	else:
+		return "  89 piatto 0 -> 89:    [FAIL]\n"
+
+func _test_89_sets_piatto_from_11():
+	if _run_89_asserts(11):
+		_test("89 piatto from 11")
+		return "  89 piatto 11 -> 89:   [PASS]\n"
+	else:
+		return "  89 piatto 11 -> 89:   [FAIL]\n"
+
+func _test_89_sets_piatto_from_50():
+	if _run_89_asserts(50):
+		_test("89 piatto from 50")
+		return "  89 piatto 50 -> 89:   [PASS]\n"
+	else:
+		return "  89 piatto 50 -> 89:   [FAIL]\n"
 
 
 # ---------------------------------------------------------------------------

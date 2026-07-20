@@ -362,7 +362,7 @@ func apply_action(game, action_dict):
 		increment = int(card.value)
 
 	var plateau = int(game.metadata.get("piatto", 0))
-	if _is_gold_card(card) or game.metadata.has("_plus11_gold_chain"):
+	if _is_gold_card(card) or _is_special_89_card(card) or game.metadata.has("_plus11_gold_chain"):
 		if game.metadata.has("_plus11_gold_chain"):
 			game.metadata.erase("_plus11_gold_chain")
 		plateau = increment

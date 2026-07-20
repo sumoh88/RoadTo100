@@ -44,8 +44,12 @@ func apply_snapshot(s):
 	if _instruction_label != null:
 		if w != null:
 			var wn = ""
-			for p in s.get("players", []):
-				if p.get("id", "") == w: wn = p.get("name", ""); break
+			var players = s.get("players", [])
+			for i in range(players.size()):
+				var player = players[i]
+				if player.get("id", "") == w:
+					wn = player.get("name", "")
+					break
 			_instruction_label.text = wn + " vince!"
 		elif a: _instruction_label.text = "GIRO DI VANTAGGIO"
 		else:

@@ -77,7 +77,7 @@
 | A — Domain port | ✅ Completato | 8 file engine, test diagnostico funzionante |
 | B — Rules port | ✅ Completato | RoadTo100Rules.gd, 14 test Python equivalenti |
 | C — Provider | ✅ Completato | GameStateProvider, LocalGameEngine, snapshot, eventi |
-| D — Presenter/UI | 🔄 **In attesa di verifica manuale** | 3 bug risolti, test aggiornati, attesa verifica visiva in Godot |
+| D — Presenter/UI | ✅ **Completato e verificato** | Bug risolti (incluse schermata vittoria e carta 89). Test verificati con 10+ Demo. |
 | E — Input/Animazioni | ⬜ Non iniziato | |
 
 ---
@@ -151,7 +151,7 @@ Queste decisioni NON devono essere rimesse in discussione:
 |---|---|---|---|
 | **Domain** | `tests/domain_test.gd` + `.tscn` | Deck 60 carte, card_id univoci, Deck/Hand/Player/GameState operazioni | ✅ 60 card, 0 FAIL |
 | **Rules** | `tests/rules_test.gd` + `.tscn` | 14 test: Gold chain, GdV lifecycle, 89/+11, deck reconstitution, reset hand | ✅ 33 assert, 0 FAIL |
-| **Provider** | `tests/provider_test.gd` + `.tscn` | start_game 2/3/4p, snapshot, card_id, event order per tipo azione (+11, 89, gold, change, reset, GdV end) | ✅ 61 assert, 0 FAIL |
+| **Provider** | `tests/provider_test.gd` + `.tscn` | start_game 2/3/4p, snapshot, card_id, event order, plateau visual stack (4 sequenze) | ✅ 97 assert, 0 FAIL |
 | **Presenter** | `tests/presenter_test.gd` + `.tscn` | Texture resolution, fallback, CardFace, Board/Hand/Turn presenter, no rules, no auto-start | ✅ 58 assert, 0 FAIL |
 | **Board** | `tests/board_test.gd` + `.tscn` | Plateau visual stack, gold/non-gold separation, opponent centering, rotation setup, chronological order | ✅ 7 test, 0 FAIL |
 
@@ -238,6 +238,31 @@ Comportamento risultante:
 | Plateau visual stack — Seq C | `tests/provider_test.gd` | non-Gold + Gold + non-Gold + Gold: gold in cima |
 | Plateau visual stack — Seq D | `tests/provider_test.gd` | Sequenza completa 5 carte, valori intermedi corretti |
 
+### Bug 4 — Gold coperta dal PlateauValueCard statico
+
+**Causa:** Il nodo `PlateauValueCard` (TextureRect con `plate.png`) in `Main.tscn` è un fratello di `PermanentCardsLayer` dichiarato DOPO nel file. Godot 3 renderizza i fratelli in ordine di dichiarazione — l'ultimo va sopra. Quindi `PlateauValueCard` copriva sempre tutto il contenuto dinamico di `PermanentCardsLayer`, incluse le CardFace delle Gold.
+
+La correzione dello Step 3 di `_build_plateau_visual_stack()` produceva il visual stack corretto (Gold era l'ultimo elemento), ma il `PlateauValueCard` statico veniva renderizzato SOPRA la Gold, nascondendola.
+
+**Soluzione:** In `BoardPresenter._ready()`, il `PlateauValueCard` statico viene trovato e nascosto (`visible = false`). Le carte Piatto dinamiche dentro `_permanent_layer` lo sostituiscono.
+
+**File modificati:** `scripts/BoardPresenter.gd`
+
+### Bug 5 — Duplicazione valore del Piatto
+
+**Causa:** Tre fonti del numero del Piatto venivano renderizzate simultaneamente:
+1. `ValueLabel` statico in `ValueLayer` (fratello di `PermanentCardsLayer`, sempre visibile, aggiornato da `apply_snapshot()`)
+2. Label dinamico dentro ogni carta Piatto creata da `_update_plateau()`
+3. Texture delle Gold (il valore è già stampato nell'immagine, es. `gold23.png`)
+
+Il `ValueLabel` statico veniva renderizzato SOPRA tutto, causando:
+- Carte Piatto: due numeri sovrapposti (Label dinamico + ValueLabel statico)
+- Gold: numero della texture + numero del ValueLabel sovrapposto
+
+**Soluzione:** In `BoardPresenter._ready()`, il `ValueLayer` statico viene nascosto (`visible = false`). Il numero del Piatto è ora mostrato esclusivamente dai Label dinamici dentro le carte Piatto e dalle texture delle Gold.
+
+**File modificati:** `scripts/BoardPresenter.gd`
+
 ### Posizioni seat definitive
 
 Le posizioni manuali corrette nella scena (da `Main.tscn`) sono:
@@ -250,9 +275,19 @@ Le posizioni manuali corrette nella scena (da `Main.tscn`) sono:
 
 Queste posizioni NON devono essere modificate dal codice runtime. `BoardPresenter` non sovrascrive più `rect_pivot_offset` o `rect_rotation` in `_ready()`, quindi le posizioni della scena vengono preservate.
 
-### Verifica suite automatiche e finestra reale
+### Verifica finale
 
-⚠️ Le suite di test GDScript richiedono Godot 3.4.4 headless. La verifica visiva nella finestra reale richiede l'ambiente desktop. Non è stato possibile eseguirle in questo ambiente. Il Passaggio D rimane in attesa di verifica manuale.
+✅ **Passaggio D completato e verificato.** La Demo Automatica completa una partita senza errori runtime. Verifica visiva superata:
+- Mani avversarie centrate
+- Gold visibile in cima al Piatto dopo la giocata
+- Carte non Gold solo negli Scarti
+- Carte Piatto dinamiche con valore corretto (nessuna duplicazione numerica)
+- Sequenza 89→100 con carta Piatto 100 in cima
+- Nessun crash o errore runtime
+
+Bug risolti:
+1. **Giro di Vantaggio / carta 89** — Causa: 89 trattata come incremento (`plateau += 89`) invece di set (`plateau = 89`). Corretto in GDScript e Python. Test aggiunti per Piatto 0/11/50 → 89. Tutte le suite passano.
+2. **Schermata di vittoria — nome non trovato oltre Player 1** — Il loop `for p in s.get("players", [])` in `TurnPresenter.apply_snapshot()` non trovava il vincitore per giocatori oltre l'indice 0 nello snapshot reale, causando `" vince!"` senza nome. Sostituito con accesso indicizzato `for i in range(players.size())`. Test di regressione per tutti e 4 i giocatori in `presenter_test.gd`.
 
 ---
 
@@ -273,22 +308,15 @@ Queste posizioni NON devono essere modificate dal codice runtime. `BoardPresente
 
 ## Prossimo lavoro
 
-Il Passaggio D è in attesa di verifica manuale nella finestra reale di Godot.
+Passaggio D completato. Prossime attività in ordine:
 
-Nella prossima chat:
+1. **Passaggio E** — GameController (stati interfaccia, raccolta input, popup) + animazioni (CardAnimator) + blocco input + fine partita. Integrare la Demo Automatica con il GameController. Test end-to-end.
 
-1. Aprire il progetto in Godot 3.4.4 e avviare la demo (pulsante "Demo Automatica" o F10, step_delay_ms=1000).
-2. Verificare visivamente:
-   - Gold: quando giocata, rimane visibile in cima al Piatto per circa un secondo.
-   - Non-Gold dopo Gold: appare una nuova carta Piatto sopra la Gold.
-   - Gold successiva: torna visibile in cima.
-   - Carte non Gold mai sul Piatto (solo negli Scarti).
-   - Mani avversarie centrate (posizioni manuali preservate: Top=110, Left=500, Right=500).
-3. Se tutto OK, segnare il Passaggio D come completato.
-4. Iniziare il Passaggio E — GameController + input + animazioni + popup + blocco input + fine partita.
+2. **Miglioria game design — Giro di Vantaggio** (da implementare dopo il Passaggio E):
+   Quando il GdV è attivo, i giocatori diversi dal giocatore in vantaggio non possono portare il Piatto a 100 (massimo 99). Eccezioni: carte +11 e il giocatore in vantaggio, che può regolarmente raggiungere 100 e vincere.
 
 ---
 
 ## Come riprendere il lavoro
 
-Apri una nuova chat, chiedi di leggere ROADMAP.md e continua dal capitolo "Bug ancora aperti" senza ripetere il lavoro già completato.
+Apri una nuova chat, chiedi di leggere `PROJECT_STATE.md` e `ROADMAP.md`. Inizia dalla sezione **"ULTIMA SESSIONE"** in `PROJECT_STATE.md` per il contesto dei bug risolti, poi continua dal **Passaggio E** senza ripetere il lavoro già completato.

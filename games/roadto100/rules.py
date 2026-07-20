@@ -383,7 +383,7 @@ class RoadTo100RuleSet(RuleSet):
             increment = int(card.value or 0)
 
         plateau = int(game.metadata.get("piatto", 0))
-        if self._is_gold_card(card) or game.metadata.pop("_plus11_gold_chain", False):
+        if self._is_gold_card(card) or self._is_special_89_card(card) or game.metadata.pop("_plus11_gold_chain", False):
             plateau = increment
         else:
             plateau += increment

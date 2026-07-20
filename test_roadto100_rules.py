@@ -293,6 +293,51 @@ class TestPlus11DuringGdv(unittest.TestCase):
                       "+11 must grant immediate victory during GdV")
 
 
+class TestCard89SetsPiatto(unittest.TestCase):
+    """89 must SET the piatto to 89, not add 89 to current value."""
+
+    def _run_89_asserts(self, piatto_before: int) -> None:
+        rules = RoadTo100RuleSet()
+        c89 = card89()
+        p = Player("p1", "P1", Hand([c89]))
+        game = make_game(
+            players=[p],
+            deck_cards=[increment_card(1)],
+            metadata={
+                "piatto": piatto_before,
+                "plateau_cards": [],
+                "advantage_turn": False,
+                "advantage_player_id": None,
+                "turn_phase": "start",
+                "target_score": TARGET_SCORE,
+            },
+        )
+
+        action = RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": c89})
+        rules.apply_action(game, action)
+
+        self.assertEqual(game.metadata["piatto"], 89,
+                         f"89 from piatto={piatto_before} must set piatto to 89")
+        self.assertTrue(game.metadata.get("advantage_turn"),
+                        "advantage_turn must be set after 89")
+        self.assertEqual(game.metadata.get("advantage_player_id"), "p1",
+                         "advantage_player_id must be the player who played 89")
+        self.assertIsNone(game.winner,
+                          "89 must not trigger an immediate win")
+
+    def test_89_from_piatto_0(self) -> None:
+        """Piatto 0 + 89 → piatto=89, GdV active, no winner."""
+        self._run_89_asserts(0)
+
+    def test_89_from_piatto_11(self) -> None:
+        """Piatto 11 + 89 → piatto=89 (NOT 100), GdV active, no winner."""
+        self._run_89_asserts(11)
+
+    def test_89_from_piatto_50(self) -> None:
+        """Piatto 50 + 89 → piatto=89 (NOT 100/139), GdV active, no winner."""
+        self._run_89_asserts(50)
+
+
 class TestDeckReconstitution(unittest.TestCase):
     """Draw logic with partial deck and discard reshuffle."""
 

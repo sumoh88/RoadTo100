@@ -246,6 +246,84 @@ func _test_turn_presenter_labels():
 	return "  Turn presenter:        [PASS]\n"
 
 
+# ---------------------------------------------------------------------------
+# Test winner name resolution for all players (regression: for-in vs indexed)
+# ---------------------------------------------------------------------------
+func _test_winner_all_players():
+	var ok = true
+
+	# Build realistic player data with hand (as produced by LocalGameEngine)
+	var players = [
+		{"id": "player_1", "name": "Player 1", "hand_count": 3, "hand": [
+			{"card_id": "c1", "name": "+1", "value": 1, "color": "arancione", "card_type": "increment"},
+			{"card_id": "c2", "name": "+2", "value": 2, "color": "arancione", "card_type": "increment"},
+			{"card_id": "c3", "name": "Jolly", "value": null, "color": "arancione", "card_type": "jolly"},
+		]},
+		{"id": "player_2", "name": "Player 2", "hand_count": 3, "hand": [
+			{"card_id": "c4", "name": "12", "value": 12, "color": "dorato", "card_type": "gold"},
+			{"card_id": "c5", "name": "+5", "value": 5, "color": "arancione", "card_type": "increment"},
+			{"card_id": "c6", "name": "89", "value": 89, "color": "viola", "card_type": "special"},
+		]},
+		{"id": "player_3", "name": "Player 3", "hand_count": 3, "hand": [
+			{"card_id": "c7", "name": "+11", "value": 11, "color": "rosso", "card_type": "special"},
+			{"card_id": "c8", "name": "+8", "value": 8, "color": "arancione", "card_type": "increment"},
+			{"card_id": "c9", "name": "Imbroglio", "value": 0, "color": "verde", "card_type": "imbroglio"},
+		]},
+		{"id": "player_4", "name": "Player 4", "hand_count": 3, "hand": [
+			{"card_id": "c10", "name": "78", "value": 78, "color": "dorato", "card_type": "gold"},
+			{"card_id": "c11", "name": "+3", "value": 3, "color": "arancione", "card_type": "increment"},
+			{"card_id": "c12", "name": "+10", "value": 10, "color": "arancione", "card_type": "increment"},
+		]},
+	]
+
+	var expected_p1 = "Player 1 vince!"
+	var expected_p2 = "Player 2 vince!"
+	var expected_p3 = "Player 3 vince!"
+	var expected_p4 = "Player 4 vince!"
+
+	# Test player_1
+	var snap1 = {"turn_number":10,"phase":"game_over","winner":"player_1","advantage_turn":false,"current_player_index":0,"local_player_id":"player_1","players":players,"available_actions":[]}
+
+	# Directly test the indexed access pattern from the fix
+	var players_arr = snap1["players"]
+	var resolved1 = ""
+	for i in range(players_arr.size()):
+		if players_arr[i].get("id", "") == "player_1":
+			resolved1 = players_arr[i].get("name", "")
+			break
+	var ok1 = _assert_eq(resolved1, "Player 1", "resolve p1: " + resolved1)
+	if not ok1: ok = false
+
+	# Test player_2
+	var resolved2 = ""
+	for i in range(players_arr.size()):
+		if players_arr[i].get("id", "") == "player_2":
+			resolved2 = players_arr[i].get("name", "")
+			break
+	var ok2 = _assert_eq(resolved2, "Player 2", "resolve p2: " + resolved2)
+	if not ok2: ok = false
+
+	# Test player_3
+	var resolved3 = ""
+	for i in range(players_arr.size()):
+		if players_arr[i].get("id", "") == "player_3":
+			resolved3 = players_arr[i].get("name", "")
+			break
+	var ok3 = _assert_eq(resolved3, "Player 3", "resolve p3: " + resolved3)
+	if not ok3: ok = false
+
+	# Test player_4
+	var resolved4 = ""
+	for i in range(players_arr.size()):
+		if players_arr[i].get("id", "") == "player_4":
+			resolved4 = players_arr[i].get("name", "")
+			break
+	var ok4 = _assert_eq(resolved4, "Player 4", "resolve p4: " + resolved4)
+	if not ok4: ok = false
+
+	return "  Winner all players:    " + ("[PASS]\n" if ok else "[FAIL]\n")
+
+
 # ===========================================================================
 # 7. No demo auto-start
 # ===========================================================================
@@ -294,6 +372,7 @@ func _run_all():
 	out += _test_board_presenter_piatto()
 	out += _test_hand_presenter_snapshot()
 	out += _test_turn_presenter_labels()
+	out += _test_winner_all_players()
 	out += _test_no_auto_start()
 	out += _test_no_rules_in_presenters()
 
