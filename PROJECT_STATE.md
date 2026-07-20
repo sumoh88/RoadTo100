@@ -12,67 +12,68 @@ Il progetto è composto da due codebase separati:
 | Componente | Stato |
 |---|---|
 | Simulatore Python | **Completato e congelato** |
-| Client Godot — Passaggio D | **Completato e verificato** |
+| Client Godot — Passaggio E, Step 7 | **Completato e verificato** |
 
 ---
 
 ## Client Godot — Stato di avanzamento
 
-Il porting delle regole e della UI in Godot è suddiviso in 5 passaggi progressivi.
+Il porting delle regole e della UI in Godot è suddiviso in passaggi progressivi.
 
 ### Passaggio A — Domain (✅ Completato)
 Port delle strutture dati fondamentali: `CardData`, `Deck`, `Hand`, `PlayerData`, `GameState`, `GameConstants`, `CardDatabase`. 8 file in `engine/`. Test headless funzionanti.
 
 ### Passaggio B — Rules (✅ Completato e approvato)
-Port del motore di gioco `RoadTo100Rules.gd` (426 righe), fedele alla reference Python. 14 test GDScript equivalenti ai test Python. 33 assertion, 0 FAIL.
+Port del motore di gioco `RoadTo100Rules.gd` (426 righe), fedele alla reference Python. 17 test GDScript, 48 assert, 0 FAIL.
 
 ### Passaggio C — Provider (✅ Completato)
 `GameStateProvider` (contratto astratto) + `LocalGameEngine` (implementazione concreta locale). Produce snapshot ed eventi serializzabili (nessun oggetto Reference). `RemoteGameAdapter` previsto per il futuro multiplayer.
 
 ### Passaggio D — Presenter/UI (✅ Completato e verificato)
-Tutta la UI del tavolo da gioco:
+Tutta la UI del tavolo da gioco. BoardPresenter, HandPresenter, TurnPresenter, CardFace, CardAnimator (scheletro), TextureResolver, DebugDemo, Main.tscn. Bug risolti: mani avversarie non centrate, carte non Gold duplicate sul Piatto, Gold coperta, duplicazione valore Piatto, carta 89, nome vincitore oltre Player 1.
 
-| Componente | Descrizione |
-|---|---|
-| `BoardPresenter` | Piatto, mazzo, scarti, carte permanenti (Gold/89), mani avversarie |
-| `HandPresenter` | Mano del giocatore locale |
-| `TurnPresenter` | Label turno, istruzioni, pulsanti, popup Game Over |
-| `CardFace` | Carta visuale riutilizzabile (fronte/retro) |
-| `CardAnimator` | Scheletro per future animazioni |
-| `TextureResolver` | Mapping texture `{prefisso}{valore}.png` centralizzato |
-| `DebugDemo` | Demo automatica 4 giocatori (avvio manuale: F10 o pulsante) |
-| `Main.tscn` | Layout definitivo 1920×1080 (non modificare) |
+### Passaggio E — GameController (✅ Completato, 7 step)
 
-#### Bug risolti durante il Passaggio D
-1. **Mani avversarie non centrate** — pivot ricalcolato a runtime, bounding box carte visibili
-2. **Carte non Gold duplicate sul Piatto** — `plateau_visual_stack` distingue Gold/89 (card face) da non-Gold (carta Piatto)
-3. **Gold coperta dalla carta Piatto** — Step 3 di `_build_plateau_visual_stack()` non aggiunge plate dopo Gold/89
-4. **Gold coperta dal PlateauValueCard statico** — nodo fratello nascosto in `_ready()`
-5. **Duplicazione valore del Piatto** — `ValueLayer` statico nascosto (sostituito dai Label dinamici)
-6. **Carta 89 non impostava il Piatto** — 89 trattata come incremento invece di set; corretto aggiungendo `_is_special_89_card()` al condizionale plateau. Test aggiunti per Piatto 0/11/50 → 89.
+| Step | Descrizione | Stato |
+|---|---|---|
+| 1 | Scheletro e macchina a stati (8 stati: WAITING_FOR_STATE → GAME_OVER) | ✅ |
+| 2 | Selezione carte: CardFace → HandPresenter → GameController | ✅ |
+| 3 | Bottoni azione: PlayButton/ChangeButton/CancelButton → GameController | ✅ |
+| 4 | Popup e scelte speciali: Jolly, Imbroglio, Gold Reveal | ✅ |
+| 5 | CardAnimator: coda FIFO, animazione card_played, segnali start/finish, headless fallback | ✅ |
+| 6 | Integrazione DebugDemo con GameController | ✅ |
+| 7 | Flusso input GUI reale, punto unico `perform_action()` | ✅ |
 
-#### Bug verificati e chiusi (Passaggio D)
-1. **Giro di Vantaggio / carta 89** — Causa: 89 trattata come incremento (`plateau += 89`) invece di set (`plateau = 89`). Corretto in GDScript e Python. Test aggiunti per Piatto 0/11/50 → 89. Tutte le suite passano.
-2. **Schermata di vittoria — nome non trovato oltre Player 1** — Il loop `for p in s.get("players", [])` in `TurnPresenter.apply_snapshot()` non trovava il vincitore per giocatori oltre l'indice 0 nello snapshot reale. Causa: comportamento anomalo del `for-in` con dizionari complessi (contenenti array `hand`). Sostituito con accesso indicizzato `for i in range(players.size())`. Test di regressione per tutti e 4 i giocatori aggiunto in `presenter_test.gd`. Verificato con 10+ Demo automatiche.
+**Flusso completo realizzato:**
+```
+CardFace._gui_input(click)
+  → clicked(card_id)
+  → HandPresenter._on_card_face_clicked()
+  → card_selected(card_id)
+  → GameController._on_card_selected()
+  → stato CARD_SELECTED
 
-#### Visual stack del Piatto
-La pila visiva è costruita dal Provider (`_build_plateau_visual_stack()`) e renderizzata dal Presenter (`_update_plateau()`):
-- Sequenza corretta: carta Piatto iniziale → Gold → carta Piatto aggiornata → Gold → ...
-- Gold: visibile in cima dopo la giocata (~1 secondo con demo a 1000ms)
-- Non-Gold dopo Gold: nuova carta Piatto sopra la Gold
-- Carte non Gold mai nella pila del Piatto
+PlayButton.pressed
+  → TurnPresenter._on_play()
+  → play_pressed
+  → GameController._on_play_pressed()
+  → GameController.perform_action(action_dict)
+  → Provider.send_action()
+  → action_completed({snapshot, events})
+  → GameController._apply_snapshot() (presenter aggiornati)
+  → CardAnimator.play_events() + stato ANIMATING
+  → animation_finished → _finish_post_action()
+  → READY_FOR_INPUT
+```
 
-#### Bug aperti (Passaggio D)
-Nessuno. Il Passaggio D è completato e verificato.
-
-### Passaggio E — Input/Animazioni (⬜ Non iniziato)
-GameController + input giocatore + popup scelta valore + blocco input + animazioni + fine partita.
+Tutte le azioni transitano esclusivamente per `GameController.perform_action(action_dict)`.
 
 ---
 
 ## Componenti completati
 
-- **Simulatore Python** (`games/roadto100/`): implementa tutte le regole di `GAME_RULES.md`
+### Simulatore Python
+- `games/roadto100/`: implementa tutte le regole di `GAME_RULES.md`
   - Mazzo 60 carte, 5 tipologie
   - Giro di Vantaggio (attivazione, durata, restrizioni carte)
   - Catena Gold della carta +11 (12→23…78→89)
@@ -82,171 +83,134 @@ GameController + input giocatore + popup scelta valore + blocco input + animazio
 - **Test**: 16 test mirati (`test_roadto100_rules.py`) — tutti OK
 - **Strumenti**: `run_simulations.py` (batch di partite)
 - **Validazione**: 50.000+ partite simulate con 2/3/4 giocatori, zero errori
-- **Client Godot** (Passaggi A–D completati):
-  - Engine: CardData, Deck, Hand, PlayerData, GameState, GameConstants, CardDatabase
-  - Regole: RoadTo100Rules.gd (porting fedele)
-  - Provider: GameStateProvider + LocalGameEngine (snapshot/eventi)
-  - Presenter/UI: BoardPresenter, HandPresenter, TurnPresenter, CardFace, TextureResolver
-  - Debug: Demo automatica 4 giocatori funzionante
-  - Test GDScript: tutte le suite superate (domain, rules, provider, presenter, board)
+- **Congelato**: non modificare salvo bug reale, modifica regolamento o incompatibilità Python
 
----
+### Client Godot
 
-## Componenti congelati
+| Componente | File | Stato |
+|---|---|---|
+| **Domain (engine/)** | | ✅ Passaggio A |
+| CardData | `engine/CardData.gd` | ✅ |
+| Deck | `engine/Deck.gd` | ✅ |
+| Hand | `engine/Hand.gd` | ✅ |
+| PlayerData | `engine/PlayerData.gd` | ✅ |
+| GameState | `engine/GameState.gd` | ✅ |
+| GameConstants | `engine/GameConstants.gd` | ✅ |
+| CardDatabase | `engine/CardDatabase.gd` | ✅ |
+| **Regole** | `engine/RoadTo100Rules.gd` | ✅ Passaggio B |
+| **Provider** | | ✅ Passaggio C |
+| GameStateProvider | `engine/GameStateProvider.gd` | ✅ Contratto |
+| LocalGameEngine | `engine/LocalGameEngine.gd` | ✅ Concreto |
+| **Presenter/UI** | | ✅ Passaggio D |
+| BoardPresenter | `scripts/BoardPresenter.gd` | ✅ |
+| HandPresenter | `scripts/HandPresenter.gd` | ✅ |
+| TurnPresenter | `scripts/TurnPresenter.gd` | ✅ |
+| CardFace | `scenes/CardFace.tscn` + `scripts/CardFace.gd` | ✅ |
+| CardAnimator | `scripts/CardAnimator.gd` | ✅ Implementato (E5) |
+| TextureResolver | `engine/TextureResolver.gd` | ✅ |
+| **GameController** | `scripts/GameController.gd` | ✅ Implementato (E1–E7) |
+| **Debug** | | |
+| DebugDemo | `scripts/DebugDemo.gd` | ✅ Integrato con GC (E6) |
+| DemoButton | In `Main.tscn` | ✅ F10/pulsante |
 
-**Nessuna modifica al simulatore** (`games/roadto100/`, `simulator/`) salvo:
-
-1. Bug reale
-2. Modifica di `GAME_RULES.md`
-3. Incompatibilità Python
-
-Il simulatore è la **fonte ufficiale** del regolamento. Ogni differenza tra Godot e simulatore è un bug del client o una modifica esplicita del regolamento.
-
----
-
-## Regole progettuali importanti
-
-- `GAME_RULES.md` prevale su qualsiasi codice
-- Il client Godot deve implementare fedelmente il comportamento del simulatore
-- Le regole non sono duplicate tra documenti
-- Framework `simulator/domain/` e `simulator/engine/` sono congelati
-- Nuova logica va in `games/` (Python) o in `.gd` (Godot)
-- Compatibilità Python 3.8 mantenuta
-- Zero dipendenze esterne per il simulatore
-
----
-
-## Architettura attuale
+### Architettura finale
 
 ```
-roadTo100/
-├── games/roadto100/        # Logica di gioco Python (attiva, congelata)
-│   ├── rules.py            # RoadTo100RuleSet
-│   ├── actions.py          # RoadTo100Action, ActionController
-│   ├── cards.py            # Costruzione mazzo
-│   ├── card_database.py    # Definizioni carte
-│   ├── config.py           # Costanti
-│   ├── setup.py            # build_initial_game()
-│   └── helpers.py          # Utilità
-├── simulator/
-│   ├── domain/             # Tipi generici (congelato)
-│   ├── engine/             # Loop simulazione (congelato)
-│   └── ai/                 # Bot base (placeholder)
-├── engine/                 # Godot — logica di gioco (completato A–C)
-│   ├── CardData.gd
-│   ├── Deck.gd / Hand.gd / PlayerData.gd
-│   ├── GameState.gd / GameConstants.gd
-│   ├── CardDatabase.gd / TextureResolver.gd
-│   ├── RoadTo100Rules.gd
-│   ├── GameStateProvider.gd / LocalGameEngine.gd
-├── scripts/                # Godot — presenter e UI (completato D)
-│   ├── BoardPresenter.gd / HandPresenter.gd / TurnPresenter.gd
-│   ├── CardFace.gd / CardAnimator.gd
-│   └── DebugDemo.gd
-├── scenes/
-│   └── CardFace.tscn
-├── tests/                  # Godot — test headless
-│   ├── domain_test, rules_test, provider_test
-│   ├── presenter_test, board_test
-├── Main.tscn               # Scena principale (layout definitivo)
-├── project.godot           # Config Godot 3.4.4
-├── GAME_RULES.md           # Regolamento ufficiale
-├── CARD_DATABASE.md        # Dati carte
-├── ROADMAP.md              # Roadmap e stato passaggi
-└── test_roadto100_rules.py # Test regole Python
+┌─────────────────────────────────────────────────┐
+│              UI Layer (Main.tscn)                 │
+│  BoardPresenter  HandPresenter  TurnPresenter     │
+│  CardAnimator (queue + tween)  CardFace  popup    │
+│  DemoButton (Debug)                               │
+│  Non conoscono le regole                          │
+└─────────────────────┬───────────────────────────┘
+                      │ snapshot / events / segnali
+┌─────────────────────▼───────────────────────────┐
+│              GameController.gd                    │
+│  Stati: WAITING → READY → CARD_SELECTED →        │
+│         WAITING_CHOICE → ACTION_PENDING →        │
+│         ANIMATING → GAME_OVER                    │
+│  Public API: start_game(), perform_action()      │
+│  Signal: action_applied(result)                  │
+└─────────────────────┬───────────────────────────┘
+                      │ perform_action(action_dict)
+                      │ start_game(player_count)
+                      ▼
+┌─────────────────────────────────────────────────┐
+│         GameStateProvider (contratto)            │
+│  LocalGameEngine (concreto)                      │
+│  RemoteGameAdapter (futuro — rete)               │
+└─────────────────────┬───────────────────────────┘
+                      │
+┌─────────────────────▼───────────────────────────┐
+│  RoadTo100Rules  •  CardData/Deck               │
+│  Hand/PlayerData  •  GameState  •  CardDatabase  │
+│  TextureResolver                                 │
+└─────────────────────────────────────────────────┘
 ```
 
 ---
 
-## File fondamentali
+## Test
 
-| File | Ruolo |
-|---|---|
-| `GAME_RULES.md` | Regolamento ufficiale — fonte di verità |
-| `ROADMAP.md` | Roadmap e stato dei passaggi — leggere all'inizio di ogni sessione |
-| `games/roadto100/rules.py` | `RoadTo100RuleSet` — tutte le meccaniche |
-| `games/roadto100/actions.py` | Tipi azione e `RoadTo100ActionController` (selezione casuale) |
-| `games/roadto100/cards.py` | `build_deck()` — costruzione mazzo 60 carte |
-| `games/roadto100/setup.py` | `build_initial_game()` — setup partita |
-| `run_simulations.py` | Esecuzione batch: `python3 run_simulations.py <g2|g3|g4> <N>` |
-| `engine/RoadTo100Rules.gd` | Porting GDScript fedele delle regole |
-| `engine/LocalGameEngine.gd` | Provider concreto locale (snapshot/eventi) |
-| `scripts/BoardPresenter.gd` | Presenter del tavolo (piatto, mani, carte permanenti) |
-| `Main.tscn` | Scena principale Godot (layout definitivo) |
-| `project.godot` | Config Godot 3.4.4 |
+| Suite | File | Assert | Esito |
+|---|---|---|---|
+| Domain | `tests/domain_test.gd` | 55+ | ✅ All PASS |
+| Rules | `tests/rules_test.gd` | 48 | ✅ 0 FAIL |
+| Provider | `tests/provider_test.gd` | 104 | ✅ 0 FAIL |
+| Presenter | `tests/presenter_test.gd` | 84 | ✅ 0 FAIL |
+| Board | `tests/board_test.gd` | 42 | ✅ 0 FAIL (bug `_a()` risolto) |
+| GameController | `tests/game_controller_test.gd` | 145 | ✅ 0 FAIL, nessun memory leak |
+| CardAnimator | `tests/card_animator_test.gd` | 5 | ✅ 0 FAIL |
+| Demo Automatica | — | — | ✅ Funzionante, ~4+ turni in 9s |
 
 ---
 
 ## TODO rimasti
 
-- [ ] **Passaggio E — GameController + Input + Animazioni** (prossimo)
-  - GameController: stati interfaccia (WAITING_FOR_STATE, READY_FOR_INPUT, CARD_SELECTED, ecc.)
-  - Raccolta input giocatore (clic carte, pulsanti)
-  - Popup scelta valore (Jolly, Imbroglio)
-  - Popup Gold Reveal
-  - Animazioni carte (CardAnimator)
-  - Blocco input durante animazioni
-  - Fine partita e Game Over
-  - Integrazione Demo Automatica con GameController
-  - Test end-to-end
+- [ ] **Passaggio E — Step 8** (prossimo)
+  - Da definire.
 - [ ] **AI** (`simulator/ai/bot.py`): scheletro vuoto — opzionale, fase futura
 - [ ] **Multiplayer**: non iniziato
 
 ---
 
-## Prossima fase
-
-**Passaggio E — GameController + Input + Animazioni.**
-
-Il tavolo da gioco è completo (mazzo, mani, piatto, scarti, carte permanenti, avversari). Manca il GameController che collega l'input del giocatore al Provider e gestisce gli stati dell'interfaccia.
-
-Il simulatore Python funge da reference: per qualsiasi dubbio sul comportamento di una carta o di una meccanica, eseguire il simulatore è più rapido e affidabile che rileggere il regolamento.
-
-Flusso di lavoro consigliato:
-1. Implementare una feature in Godot
-2. Verificare che il comportamento corrisponda al simulatore (stesse carte → stesso risultato)
-3. In caso di discrepanza, il simulatore ha ragione — correggere Godot
-
----
-
 ## ULTIMA SESSIONE (20 luglio 2026)
 
-### Bug carta 89 — risolto
+### Passaggio E completato (Step 1–7)
 
-È stato individuato un bug condiviso tra Godot e simulatore Python: la carta 89 **aggiungeva** 89 al Piatto (`plateau += 89`) invece di **impostarlo** a 89 (`plateau = 89`), come da `GAME_RULES.md` ("il Piatto diventa 89"). Quando il Piatto era ≥ 12, l'incremento portava a 100 e il giocatore vinceva immediatamente invece di attivare il Giro di Vantaggio.
+Il GameController è stato implementato in 7 step progressivi:
 
-**Correzione:** in `RoadTo100Rules.gd` e `rules.py`, aggiunto `_is_special_89_card(card)` al condizionale che determina `plateau = increment`.
+1. **Step 1** — Scheletro e macchina a stati. `GameController.gd` creato con 8 stati di interfaccia, connessione al provider (LocalGameEngine), applicazione snapshot ai presenter.
+2. **Step 2** — Selezione carte. `HandPresenter` esteso con segnale `card_selected`, metodi `set_selected`/`clear_selection`, evidenziazione per spostamento verticale. `GameController` gestisce selezione/deselezione/cambio carta.
+3. **Step 3** — Bottoni azione. `TurnPresenter` esteso con segnali `play_pressed`/`change_pressed`/`cancel_pressed` e connessione pulsanti. `GameController` gestisce Play/Change/Cancel con transizioni di stato.
+4. **Step 4** — Popup Jolly/Imbroglio/Gold Reveal. `GameController` apre `ValueChoicePopup` e `GoldRevealPopup`, convalida valori. Aggiunta UI minima ai popup in `Main.tscn`.
+5. **Step 5** — `CardAnimator` implementato con coda FIFO, animazione `card_played` (tween), segnali `animation_started`/`animation_finished`, headless fallback. `GameController` integra animazioni nel flusso `action_completed`.
+6. **Step 6** — `DebugDemo` integrato con `GameController`. Non crea più engine proprio, usa `GC.start_game()` e `GC.perform_action()`. Aggiunto `signal action_applied` e metodo pubblico `perform_action()` a `GameController`.
+7. **Step 7** — Consolidamento: rimosso `_send_action()`, tutte le azioni passano per `perform_action()`. Singolo punto di ingresso. Test di integrazione `_test_real_click_to_action`: CardFace._gui_input → HandPresenter → GC → perform_action → provider.
 
-**Test:** aggiunti 3 test per Piatto 0, 11, 50 → sempre 89. Tutte le suite passano.
+### Bug risolti durante la sessione
 
-### Bug nome vincitore — risolto
+- `board_test.gd`: bug `_a()` con semicolonne causava falsi `FAIL`. Centramento Left seat: formula hardcoded `3*60+2*6` invece di usare `hand_count=2`. Entrambi corretti.
+- `tests/mock_animator.gd`: da auto-asincrono (yield) a controllabile (`play_events` senza emissione, `finish_animation()` manuale).
+- `tests/presenter_test.gd`: `_test_no_auto_start` usava `dd.engine` (rimosso in Step 6).
+- `tests/game_controller_test.gd`: leak Control node in `_test_real_click_to_action` — `layer.free()` mancante.
+- `scripts/DebugDemo.gd`: mancava `_schedule_next_step()` dopo `_gc.start_game(4)` — timer non partiva, Turns=0.
 
-Il testo di vittoria mostrava solo `" vince!"` (senza nome) per Player 2, 3 e 4. Il bug è stato risolto modificando la ricerca del giocatore vincitore all'interno dello snapshot: il ciclo originario è stato sostituito con una ricerca indicizzata. La modifica elimina il problema che impediva la corretta risoluzione del nome per i giocatori oltre il primo.
+### Stato test finale
 
-**Nota:** la UI rimane completamente statica — Player 1 = Bottom (locale), Player 2 = Top, Player 3 = Left, Player 4 = Right. Con 2 giocatori si nascondono Left e Right; con 3 si nasconde Right. L'online cambierà solo i nomi visualizzati nei PlayerData.
+| Suite | Assert | Esito |
+|---|---|---|
+| `tests/domain_test.gd` | 55+ | ✅ All PASS |
+| `tests/rules_test.gd` | 48 | ✅ 0 FAIL |
+| `tests/provider_test.gd` | 104 | ✅ 0 FAIL |
+| `tests/presenter_test.gd` | 84 | ✅ 0 FAIL |
+| `tests/board_test.gd` | 42 | ✅ 0 FAIL (bug `_a()` risolto) |
+| `tests/game_controller_test.gd` | 145 | ✅ 0 FAIL, NO memory leak |
+| `tests/card_animator_test.gd` | 5 | ✅ 0 FAIL |
+| Demo Automatica | — | ✅ Funzionante via GC |
 
-**Test:** test di regressione `_test_winner_all_players()` in `presenter_test.gd` — verifica il nome risolto per tutti e 4 i giocatori.
+Tutte le suite superate. Nessun memory leak nei test.
 
-### Stato test
+### Prossimo lavoro
 
-- **Python:** 16 test, tutti OK
-- **Godot rules_test.gd:** 17 test, 48 assert, 0 FAIL
-- **Godot presenter_test.gd:** 9 test, 62 assert, 0 FAIL
-- **Godot provider_test.gd:** 20 test, 92 assert, 0 FAIL
-- **Godot board_test.gd:** 7 test, 0 FAIL
-- **Godot domain_test.gd:** All PASS
-
-Un eventuale miglioramento futuro della copertura test è opzionale e NON rappresenta un bug aperto.
-
-### Pulizia
-
-Rimossi: logging diagnostico `[DIAG-T]`, flag `AUTO_DEMO`, file temporanei (`test_forin_bug.*`, `tests/MockLabel.gd`).
-
-### Stato attuale
-
-Il Passaggio D è concluso. Entrambi i bug principali sono risolti e verificati.
-
-Il prossimo lavoro dovrà partire dal **Passaggio E** della roadmap.
-
-Non riaprire le diagnosi della carta 89 o del nome del vincitore salvo la comparsa di nuovi bug reali.
-
+**Passaggio E, Step 8** — da definire. Consultare `ROADMAP.md` e la roadmap aggiornata per la prossima milestone.

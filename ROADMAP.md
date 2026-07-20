@@ -5,31 +5,33 @@
 ### Architettura attuale
 
 ```
-┌──────────────────────────────────────────────┐
-│              UI Layer (Main.tscn)              │
-│  BoardPresenter  HandPresenter  TurnPresenter  │
-│  CardAnimator (skeleton)  CardFace  popup      │
-│  DemoButton (Debug)                           │
-│  Non conoscono le regole                       │
-└───────────────────┬──────────────────────────┘
-                    │ snapshot / events segnali
-┌───────────────────▼──────────────────────────┐
-│            GameController (skeleton)           │
-│  Stati interfaccia (non implementati)          │
-│  Passaggio E — non ancora iniziato            │
-└───────────────────┬──────────────────────────┘
-                    │ send_action()  │ start_game()
-                    ▼                ▼
-┌──────────────────────────────────────────────┐
-│         GameStateProvider (contratto)         │
-│  signal game_started(snapshot)                │
-│  signal action_completed({snapshot, events})  │
-│  signal action_rejected(msg)                 │
-│  func start_game(n) / send_action(dict)      │
-├──────────────────────┬───────────────────────┤
-│   LocalGameEngine    │ RemoteGameAdapter      │
-│  (implementato)      │ (futuro — rete)       │
-└──────────┬───────────┴───────────────────────┘
+┌─────────────────────────────────────────────────┐
+│              UI Layer (Main.tscn)                 │
+│  BoardPresenter  HandPresenter  TurnPresenter     │
+│  CardAnimator (queue + tween)  CardFace  popup    │
+│  DemoButton (Debug)                               │
+│  Non conoscono le regole                          │
+└─────────────────────┬───────────────────────────┘
+                      │ snapshot / events / segnali
+┌─────────────────────▼───────────────────────────┐
+│              GameController.gd                    │
+│  8 stati interfaccia (implementati)              │
+│  Public: start_game(), perform_action()          │
+│  Signal: action_applied(result)                  │
+│  Passaggio E — completato (Step 1–7)             │
+└─────────────────────┬───────────────────────────┘
+                      │ perform_action() / start_game()
+                      ▼
+┌─────────────────────────────────────────────────┐
+│         GameStateProvider (contratto)            │
+│  signal game_started(snapshot)                   │
+│  signal action_completed({snapshot, events})    │
+│  signal action_rejected(msg)                    │
+│  func start_game(n) / send_action(dict)         │
+├──────────────────────┬──────────────────────────┤
+│   LocalGameEngine    │ RemoteGameAdapter         │
+│  (implementato)      │ (futuro — rete)          │
+└──────────┬───────────┴──────────────────────────┘
            │
 ┌──────────▼──────────┐
 │  RoadTo100Rules     │
@@ -64,11 +66,11 @@
 | BoardPresenter | `scripts/BoardPresenter.gd` | ✅ Scaffold |
 | HandPresenter | `scripts/HandPresenter.gd` | ✅ Scaffold |
 | TurnPresenter | `scripts/TurnPresenter.gd` | ✅ Scaffold |
-| CardAnimator | `scripts/CardAnimator.gd` | ⬜ Scheletro (E) |
+| CardAnimator | `scripts/CardAnimator.gd` | ✅ Implementato (E5) |
 | **Debug** | | |
-| DebugDemo | `scripts/DebugDemo.gd` | ✅ Funzionante |
+| DebugDemo | `scripts/DebugDemo.gd` | ✅ Integrato con GC (E6) |
 | DemoButton | In `Main.tscn` | ✅ Funzionante |
-| **GameController** | `scripts/GameController.gd` | ⬜ Non implementato (E) |
+| **GameController** | `scripts/GameController.gd` | ✅ Implementato (E1–E7) |
 
 ### Stato passaggi
 
@@ -78,7 +80,7 @@
 | B — Rules port | ✅ Completato | RoadTo100Rules.gd, 14 test Python equivalenti |
 | C — Provider | ✅ Completato | GameStateProvider, LocalGameEngine, snapshot, eventi |
 | D — Presenter/UI | ✅ **Completato e verificato** | Bug risolti (incluse schermata vittoria e carta 89). Test verificati con 10+ Demo. |
-| E — Input/Animazioni | ⬜ Non iniziato | |
+| E — Input/Animazioni | ✅ **Completato (Step 1–7)** | GameController, card selection, bottoni, popup Jolly/Imbroglio/Gold Reveal, CardAnimator, DebugDemo integrato, perform_action(). Test: 145 assert GC, 0 FAIL. |
 
 ---
 
@@ -125,10 +127,10 @@ Queste decisioni NON devono essere rimesse in discussione:
 | `scripts/BoardPresenter.gd` | Aggiorna piatto, mazzo, scarti, carte permanenti, avversari | ✅ Scaffold |
 | `scripts/HandPresenter.gd` | Gestisce mano giocatore locale | ✅ Scaffold |
 | `scripts/TurnPresenter.gd` | Label, bottoni, popup | ✅ Scaffold |
-| `scripts/CardAnimator.gd` | Scheletro per animazioni (Passaggio E) | ⬜ Scheletro |
+| `scripts/CardAnimator.gd` | Coda animazioni FIFO, card_played tween, headless fallback (Passaggio E, Step 5) | ✅ Implementato |
 | `scripts/CardFace.gd` | Carta visuale riutilizzabile | ✅ Scaffold |
-| `scripts/DebugDemo.gd` | Demo automatica 4 giocatori (sviluppo) | ✅ Funzionante |
-| `scripts/GameController.gd` | Non ancora creato | ⬜ Mancante |
+| `scripts/DebugDemo.gd` | Demo automatica 4 giocatori — integrata con GameController (Passaggio E, Step 6) | ✅ Integrata |
+| `scripts/GameController.gd` | Orchestratore centrale: 8 stati, input, popup, animazioni, perform_action() (Passaggio E, Step 1–7) | ✅ Implementato |
 
 ### Scene
 
@@ -150,10 +152,12 @@ Queste decisioni NON devono essere rimesse in discussione:
 | Suite | File | Cosa verifica | Stato |
 |---|---|---|---|
 | **Domain** | `tests/domain_test.gd` + `.tscn` | Deck 60 carte, card_id univoci, Deck/Hand/Player/GameState operazioni | ✅ 60 card, 0 FAIL |
-| **Rules** | `tests/rules_test.gd` + `.tscn` | 14 test: Gold chain, GdV lifecycle, 89/+11, deck reconstitution, reset hand | ✅ 33 assert, 0 FAIL |
-| **Provider** | `tests/provider_test.gd` + `.tscn` | start_game 2/3/4p, snapshot, card_id, event order, plateau visual stack (4 sequenze) | ✅ 97 assert, 0 FAIL |
-| **Presenter** | `tests/presenter_test.gd` + `.tscn` | Texture resolution, fallback, CardFace, Board/Hand/Turn presenter, no rules, no auto-start | ✅ 58 assert, 0 FAIL |
-| **Board** | `tests/board_test.gd` + `.tscn` | Plateau visual stack, gold/non-gold separation, opponent centering, rotation setup, chronological order | ✅ 7 test, 0 FAIL |
+| **Rules** | `tests/rules_test.gd` + `.tscn` | 14 test: Gold chain, GdV lifecycle, 89/+11, deck reconstitution, reset hand | ✅ 48 assert, 0 FAIL |
+| **Provider** | `tests/provider_test.gd` + `.tscn` | start_game 2/3/4p, snapshot, card_id, event order, plateau visual stack (4 sequenze) | ✅ 104 assert, 0 FAIL |
+| **Presenter** | `tests/presenter_test.gd` + `.tscn` | Texture resolution, fallback, CardFace, Board/Hand/Turn presenter, button signals, selection, no rules, no auto-start | ✅ 84 assert, 0 FAIL |
+| **Board** | `tests/board_test.gd` + `.tscn` | Plateau visual stack, gold/non-gold separation, opponent centering, rotation setup, chronological order | ✅ 42 assert, 0 FAIL |
+| **GameController** | `tests/game_controller_test.gd` + `.tscn` | Stati, card selection, bottoni, popup, animazioni, integrazione Demo, input GUI reale | ✅ 145 assert, 0 FAIL |
+| **CardAnimator** | `tests/card_animator_test.gd` + `.tscn` | FIFO, segnali start/finish, headless fallback, busy guard | ✅ 5 assert, 0 FAIL |
 
 ---
 
@@ -308,9 +312,9 @@ Bug risolti:
 
 ## Prossimo lavoro
 
-Passaggio D completato. Prossime attività in ordine:
+Passaggio E completato (Step 1–7). Prossime attività in ordine:
 
-1. **Passaggio E** — GameController (stati interfaccia, raccolta input, popup) + animazioni (CardAnimator) + blocco input + fine partita. Integrare la Demo Automatica con il GameController. Test end-to-end.
+1. **Passaggio E, Step 8** — da definire.
 
 2. **Miglioria game design — Giro di Vantaggio** (da implementare dopo il Passaggio E):
    Quando il GdV è attivo, i giocatori diversi dal giocatore in vantaggio non possono portare il Piatto a 100 (massimo 99). Eccezioni: carte +11 e il giocatore in vantaggio, che può regolarmente raggiungere 100 e vincere.
@@ -319,4 +323,12 @@ Passaggio D completato. Prossime attività in ordine:
 
 ## Come riprendere il lavoro
 
-Apri una nuova chat, chiedi di leggere `PROJECT_STATE.md` e `ROADMAP.md`. Inizia dalla sezione **"ULTIMA SESSIONE"** in `PROJECT_STATE.md` per il contesto dei bug risolti, poi continua dal **Passaggio E** senza ripetere il lavoro già completato.
+Apri una nuova chat, chiedi di leggere `PROJECT_STATE.md` e `ROADMAP.md`. Inizia dalla sezione **"ULTIMA SESSIONE"** in `PROJECT_STATE.md` per il contesto delle ultime correzioni, poi continua dal **Passaggio E, Step 8** senza ripetere il lavoro già completato.
+
+Tutte le suite di test sono verdi. Eseguire i test dopo ogni modifica:
+
+```bash
+/home/sumaka/bin/Godot3 --path /media/sumaka/Giochi/GodotProjects/roadTo100 tests/<suite>.tscn --no-window
+```
+
+Suite disponibili: `game_controller_test`, `presenter_test`, `board_test`, `provider_test`, `rules_test`, `domain_test`, `card_animator_test`.

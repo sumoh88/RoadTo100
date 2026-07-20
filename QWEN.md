@@ -171,17 +171,20 @@ from games.roadto100.rules import RoadTo100Rules  # (to be implemented)
 
 ## Current Development Status
 
-| Phase | Status |
+| Component | Status |
 |---|---|
-| Phase 0 (Setup) | Godot 3.4.4 configured |
-| Phase 1 (Game Engine) | **In progress** — domain types defined, RoadTo100 game logic placeholders |
-| Phase 2 (Multiplayer) | Not started |
-| Phase 3 (Interface) | Not started |
-| Phase 4 (Simulator) | Framework complete, game-specific rules are placeholders |
-| Phase 5 (AI) | Bot base class exists (empty) |
-| Phase 6 (Polish) | Not started |
+| Domain (CardData, Deck, Hand, etc.) | ✅ Completed |
+| Rules (RoadTo100Rules GDScript) | ✅ Completed and approved |
+| Provider (GameStateProvider + LocalGameEngine) | ✅ Completed |
+| Presenter/UI (Board, Hand, Turn, CardFace) | ✅ Completed and verified |
+| GameController (8 states, input, popup, animation) | ✅ Completed (Steps 1–7) |
+| CardAnimator (FIFO queue, tween, headless fallback) | ✅ Implemented |
+| DebugDemo (Auto demo, integrated with GC) | ✅ Functional |
+| Python Simulator | ✅ Complete and frozen |
+| Multiplayer | ❌ Not started |
+| AI (bot.py) | ❌ Not started |
 
-See `TODO.md` for the full roadmap.
+See `PROJECT_STATE.md` and `ROADMAP.md` for the full roadmap and detailed status.
 
 ---
 
