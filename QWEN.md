@@ -22,7 +22,6 @@
 ```
 /media/sumaka/Giochi/GodotProjects/roadTo100/
 ├── project.godot          # Godot engine project config (1280×720, "Road To 100")
-├── a.gd                   # Empty GDScript placeholder
 ├── default_env.tres       # Godot default environment
 ├── icon.png / .import     # Game icon (auto-imported by Godot)
 ├── CARD_DATABASE.md       # Official card database v1.0
@@ -34,8 +33,8 @@
 ├── .vscode/settings.json  # VSCode IDE config
 ├── memories/              # Project context memory files
 │   └── repo/framework-guardrails.md
-├── simulator/             # ** Python card-game simulation framework **
-│   ├── domain/            # Generic domain types (frozen)
+├── simulator/             # ** Python card-game simulation framework (frozen) **
+│   ├── domain/            # Generic domain types (Game, Card, Player, Deck, etc.)
 │   │   ├── game.py        # Game state (players, deck, phase, winner)
 │   │   ├── card.py        # Generic Card dataclass
 │   │   ├── deck.py        # Deck management (draw, shuffle)
@@ -47,20 +46,15 @@
 │   ├── engine/            # Simulation orchestration (frozen)
 │   │   ├── simulator.py   # Main Simulator loop + SimulationResult
 │   │   └── action_controller.py  # ActionController ABC (strategy pattern)
-│   ├── ai/                # Bot agents
-│   │   └── bot.py         # Bot base class (empty)
-│   └── games/             # Game-specific implementations
-│       └── roadto100/     # RoadTo100 concrete game
-│           ├── rules.py             # (empty placeholder)
-│           ├── card_database.py     # (empty placeholder)
-│           └── deck_definition.py   # (empty placeholder)
-├── games/                 # ** Python game definition modules **
-│   ├── roadto100/         # RoadTo100 game implementation (in progress)
+│   └── ai/                # Bot agents
+│       └── bot.py         # Bot base class (empty — future work)
+├── games/                 # ** Python game definition modules (uses simulator/) **
+│   ├── roadto100/         # RoadTo100 game implementation (COMPLETE)
 │   │   ├── __init__.py
 │   │   ├── config.py      # Static game parameters
 │   │   ├── cards.py       # Card definitions (per CARD_DATABASE.md)
 │   │   ├── actions.py     # Action models (play_card, change_card, reveal_gold, etc.)
-│   │   ├── rules.py       # RoadTo100Rules (RuleSet implementation)
+│   │   ├── rules.py       # RoadTo100RuleSet implementation (all rules incl. GdV bounce)
 │   │   ├── setup.py       # Initial game state construction
 │   │   ├── helpers.py     # Shared utility functions
 │   │   └── README.md      # Architecture proposal document
@@ -71,8 +65,41 @@
 │       ├── rules.py
 │       ├── setup.py
 │       └── README.md
-└── simulator.{zip,7z,tar} # Packaged simulator archives
+├── engine/                # ** Godot GDScript domain + rules **
+│   ├── CardData.gd        # Domain port from Python
+│   ├── Deck.gd            # Domain port from Python
+│   ├── Hand.gd            # Domain port from Python
+│   ├── PlayerData.gd      # Domain port from Python
+│   ├── GameState.gd       # Domain port from Python
+│   ├── GameConstants.gd   # Domain port from Python
+│   ├── CardDatabase.gd    # Domain port from Python
+│   ├── RoadTo100Rules.gd  # Rules port from Python (complete)
+│   ├── GameStateProvider.gd  # Abstract contract for game state provider
+│   ├── LocalGameEngine.gd    # Concrete local implementation
+│   └── TextureResolver.gd    # Centralized texture resolution
+├── scripts/               # ** Godot UI/presenter layer **
+│   ├── BoardPresenter.gd  # Plateau, opponents, permanent cards
+│   ├── HandPresenter.gd   # Player's hand management
+│   ├── TurnPresenter.gd   # Turn info, buttons
+│   ├── CardFace.gd        # Reusable card visual component
+│   ├── CardAnimator.gd    # FIFO animation queue + tween
+│   ├── GameController.gd  # State machine (8 states), input orchestration
+│   └── DebugDemo.gd       # Automated demo (integrated with GameController)
+├── scenes/                # Godot scene files
+│   └── CardFace.tscn      # Reusable card scene
+├── tests/                 # Godot GDScript test suites
+│   ├── domain_test.gd/.tscn        # Domain operations (55+ assert)
+│   ├── rules_test.gd/.tscn         # Rules validation (24 test, 68 assert)
+│   ├── provider_test.gd/.tscn      # Provider snapshot/event tests (104 assert)
+│   ├── presenter_test.gd/.tscn     # Presenter/UI tests (84 assert)
+│   ├── board_test.gd/.tscn         # Board visual tests (42 assert)
+│   ├── game_controller_test.gd/.tscn  # GameController state/input tests (145 assert)
+│   └── card_animator_test.gd/.tscn    # CardAnimator FIFO tests (5 assert)
+├── test_roadto100_rules.py  # Python unit tests for RoadTo100 rules (23 tests)
+└── run_simulations.py       # Python batch simulation runner
 ```
+
+**Note:** The `simulator/games/` directory no longer exists. The game-specific implementations live directly under `games/` at the repository root, which uses the `simulator/domain/` and `simulator/engine/` framework modules.
 
 ### Two Codebases
 
@@ -158,8 +185,18 @@ from games.roadto100.rules import RoadTo100Rules  # (to be implemented)
 - Visual design inspired by UNO, MTG Arena layout, and Poker clarity.
 
 ### Testing
-- No test framework is configured yet (inferred from absence of test files).
-- TODO: Add tests using Python's `unittest` or `pytest`.
+
+**Python tests:** Standard library `unittest` — 23 tests in `test_roadto100_rules.py` covering Gold chain, GdV lifecycle, +11 during GdV, card 89 behavior, deck reconstitution, and bounce rule. Run with:
+
+```bash
+python3 -m unittest test_roadto100_rules
+```
+
+**Godot tests:** Headless GDScript suites in `tests/` — 7 suites (domain_test, rules_test, provider_test, presenter_test, board_test, game_controller_test, card_animator_test), ~490+ total assertions. Run with:
+
+```bash
+/home/sumaka/bin/Godot3 --path . tests/<suite>.tscn --no-window
+```
 
 ### Documentation Hierarchy
 - **`GAME_RULES.md`** is the authoritative source for game rules (overrides code).
