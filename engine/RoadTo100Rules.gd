@@ -368,6 +368,15 @@ func apply_action(game, action_dict):
 		plateau = increment
 	else:
 		plateau += increment
+
+	# Bounce rule: during GdV, non-advantage players bounce at TARGET_SCORE
+	if bool(game.metadata.get("advantage_turn", false)):
+		var adv_pid = game.metadata.get("advantage_player_id", null)
+		if adv_pid != null and current_player.player_id != adv_pid and not _is_plus11_card(card):
+			var raw_total = int(game.metadata.get("piatto", 0)) + increment
+			if raw_total >= 100:  # TARGET_SCORE
+				plateau = 199 - raw_total
+
 	game.metadata["piatto"] = min(plateau, 100)  # TARGET_SCORE
 
 	if not game.metadata.has("plateau_cards"):

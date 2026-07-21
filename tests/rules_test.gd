@@ -173,6 +173,22 @@ func _run_all():
 	out += _test_reset_hand_reconstitutes()
 	tests_run += 1
 
+	# --- TestGdvBounce (7 tests) ---
+	out += _test_bounce_99_plus_1()
+	tests_run += 1
+	out += _test_bounce_99_plus_5()
+	tests_run += 1
+	out += _test_bounce_90_plus_10()
+	tests_run += 1
+	out += _test_bounce_97_plus_8()
+	tests_run += 1
+	out += _test_bounce_70_plus_10_no_bounce()
+	tests_run += 1
+	out += _test_no_bounce_advantage_player()
+	tests_run += 1
+	out += _test_no_bounce_plus11_non_advantage()
+	tests_run += 1
+
 	out += "\n--- Summary ---\n"
 	out += "  Tests executed: " + str(tests_run) + "\n"
 	out += "  Passed: " + str(passed) + "\n"
@@ -596,3 +612,151 @@ func _test_reset_hand_reconstitutes():
 		return "  Reset hand reconstit: [PASS]\n"
 	else:
 		return "  Reset hand reconstit: [FAIL]\n"
+
+
+# ---------------------------------------------------------------------------
+# Helper: create a 2-player GdV game with P2 as current player (non-advantage
+# by default) and P1 as advantage player.
+# ---------------------------------------------------------------------------
+
+func _make_gdv_game(piatto, card, advantage_player = "p1", current_player = "p2"):
+	var rules = Rules.new()
+	var p1 = PlayerData.new("p1", "P1")
+	var p2 = PlayerData.new(current_player, "P" + current_player.right(1))
+	p2.receive_card(card)
+	var game = make_game(
+		[p1, p2],
+		[increment_card(3, 0)],
+		null,
+		{
+			"piatto": piatto,
+			"plateau_cards": [],
+			"advantage_turn": true,
+			"advantage_player_id": advantage_player,
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+	game.set_current_player(p2)
+	return [rules, p2, game]
+
+
+# ---------------------------------------------------------------------------
+# GdV Bounce tests (mirror TestGdvBounce in test_roadto100_rules.py)
+# ---------------------------------------------------------------------------
+
+func _test_bounce_99_plus_1():
+	var r = _make_gdv_game(99, increment_card(1, 0))
+	var rules = r[0]; var player = r[1]; var game = r[2]
+	var action = {"action_type": "play_card", "card": player.hand.cards[0]}
+	rules.apply_action(game, action)
+	var o1 = _assert_eq(game.metadata["piatto"], 99, "bounce 99+1", "expected 99")
+	var o2 = _assert_true(game.winner == null, "bounce 99+1 no win", "no winner")
+	if o1 and o2:
+		_test("bounce 99+1")
+		return "  Bounce 99+1:          [PASS]\n"
+	return "  Bounce 99+1:          [FAIL]\n"
+
+func _test_bounce_99_plus_5():
+	var r = _make_gdv_game(99, increment_card(5, 0))
+	var rules = r[0]; var player = r[1]; var game = r[2]
+	var action = {"action_type": "play_card", "card": player.hand.cards[0]}
+	rules.apply_action(game, action)
+	var o1 = _assert_eq(game.metadata["piatto"], 95, "bounce 99+5", "expected 95")
+	var o2 = _assert_true(game.winner == null, "bounce 99+5 no win", "no winner")
+	if o1 and o2:
+		_test("bounce 99+5")
+		return "  Bounce 99+5:          [PASS]\n"
+	return "  Bounce 99+5:          [FAIL]\n"
+
+func _test_bounce_90_plus_10():
+	var r = _make_gdv_game(90, increment_card(10, 0))
+	var rules = r[0]; var player = r[1]; var game = r[2]
+	var action = {"action_type": "play_card", "card": player.hand.cards[0]}
+	rules.apply_action(game, action)
+	var o1 = _assert_eq(game.metadata["piatto"], 99, "bounce 90+10", "expected 99")
+	var o2 = _assert_true(game.winner == null, "bounce 90+10 no win", "no winner")
+	if o1 and o2:
+		_test("bounce 90+10")
+		return "  Bounce 90+10:         [PASS]\n"
+	return "  Bounce 90+10:         [FAIL]\n"
+
+func _test_bounce_97_plus_8():
+	var r = _make_gdv_game(97, increment_card(8, 0))
+	var rules = r[0]; var player = r[1]; var game = r[2]
+	var action = {"action_type": "play_card", "card": player.hand.cards[0]}
+	rules.apply_action(game, action)
+	var o1 = _assert_eq(game.metadata["piatto"], 94, "bounce 97+8", "expected 94")
+	var o2 = _assert_true(game.winner == null, "bounce 97+8 no win", "no winner")
+	if o1 and o2:
+		_test("bounce 97+8")
+		return "  Bounce 97+8:          [PASS]\n"
+	return "  Bounce 97+8:          [FAIL]\n"
+
+func _test_bounce_70_plus_10_no_bounce():
+	var r = _make_gdv_game(70, increment_card(10, 0))
+	var rules = r[0]; var player = r[1]; var game = r[2]
+	var action = {"action_type": "play_card", "card": player.hand.cards[0]}
+	rules.apply_action(game, action)
+	var o1 = _assert_eq(game.metadata["piatto"], 80, "bounce 70+10", "expected 80 (no bounce)")
+	var o2 = _assert_true(game.winner == null, "bounce 70+10 no win", "no winner")
+	if o1 and o2:
+		_test("bounce 70+10 no bounce")
+		return "  Bounce 70+10:         [PASS]\n"
+	return "  Bounce 70+10:         [FAIL]\n"
+
+func _test_no_bounce_advantage_player():
+	var rules = Rules.new()
+	var p1 = PlayerData.new("p1", "P1")
+	p1.receive_card(increment_card(10, 0))
+	var p2 = PlayerData.new("p2", "P2")
+	var game = make_game(
+		[p1, p2],
+		[increment_card(3, 0)],
+		null,
+		{
+			"piatto": 95,
+			"plateau_cards": [],
+			"advantage_turn": true,
+			"advantage_player_id": "p1",
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+	game.set_current_player(p1)
+	var action = {"action_type": "play_card", "card": p1.hand.cards[0]}
+	rules.apply_action(game, action)
+	var o1 = _assert_eq(game.metadata["piatto"], 100, "adv player 95+10", "expected 100")
+	var o2 = _assert_true(game.winner == p1, "adv player wins", "expected p1 winner")
+	if o1 and o2:
+		_test("no bounce advantage")
+		return "  Bounce adv player:    [PASS]\n"
+	return "  Bounce adv player:    [FAIL]\n"
+
+func _test_no_bounce_plus11_non_advantage():
+	var rules = Rules.new()
+	var p1 = PlayerData.new("p1", "P1")
+	var c11 = plus11_card(0)
+	var p2 = PlayerData.new("p2", "P2")
+	p2.receive_card(c11)
+	var game = make_game(
+		[p1, p2],
+		[increment_card(3, 0)],
+		null,
+		{
+			"piatto": 99,
+			"plateau_cards": [],
+			"advantage_turn": true,
+			"advantage_player_id": "p1",
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+	game.set_current_player(p2)
+	var action = {"action_type": "play_card", "card": c11}
+	rules.apply_action(game, action)
+	var o1 = _assert_true(game.winner == p2, "+11 non-adv wins", "+11 must win for non-advantage")
+	if o1:
+		_test("+11 non-advantage")
+		return "  +11 non-adv GdV:      [PASS]\n"
+	return "  +11 non-adv GdV:      [FAIL]\n"

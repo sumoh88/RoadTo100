@@ -387,6 +387,15 @@ class RoadTo100RuleSet(RuleSet):
             plateau = increment
         else:
             plateau += increment
+
+        # Bounce rule: during GdV, non-advantage players bounce at TARGET_SCORE
+        if bool(game.metadata.get("advantage_turn", False)):
+            adv_pid = game.metadata.get("advantage_player_id")
+            if adv_pid is not None and current_player.player_id != adv_pid and not self._is_plus11_card(card):
+                raw_total = int(game.metadata.get("piatto", 0)) + increment
+                if raw_total >= TARGET_SCORE:
+                    plateau = (2 * TARGET_SCORE - 1) - raw_total  # = 199 - raw
+
         game.metadata["piatto"] = min(plateau, TARGET_SCORE)
         game.metadata.setdefault("plateau_cards", []).append(card)
 

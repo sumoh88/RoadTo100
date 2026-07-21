@@ -238,17 +238,32 @@ Durante un Giro di Vantaggio, la carta +11 può essere giocata come se fosse una
 
 # Giro di Vantaggio
 
-Il Giro di Vantaggio inizia esclusivamente quando viene giocata la carta 89, il giocatore che la gioca diventa il giocatore in Vantaggio.
+Il Giro di Vantaggio inizia esclusivamente quando viene giocata la carta 89; il giocatore che la gioca diventa il **giocatore in Vantaggio**.
 
 Durante il Giro di Vantaggio:
 
-- soltanto il giocatore in Vantaggio può vincere;
-- possono essere giocate esclusivamente Carte Arancioni.
+* soltanto il giocatore in Vantaggio può vincere;
+* possono essere giocate esclusivamente Carte Arancioni.
 
-Eccezione:
-La carta +11 può essere giocata come una Carta Arancione e assegna immediatamente la vittoria al giocatore che la gioca.
+### Regola del rimbalzo
 
-Il Giro di Vantaggio termina quando il giocatore in Vantaggio termina il proprio prossimo turno.
+Per tutti i giocatori **che non sono in Vantaggio**, il piatto non può superare 100.
+
+Se una Carta Arancione farebbe superare 100, il piatto raggiunge prima 100 e poi **rimbalza** all'indietro di un numero di punti pari all'eccedenza.
+
+Esempi:
+
+* Piatto 99, carta +1 → piatto 99.
+* Piatto 99, carta +5 → piatto 95.
+* Piatto 97, carta +8 → piatto 94.
+
+Questa regola si applica esclusivamente ai giocatori che non sono in Vantaggio.
+
+### Eccezione
+
+La carta **+11** può essere giocata come una Carta Arancione e assegna immediatamente la vittoria al giocatore che la gioca. La carta **+11** non è influenzata dalla regola del rimbalzo.
+
+Il Giro di Vantaggio termina immediatamente dopo il successivo turno del giocatore in Vantaggio. In pratica, dopo che viene giocata la carta 89, ogni altro giocatore effettua un ultimo turno; successivamente il giocatore in Vantaggio svolge il proprio turno finale, al termine del quale il Giro di Vantaggio termina, indipendentemente dal fatto che abbia vinto o meno.
 
 ---
 

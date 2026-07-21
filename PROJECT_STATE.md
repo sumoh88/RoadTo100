@@ -1,6 +1,6 @@
 # RoadTo100 — Stato Progetto
 
-> Aggiornato al: 20 luglio 2026
+> Aggiornato al: 21 luglio 2026
 > Scopo: documento di avvio per future sessioni di sviluppo.
 
 ---
@@ -24,7 +24,8 @@ Il porting delle regole e della UI in Godot è suddiviso in passaggi progressivi
 Port delle strutture dati fondamentali: `CardData`, `Deck`, `Hand`, `PlayerData`, `GameState`, `GameConstants`, `CardDatabase`. 8 file in `engine/`. Test headless funzionanti.
 
 ### Passaggio B — Rules (✅ Completato e approvato)
-Port del motore di gioco `RoadTo100Rules.gd` (426 righe), fedele alla reference Python. 17 test GDScript, 48 assert, 0 FAIL.
+Port del motore di gioco `RoadTo100Rules.gd` (444+ righe), fedele alla reference Python. 24 test GDScript, 68 assert, 0 FAIL.
+Include regola del rimbalzo GdV (allineata al simulatore Python).
 
 ### Passaggio C — Provider (✅ Completato)
 `GameStateProvider` (contratto astratto) + `LocalGameEngine` (implementazione concreta locale). Produce snapshot ed eventi serializzabili (nessun oggetto Reference). `RemoteGameAdapter` previsto per il futuro multiplayer.
@@ -155,10 +156,10 @@ Tutte le azioni transitano esclusivamente per `GameController.perform_action(act
 | Suite | File | Assert | Esito |
 |---|---|---|---|
 | Domain | `tests/domain_test.gd` | 55+ | ✅ All PASS |
-| Rules | `tests/rules_test.gd` | 48 | ✅ 0 FAIL |
+| Rules | `tests/rules_test.gd` | 68 | ✅ 0 FAIL (24 test, include rimbalzo GdV) |
 | Provider | `tests/provider_test.gd` | 104 | ✅ 0 FAIL |
 | Presenter | `tests/presenter_test.gd` | 84 | ✅ 0 FAIL |
-| Board | `tests/board_test.gd` | 42 | ✅ 0 FAIL (bug `_a()` risolto) |
+| Board | `tests/board_test.gd` | 42 | ✅ 0 FAIL |
 | GameController | `tests/game_controller_test.gd` | 145 | ✅ 0 FAIL, nessun memory leak |
 | CardAnimator | `tests/card_animator_test.gd` | 5 | ✅ 0 FAIL |
 | Demo Automatica | — | — | ✅ Funzionante, ~4+ turni in 9s |
@@ -174,7 +175,28 @@ Tutte le azioni transitano esclusivamente per `GameController.perform_action(act
 
 ---
 
-## ULTIMA SESSIONE (20 luglio 2026)
+## ULTIMA SESSIONE (21 luglio 2026)
+
+### Regola del rimbalzo GdV
+
+Implementata la regola del rimbalzo nel Giro di Vantaggio, allineata perfettamente tra simulatore Python e client Godot:
+
+- Durante il GdV, i giocatori **non in Vantaggio** che giocano carte Arancioni con `piatto + incremento >= 100` attivano il rimbalzo: il nuovo piatto diventa `199 - (piatto + incremento)`.
+- Il **giocatore in Vantaggio** non usa il rimbalzo e vince normalmente a 100.
+- La carta **+11** non usa il rimbalzo e mantiene il comportamento speciale (vittoria istantanea in GdV).
+- Se `piatto + incremento < 100`, il piatto aumenta normalmente.
+
+**File modificati:**
+- `games/roadto100/rules.py` — Aggiunta logica rimbalzo in `apply_action()`
+- `engine/RoadTo100Rules.gd` — Aggiunta logica rimbalzo in `apply_action()`
+- `test_roadto100_rules.py` — Aggiunta classe `TestGdvBounce` (7 test)
+- `tests/rules_test.gd` — Aggiunti 7 test GdVBounce, 24 test totali / 68 assert
+- `PROJECT_STATE.md` — Stato aggiornato
+
+**Test Python:** 23/23 OK (7 nuovi)
+**Test Godot:** rules_test 68 assert 0 FAIL, tutte le altre suite verdi (104+84+42+145+5+55+)
+
+Simulatore e client implementano la stessa regola del rimbalzo.
 
 ### Passaggio E completato (Step 1–7)
 

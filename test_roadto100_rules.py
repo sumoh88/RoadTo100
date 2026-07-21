@@ -442,5 +442,125 @@ class TestDeckReconstitution(unittest.TestCase):
                          "hand must have 3 cards after RESET_HAND")
 
 
+class TestGdvBounce(unittest.TestCase):
+    """Bounce rule during GdV: non-advantage players bounce at 100."""
+
+    def _make_gdv_game(self, piatto: int, card: Card, advantage_player: str = "p1",
+                       current_player: str = "p2") -> tuple[RoadTo100RuleSet, Player, Game]:
+        rules = RoadTo100RuleSet()
+        p1 = Player("p1", "P1", Hand())
+        p2 = Player(current_player, f"P{current_player[-1]}", Hand([card]))
+        p2id = p2.player_id
+        deck_cards = [increment_card(3)]
+        game = make_game(
+            players=[p1, p2],
+            deck_cards=deck_cards,
+            metadata={
+                "piatto": piatto,
+                "plateau_cards": [],
+                "advantage_turn": True,
+                "advantage_player_id": advantage_player,
+                "turn_phase": "start",
+                "target_score": TARGET_SCORE,
+            },
+        )
+        game.set_current_player(p2)
+        return rules, p2, game
+
+    def test_bounce_99_plus_1(self) -> None:
+        """Non-advantage: piatto 99 +1 → bounce (199-100=99)."""
+        rules, player, game = self._make_gdv_game(99, increment_card(1))
+        action = RoadTo100Action(action_type=PLAY_CARD_ACTION,
+                                 parameters={"card": player.hand.cards[0]})
+        rules.apply_action(game, action)
+        self.assertEqual(game.metadata["piatto"], 99)
+        self.assertIsNone(game.winner)
+
+    def test_bounce_99_plus_5(self) -> None:
+        """Non-advantage: piatto 99 +5 → bounce (199-104=95)."""
+        rules, player, game = self._make_gdv_game(99, increment_card(5))
+        action = RoadTo100Action(action_type=PLAY_CARD_ACTION,
+                                 parameters={"card": player.hand.cards[0]})
+        rules.apply_action(game, action)
+        self.assertEqual(game.metadata["piatto"], 95)
+        self.assertIsNone(game.winner)
+
+    def test_bounce_90_plus_10(self) -> None:
+        """Non-advantage: piatto 90 +10 → bounce (199-100=99)."""
+        rules, player, game = self._make_gdv_game(90, increment_card(10))
+        action = RoadTo100Action(action_type=PLAY_CARD_ACTION,
+                                 parameters={"card": player.hand.cards[0]})
+        rules.apply_action(game, action)
+        self.assertEqual(game.metadata["piatto"], 99)
+        self.assertIsNone(game.winner)
+
+    def test_bounce_97_plus_8(self) -> None:
+        """Non-advantage: piatto 97 +8 → bounce (199-105=94)."""
+        rules, player, game = self._make_gdv_game(97, increment_card(8))
+        action = RoadTo100Action(action_type=PLAY_CARD_ACTION,
+                                 parameters={"card": player.hand.cards[0]})
+        rules.apply_action(game, action)
+        self.assertEqual(game.metadata["piatto"], 94)
+        self.assertIsNone(game.winner)
+
+    def test_bounce_70_plus_10_no_bounce(self) -> None:
+        """Non-advantage: piatto 70 +10=80 (<100), no bounce."""
+        rules, player, game = self._make_gdv_game(70, increment_card(10))
+        action = RoadTo100Action(action_type=PLAY_CARD_ACTION,
+                                 parameters={"card": player.hand.cards[0]})
+        rules.apply_action(game, action)
+        self.assertEqual(game.metadata["piatto"], 80)
+        self.assertIsNone(game.winner)
+
+    def test_no_bounce_advantage_player(self) -> None:
+        """Advantage player: piatto 95 +10 → 100, wins (no bounce)."""
+        rules = RoadTo100RuleSet()
+        p1 = Player("p1", "P1", Hand([increment_card(10)]))  # advantage player
+        p2 = Player("p2", "P2", Hand())
+        game = make_game(
+            players=[p1, p2],
+            deck_cards=[increment_card(3)],
+            metadata={
+                "piatto": 95,
+                "plateau_cards": [],
+                "advantage_turn": True,
+                "advantage_player_id": "p1",
+                "turn_phase": "start",
+                "target_score": TARGET_SCORE,
+            },
+        )
+        game.set_current_player(p1)
+        action = RoadTo100Action(action_type=PLAY_CARD_ACTION,
+                                 parameters={"card": p1.hand.cards[0]})
+        rules.apply_action(game, action)
+        self.assertEqual(game.metadata["piatto"], 100)
+        self.assertIs(game.winner, p1)
+
+    def test_no_bounce_plus11_non_advantage(self) -> None:
+        """Non-advantage: +11 during GdV → wins instantly, no bounce."""
+        rules = RoadTo100RuleSet()
+        p1 = Player("p1", "P1", Hand())
+        c11 = plus11_card()
+        p2 = Player("p2", "P2", Hand([c11]))
+        game = make_game(
+            players=[p1, p2],
+            deck_cards=[increment_card(3)],
+            metadata={
+                "piatto": 99,
+                "plateau_cards": [],
+                "advantage_turn": True,
+                "advantage_player_id": "p1",
+                "turn_phase": "start",
+                "target_score": TARGET_SCORE,
+            },
+        )
+        game.set_current_player(p2)
+        action = RoadTo100Action(action_type=PLAY_CARD_ACTION,
+                                 parameters={"card": c11})
+        rules.apply_action(game, action)
+        self.assertIs(game.winner, p2, "+11 must win for non-advantage player during GdV")
+        # Piatto can be anything, but should NOT be bounced (game already won)
+
+
 if __name__ == "__main__":
     unittest.main()
