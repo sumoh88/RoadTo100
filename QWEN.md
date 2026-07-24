@@ -214,8 +214,8 @@ python3 -m unittest test_roadto100_rules
 | Rules (RoadTo100Rules GDScript) | ✅ Completed and approved |
 | Provider (GameStateProvider + LocalGameEngine) | ✅ Completed |
 | Presenter/UI (Board, Hand, Turn, CardFace) | ✅ Completed and verified |
-| GameController (8 states, input, popup, animation) | ✅ Completed (Steps 1–7) |
-| CardAnimator (FIFO queue, tween, headless fallback) | ✅ Implemented |
+| GameController (8 states, input, popup, animation) | ✅ Completed (Steps 1–8) |
+| CardAnimator (FIFO, multi-player, play+draw, 0.7s/0.6s) | ✅ Implemented and verified (Steps 5+8) |
 | DebugDemo (Auto demo, integrated with GC) | ✅ Functional |
 | Python Simulator | ✅ Complete and frozen |
 | Multiplayer | ❌ Not started |

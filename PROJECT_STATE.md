@@ -1,6 +1,6 @@
 # RoadTo100 — Stato Progetto
 
-> Aggiornato al: 21 luglio 2026
+> Aggiornato al: 24 luglio 2026
 > Scopo: documento di avvio per future sessioni di sviluppo.
 
 ---
@@ -12,7 +12,7 @@ Il progetto è composto da due codebase separati:
 | Componente | Stato |
 |---|---|
 | Simulatore Python | **Completato e congelato** |
-| Client Godot — Passaggio E, Step 7 | **Completato e verificato** |
+| Client Godot — Passaggio E, Step 8 | **Completato e verificato** |
 
 ---
 
@@ -33,7 +33,7 @@ Include regola del rimbalzo GdV (allineata al simulatore Python).
 ### Passaggio D — Presenter/UI (✅ Completato e verificato)
 Tutta la UI del tavolo da gioco. BoardPresenter, HandPresenter, TurnPresenter, CardFace, CardAnimator (scheletro), TextureResolver, DebugDemo, Main.tscn. Bug risolti: mani avversarie non centrate, carte non Gold duplicate sul Piatto, Gold coperta, duplicazione valore Piatto, carta 89, nome vincitore oltre Player 1.
 
-### Passaggio E — GameController (✅ Completato, 7 step)
+### Passaggio E — GameController (✅ Completato, 8 step)
 
 | Step | Descrizione | Stato |
 |---|---|---|
@@ -44,16 +44,10 @@ Tutta la UI del tavolo da gioco. BoardPresenter, HandPresenter, TurnPresenter, C
 | 5 | CardAnimator: coda FIFO, animazione card_played, segnali start/finish, headless fallback | ✅ |
 | 6 | Integrazione DebugDemo con GameController | ✅ |
 | 7 | Flusso input GUI reale, punto unico `perform_action()` | ✅ |
+| 8 | **Animazioni multi-player e validazione**: correzione animazioni non visibili (bug doppio: `has_method` errato + snapshot prima di animazione), ricerca carte per `player_id` (locale e avversari), animazione pesca da `DrawPile`, coordinate globali, nascondi originale prima dello snapshot, 20 test, 5 partite complete, verifica 4 giocatori | ✅ |
 
-**Flusso completo realizzato:**
+**Flusso completo animazioni (multi-player):**
 ```
-CardFace._gui_input(click)
-  → clicked(card_id)
-  → HandPresenter._on_card_face_clicked()
-  → card_selected(card_id)
-  → GameController._on_card_selected()
-  → stato CARD_SELECTED
-
 PlayButton.pressed
   → TurnPresenter._on_play()
   → play_pressed
@@ -61,10 +55,28 @@ PlayButton.pressed
   → GameController.perform_action(action_dict)
   → Provider.send_action()
   → action_completed({snapshot, events})
-  → GameController._apply_snapshot() (presenter aggiornati)
-  → CardAnimator.play_events() + stato ANIMATING
-  → animation_finished → _finish_post_action()
-  → READY_FOR_INPUT
+  → GameController._on_action_completed():
+      │
+      ├─ CardAnimator.play_events([card_played, card_drawn, ...])
+      │   ├─ card_played: _find_card_node(player_id, card_id)
+      │   │   ├─ P1: HandPresenter/CardsLayer (locale)
+      │   │   ├─ P2/P3/P4: OpponentsLayer/{Top,Left,Right}Seat
+      │   │   ├─ clone = TextureRect(texture, rect_size, rect_global_position)
+      │   │   ├─ original.visible = false
+      │   │   └─ tween: posizione → destinazione (0.7s, fade ultimi 0.15s)
+      │   │
+      │   ├─ [yield] → _apply_snapshot(snapshot)
+      │   ├─ hide_drawn_cards(events)  ← nasconde carte pescate (antiflicker)
+      │   │
+      │   ├─ card_drawn: _find_card_node(player_id, card_id)
+      │   │   ├─ clone(cardback) = TextureRect(start_pos=DrawPile)
+      │   │   ├─ target.visible = false
+      │   │   ├─ tween: DrawPile → mano (0.6s, senza fade)
+      │   │   └─ target.visible = true
+      │   │
+      │   └─ animation_finished
+      │
+      └─ _finish_post_action() → READY_FOR_INPUT
 ```
 
 Tutte le azioni transitano esclusivamente per `GameController.perform_action(action_dict)`.
@@ -107,9 +119,9 @@ Tutte le azioni transitano esclusivamente per `GameController.perform_action(act
 | HandPresenter | `scripts/HandPresenter.gd` | ✅ |
 | TurnPresenter | `scripts/TurnPresenter.gd` | ✅ |
 | CardFace | `scenes/CardFace.tscn` + `scripts/CardFace.gd` | ✅ |
-| CardAnimator | `scripts/CardAnimator.gd` | ✅ Implementato (E5) |
+| CardAnimator | `scripts/CardAnimator.gd` | ✅ FIFO, multi-player, giocata+p esca, 0.7s/0.6s |
 | TextureResolver | `engine/TextureResolver.gd` | ✅ |
-| **GameController** | `scripts/GameController.gd` | ✅ Implementato (E1–E7) |
+| **GameController** | `scripts/GameController.gd` | ✅ Implementato (E1–E8) |
 | **Debug** | | |
 | DebugDemo | `scripts/DebugDemo.gd` | ✅ Integrato con GC (E6) |
 | DemoButton | In `Main.tscn` | ✅ F10/pulsante |
@@ -162,14 +174,15 @@ Tutte le azioni transitano esclusivamente per `GameController.perform_action(act
 | Board | `tests/board_test.gd` | 42 | ✅ 0 FAIL |
 | GameController | `tests/game_controller_test.gd` | 145 | ✅ 0 FAIL, nessun memory leak |
 | CardAnimator | `tests/card_animator_test.gd` | 5 | ✅ 0 FAIL |
-| Demo Automatica | — | — | ✅ Funzionante, ~4+ turni in 9s |
+| CardAnimator Multi-Player | `tests/card_animator_test2.gd` | 20 | ✅ 0 FAIL |
+| Demo Integrazione | `tests/demo_integration_test.gd` | 5 | ✅ 5/5 partite complete |
+| Demo Verifica Eventi | `tests/demo_verification_test.gd` | 9 | ✅ 0 FAIL — 4 giocatori verificati |
+| Demo Automatica | — | — | ✅ Funzionante via GC
 
 ---
 
 ## TODO rimasti
 
-- [ ] **Passaggio E — Step 8** (prossimo)
-  - Da definire.
 - [ ] **AI** (`simulator/ai/bot.py`): scheletro vuoto — opzionale, fase futura
 - [ ] **Multiplayer**: non iniziato
 
@@ -233,6 +246,56 @@ Il GameController è stato implementato in 7 step progressivi:
 
 Tutte le suite superate. Nessun memory leak nei test.
 
-### Prossimo lavoro
+---
 
-**Passaggio E, Step 8** — da definire. Consultare `ROADMAP.md` e la roadmap aggiornata per la prossima milestone.
+## ULTIMA SESSIONE (24–25 luglio 2026)
+
+### Animazioni multi-player complete
+
+Completato il Passaggio E (Step 8) con animazioni multi-player funzionanti per tutti e 4 i giocatori.
+
+#### Problemi risolti
+
+**1. Animazioni non visibili** (24 luglio)
+- CardAnimator: `c.has_method("get_card_id")` cercava un metodo inesistente (variabile membro, non metodo) → nessuna carta veniva mai clonata.
+- GameController: snapshot applicato prima della clonazione → carta già sparita dalla mano al momento del clone.
+- Fix: ordinamento invertito (`play_events` prima di snapshot), rimossa condizione `has_method`.
+
+**2. Animazioni solo per Player 1**
+- `_create_card_clone()` cercava solo in `LocalPlayerArea/PlayerHand/CardsLayer`.
+- Fix: nuova funzione `_find_card_node(player_id, card_id)`:
+  - player_1 → `HandPresenter/CardsLayer` (match per card_id)
+  - player_2/3/4 → `OpponentsLayer/{TopSeat,LeftSeat,RightSeat}/CardsLayer` (carta più a destra)
+
+**3. Nessuna animazione di pesca**
+- Fix: nuovo metodo `_animate_card_drawn(event)`: clona dorso da `_get_draw_pile_pos()` (DrawPile center), anima alla posizione post-snapshot della carta pescata.
+
+**4. Animazioni invisibili dopo giocata** (25 luglio)
+- Durata troppo breve (0.25s/0.2s) + posizione pesca confusa con scarti.
+- Fix: costanti configurabili `PLAY_ANIM_DURATION=0.7s`, `DRAW_ANIM_DURATION=0.6s`, `FADE_DURATION=0.15s`.
+- Fade ritardato di 0.55s, visibile solo alla fine della giocata.
+- Clone di pesca indipendente con `stretch_mode`, `rect_min_size`, posizione impostata prima di `add_child`.
+- `_get_draw_pile_pos()` con name check esplicito (`dp.name != "DrawPile"`).
+
+#### Verifiche eseguite
+
+| Suite | Assert | Esito |
+|---|---|---|
+| `card_animator_test` (originale) | 5 | ✅ 0 FAIL |
+| `card_animator_test2` (multi-player) | 20 | ✅ 0 FAIL |
+| `game_controller_test` | 145 | ✅ 0 FAIL |
+| `demo_integration_test` | 5 | ✅ 5/5 partite complete |
+| `demo_verification_test` | 9 | ✅ 0 FAIL — tutti e 4 i giocatori |
+| Test Python | 23 | ✅ OK |
+
+#### File creati
+- `tests/card_animator_test2.gd` + `.tscn` — 20 test: find_card per player, opponent, clone, dest, hide_drawn, event routing
+- `tests/demo_verification_test.gd` + `.tscn` — verifica eventi 4 giocatori in partita reale
+
+### Prossimo passo consigliato
+
+**Migliorie UI/UX** — Texture carte definitive, effetti sonori, schermata di vittoria, animazioni più ricche. L'infrastruttura di gameplay del client Godot è completa (Passaggio A→E), manca la rifinitura visiva per un'esperienza giocabile.
+
+Alternative:
+- **AI per simulatore Python** (`simulator/ai/bot.py`): scheletro vuoto, strategie di gioco.
+- **Multiplayer** (`RemoteGameAdapter`): architettura definita, implementazione futura.

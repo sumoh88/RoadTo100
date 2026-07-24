@@ -1,0 +1,5 @@
+[gd_scene format=2]
+[ext_resource path="res://tests/demo_verification_test.gd" type="Script" id=1]
+[ext_resource path="res://engine/LocalGameEngine.gd" type="Script" id=2]
+[node name="DemoVerification" type="Node"]
+script = ExtResource( 1 )

@@ -18,7 +18,7 @@
 │  8 stati interfaccia (implementati)              │
 │  Public: start_game(), perform_action()          │
 │  Signal: action_applied(result)                  │
-│  Passaggio E — completato (Step 1–7)             │
+│  Passaggio E — completato (Step 1–8)             │
 └─────────────────────┬───────────────────────────┘
                       │ perform_action() / start_game()
                       ▼
@@ -66,11 +66,11 @@
 | BoardPresenter | `scripts/BoardPresenter.gd` | ✅ Scaffold |
 | HandPresenter | `scripts/HandPresenter.gd` | ✅ Scaffold |
 | TurnPresenter | `scripts/TurnPresenter.gd` | ✅ Scaffold |
-| CardAnimator | `scripts/CardAnimator.gd` | ✅ Implementato (E5) |
+| CardAnimator | `scripts/CardAnimator.gd` | ✅ Multi-player, giocata+pesca, 0.7s/0.6s |
 | **Debug** | | |
 | DebugDemo | `scripts/DebugDemo.gd` | ✅ Integrato con GC (E6) |
 | DemoButton | In `Main.tscn` | ✅ Funzionante |
-| **GameController** | `scripts/GameController.gd` | ✅ Implementato (E1–E7) |
+| **GameController** | `scripts/GameController.gd` | ✅ Implementato (E1–E8) |
 
 ### Stato passaggi
 
@@ -80,7 +80,7 @@
 | B — Rules port | ✅ Completato | RoadTo100Rules.gd, 14 test Python equivalenti |
 | C — Provider | ✅ Completato | GameStateProvider, LocalGameEngine, snapshot, eventi |
 | D — Presenter/UI | ✅ **Completato e verificato** | Bug risolti (incluse schermata vittoria e carta 89). Test verificati con 10+ Demo. |
-| E — Input/Animazioni | ✅ **Completato (Step 1–7)** | GameController, card selection, bottoni, popup Jolly/Imbroglio/Gold Reveal, CardAnimator, DebugDemo integrato, perform_action(). Test: 145 assert GC, 0 FAIL. |
+| E — Input/Animazioni | ✅ **Completato (Step 1–8)** | GameController, card selection, bottoni, popup Jolly/Imbroglio/Gold Reveal, CardAnimator multi-player (giocata 0.7s + pesca 0.6s per tutti e 4 i giocatori), DebugDemo integrato, perform_action(). Step 8: correzione animazioni non visibili e multi-player, 20+9 test di verifica. |
 
 ---
 
@@ -127,10 +127,10 @@ Queste decisioni NON devono essere rimesse in discussione:
 | `scripts/BoardPresenter.gd` | Aggiorna piatto, mazzo, scarti, carte permanenti, avversari | ✅ Scaffold |
 | `scripts/HandPresenter.gd` | Gestisce mano giocatore locale | ✅ Scaffold |
 | `scripts/TurnPresenter.gd` | Label, bottoni, popup | ✅ Scaffold |
-| `scripts/CardAnimator.gd` | Coda animazioni FIFO, card_played tween, headless fallback (Passaggio E, Step 5) | ✅ Implementato |
+| `scripts/CardAnimator.gd` | Coda animazioni FIFO, card_played + card_drawn, ricerca carte per player_id, coordinate globali, 0.7s/0.6s (Passaggio E, Step 5+8) | ✅ Multi-player verificato |
 | `scripts/CardFace.gd` | Carta visuale riutilizzabile | ✅ Scaffold |
 | `scripts/DebugDemo.gd` | Demo automatica 4 giocatori — integrata con GameController (Passaggio E, Step 6) | ✅ Integrata |
-| `scripts/GameController.gd` | Orchestratore centrale: 8 stati, input, popup, animazioni, perform_action() (Passaggio E, Step 1–7) | ✅ Implementato |
+| `scripts/GameController.gd` | Orchestratore centrale: 8 stati, input, popup, animazioni, perform_action() (Passaggio E, Step 1–8) | ✅ Implementato |
 
 ### Scene
 
@@ -158,6 +158,9 @@ Queste decisioni NON devono essere rimesse in discussione:
 | **Board** | `tests/board_test.gd` + `.tscn` | Plateau visual stack, gold/non-gold separation, opponent centering, rotation setup, chronological order | ✅ 42 assert, 0 FAIL |
 | **GameController** | `tests/game_controller_test.gd` + `.tscn` | Stati, card selection, bottoni, popup, animazioni, integrazione Demo, input GUI reale | ✅ 145 assert, 0 FAIL |
 | **CardAnimator** | `tests/card_animator_test.gd` + `.tscn` | FIFO, segnali start/finish, headless fallback, busy guard | ✅ 5 assert, 0 FAIL |
+| **CardAnimator MP** | `tests/card_animator_test2.gd` + `.tscn` | find_card per player, opponent, clone, dest, hide_drawn, event routing | ✅ 20 assert, 0 FAIL |
+| **Demo Integrazione** | `tests/demo_integration_test.gd` + `.tscn` | GameController + LocalGameEngine reale, 4 giocatori, azioni automatiche | ✅ 5/5 partite complete |
+| **Demo Verifica** | `tests/demo_verification_test.gd` + `.tscn` | Eventi per tutti e 4 i giocatori, struttura eventi | ✅ 9 assert, 0 FAIL |
 
 ---
 
@@ -312,18 +315,21 @@ Bug risolti:
 
 ## Prossimo lavoro
 
-Passaggio E completato (Step 1–7). Prossime attività in ordine:
+**Passaggio E completato (Step 1–8).** Tutte le animazioni sono ora visibili in-game. Il GameController gestisce correttamente l'intero flusso di gioco: selezione carte → bottoni → popup → animazioni → snapshot.
 
-1. **Passaggio E, Step 8** — da definire.
+Prossime attività consigliate in ordine:
 
-2. **Miglioria game design — Giro di Vantaggio** (da implementare dopo il Passaggio E):
-   Quando il GdV è attivo, i giocatori diversi dal giocatore in vantaggio non possono portare il Piatto a 100 (massimo 99). Eccezioni: carte +11 e il giocatore in vantaggio, che può regolarmente raggiungere 100 e vincere.
+1. **Migliorie UI/UX** — Texture carte definitive, effetti sonori, schermata di vittoria, animazioni più ricche (transizioni Gold, rivelazione carta pescata). Questo è il naturale passo successivo: l'infrastruttura di gameplay del client Godot è completa (Passaggio A→E), manca la rifinitura visiva.
+
+2. **AI per simulatore** — `simulator/ai/bot.py` (scheletro vuoto). Richiede implementazione di strategie di gioco per test di bilanciamento.
+
+3. **Multiplayer** — `RemoteGameAdapter` + networking. Architettura definita, implementazione futura.
 
 ---
 
 ## Come riprendere il lavoro
 
-Apri una nuova chat, chiedi di leggere `PROJECT_STATE.md` e `ROADMAP.md`. Inizia dalla sezione **"ULTIMA SESSIONE"** in `PROJECT_STATE.md` per il contesto delle ultime correzioni, poi continua dal **Passaggio E, Step 8** senza ripetere il lavoro già completato.
+Apri una nuova chat, chiedi di leggere `PROJECT_STATE.md` e `ROADMAP.md`. Inizia dalla sezione **"ULTIMA SESSIONE"** in `PROJECT_STATE.md` per il contesto delle ultime correzioni, poi prosegui dalla prossima attività nella roadmap.
 
 Tutte le suite di test sono verdi. Eseguire i test dopo ogni modifica:
 
@@ -331,4 +337,4 @@ Tutte le suite di test sono verdi. Eseguire i test dopo ogni modifica:
 /home/sumaka/bin/Godot3 --path /media/sumaka/Giochi/GodotProjects/roadTo100 tests/<suite>.tscn --no-window
 ```
 
-Suite disponibili: `game_controller_test`, `presenter_test`, `board_test`, `provider_test`, `rules_test`, `domain_test`, `card_animator_test`.
+Suite disponibili: `game_controller_test`, `presenter_test`, `board_test`, `provider_test`, `rules_test`, `domain_test`, `card_animator_test`, `card_animator_test2`, `demo_integration_test`, `demo_verification_test`.

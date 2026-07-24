@@ -403,16 +403,27 @@ func _on_action_completed(result):
 	_last_snapshot = result.get("snapshot", null)
 	_last_events = result.get("events", [])
 	emit_signal("action_applied", result)
-	_apply_snapshot(_last_snapshot)
 	if _last_snapshot != null and _last_snapshot.get("winner", null) != null:
+		_apply_snapshot(_last_snapshot)
 		_clear_selection()
 		_state = State.GAME_OVER
 		return
-	# Start animation queue if animator is available and events exist
-	if _card_animator != null and _card_animator.has_method("play_events") and _last_events.size() > 0:
+
+	# Start animation BEFORE applying snapshot so CardAnimator can clone
+	# the card texture from the pre-action hand state (before the card is removed).
+	var should_animate = _card_animator != null and _card_animator.has_method("play_events") and _last_events.size() > 0
+	if should_animate:
 		_state = State.ANIMATING
 		_card_animator.play_events(_last_events, _last_snapshot)
-	else:
+
+	_apply_snapshot(_last_snapshot)
+
+	# Pre-hide any cards that will be drawn, so they don't flicker into
+	# existence before the draw animation reveals them.
+	if should_animate and _card_animator != null and _card_animator.has_method("hide_drawn_cards"):
+		_card_animator.hide_drawn_cards(_last_events)
+
+	if not should_animate:
 		_finish_post_action()
 
 
