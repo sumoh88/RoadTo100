@@ -81,6 +81,7 @@
 | C — Provider | ✅ Completato | GameStateProvider, LocalGameEngine, snapshot, eventi |
 | D — Presenter/UI | ✅ **Completato e verificato** | Bug risolti (incluse schermata vittoria e carta 89). Test verificati con 10+ Demo. |
 | E — Input/Animazioni | ✅ **Completato (Step 1–8)** | GameController, card selection, bottoni, popup Jolly/Imbroglio/Gold Reveal, CardAnimator multi-player (giocata 0.7s + pesca 0.6s per tutti e 4 i giocatori), DebugDemo integrato, perform_action(). Step 8: correzione animazioni non visibili e multi-player, 20+9 test di verifica. |
+| F — Special Round (Giro Sicuro) | 📋 **Pianificato** | Generalizzazione GdV in "Special Round" comune + implementazione Giro Sicuro. Passaggio E completato (Step 1–8). |
 
 ---
 
@@ -317,9 +318,26 @@ Bug risolti:
 
 **Passaggio E completato (Step 1–8).** Tutte le animazioni sono ora visibili in-game. Il GameController gestisce correttamente l'intero flusso di gioco: selezione carte → bottoni → popup → animazioni → snapshot.
 
-Prossime attività consigliate in ordine:
+### Passaggio F — Special Round (Giro Sicuro) — pianificato
 
-1. **Migliorie UI/UX** — Texture carte definitive, effetti sonori, schermata di vittoria, animazioni più ricche (transizioni Gold, rivelazione carta pescata). Questo è il naturale passo successivo: l'infrastruttura di gameplay del client Godot è completa (Passaggio A→E), manca la rifinitura visiva.
+Il prossimo lavoro è il **Passaggio F**, che generalizza il Giro di Vantaggio esistente in un sistema comune `Special Round` e aggiunge il **Giro Sicuro**.
+
+**Cosa cambia:**
+- Gold 12–78 → attiva Special Round `"safe"` con scelta del tipo bloccato (popup riutilizzando `WAITING_FOR_CHOICE`)
+- 89 → attiva Special Round `"advantage"` (comportamento esistente)
+- +11 dopo Gold → segue la catena: 23–78 → Safe Round; 89 → Advantage Round
+- Safe Round e Advantage Round condividono lo stesso lifecycle
+- Regola del Rimbalzo universalizzata: formula corretta `200 − (piatto + incremento)`
+
+**Step F1–F8:** definiti in `PROJECT_STATE.md` nella sezione "Prossimo passo: Passaggio F".
+
+**Pronto per:** `Implementa F1`
+
+### Attività successive al Passaggio F
+
+Dopo il completamento del Passaggio F, le attività consigliate sono:
+
+1. **Migliorie UI/UX** — Texture carte definitive, effetti sonori, schermata di vittoria, animazioni più ricche (transizioni Gold, rivelazione carta pescata). Dopo Passaggio F l'infrastruttura di gameplay del client Godot sarà completa (Passaggio A→F), manca la rifinitura visiva.
 
 2. **AI per simulatore** — `simulator/ai/bot.py` (scheletro vuoto). Richiede implementazione di strategie di gioco per test di bilanciamento.
 

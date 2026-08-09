@@ -10,9 +10,9 @@ In caso di conflitto tra il codice e questo documento, prevale sempre questo reg
 
 # Obiettivo
 
-L'obiettivo del gioco è essere il giocatore che porta il valore del **Piatto** a **100 o più**.
+L'obiettivo del gioco è essere il giocatore che porta il valore del Piatto esattamente a **100**.
 
-Se una carta porta il Piatto oltre 100, il valore finale viene comunque considerato **100**.
+Se una Carta **Incremento** porterebbe il Piatto oltre 100, viene applicata la **Regola del Rimbalzo**.
 
 Eccezione:
 
@@ -56,7 +56,7 @@ Il Piatto non può mai assumere un valore inferiore a 0.
 
 Se un effetto lo porterebbe sotto 0, il suo valore diventa semplicemente 0.
 
-Le Carte Gold e la carta 89 vengono posizionate nel Piatto e, una volta giocate, rimangono nel Piatto fino al termine della partita. Non vengono mai rimescolate nel Mazzo.
+Le Carte Gold, comprese le Carte Gold Speciali, vengono posizionate nel Piatto e, una volta giocate, rimangono nel Piatto fino al termine della partita. Non vengono mai rimescolate nel Mazzo.
 
 Tutte le altre carte giocate vengono posizionate negli Scarti.
 
@@ -108,7 +108,7 @@ Ordine:
 
 # Vittoria
 
-Vince immediatamente il giocatore che porta il Piatto a 100 o più.
+Vince immediatamente il giocatore che porta il Piatto esattamente a 100.
 
 Durante un **Giro di Vantaggio** possono vincere esclusivamente:
 
@@ -122,7 +122,6 @@ Durante un **Giro di Vantaggio** possono vincere esclusivamente:
 ## Carte Incremento
 
 tipo: Arancione.
-
 
 Aggiungono il proprio valore al Piatto.
 
@@ -144,6 +143,8 @@ Esistono:
 ## Carte Jolly
 
 tipo: Arancione.
+
+Le carte Jolly sono carte Incremento.
 
 Quando una Carta Jolly viene giocata, il gioco genera un insieme di valori possibili compresi tra +1 e +10.
 
@@ -181,6 +182,24 @@ All'inizio del proprio turno, prima di scegliere un'azione, il giocatore può ri
 
 Le Carte Gold vengono posizionate nel Piatto.
 
+### Giro Sicuro
+
+Quando viene giocata una Carta Gold normale, il giocatore attiva un Giro Sicuro e sceglie una delle seguenti tipologie:
+
+Carte Incremento;
+Carte Gold;
+Carte Imbroglio.
+
+Fino all’inizio del suo prossimo turno, tutti gli altri giocatori non possono giocare carte della tipologia scelta. I giocatori possono comunque effettuare un Cambio Carta.
+
+I divieti si applicano in base alla tipologia propria della carta giocata. Pertanto:
+
+se sono vietate le Carte Incremento, non può essere giocata neppure la +11;
+se sono vietate le Carte Gold, non possono essere giocate le Gold normali né la carta 89, ma può essere giocata una +11, poiché appartiene alla tipologia Incremento. Se viene giocata immediatamente dopo una Gold, risolve normalmente l’effetto della Gold successiva.
+
+Può essere attivo un solo Giro Sicuro alla volta. Se viene attivato un nuovo Giro Sicuro, questo sostituisce immediatamente quello precedente. Ciò avviene anche quando una +11 giocata immediatamente dopo una Gold normale assume il valore e gli effetti della Gold successiva.
+
+La carta 89 non attiva il Giro Sicuro, ma il Giro di Vantaggio. Se è già attivo un Giro Sicuro, il Giro di Vantaggio lo sostituisce immediatamente. Un Giro Sicuro sostituito dal Giro di Vantaggio termina definitivamente.
 ---
 
 ## Carte Imbroglio
@@ -196,13 +215,19 @@ Il giocatore può scegliere esclusivamente uno dei valori rimanenti.
 Il valore scelto viene aggiunto al Piatto.
 
 ---
-## Carte Speciali
-Le Carte Speciali applicano effetti unici quando vengono giocate.
-Fanno parte di questa categoria le seguenti carte:
+## Carte con effetti speciali
+Alcune Carte Incremento e Carte Gold possiedono effetti aggiuntivi.
+
+In particolare:
+
+- la carta +11 è una Carta Incremento Speciale;
+- la carta 89 è una Carta Gold Speciale.
 
 ### Carta 89
 
 tipo: Viola.
+
+La carta 89 è una Carta Gold Speciale di colore viola.
 
 Quando viene giocata:
 
@@ -210,13 +235,14 @@ Quando viene giocata:
 - il giocatore ottiene il Giro di Vantaggio.
 
 La carta viene posizionata nel Piatto.
-La carta 89 è una Carta Speciale di colore Viola. Quando una regola fa riferimento alle Carte Gold, la carta 89 è considerata una Carta Gold, salvo diversa indicazione.
 
 ---
 
 ### Carta +11
 
 Tipo: Rossa.
+
+La carta +11 è una Carta Incremento Speciale di colore rosso. Appartiene a tutti gli effetti alla tipologia Incremento.
 
 Se viene giocata normalmente, aggiunge 11 al Piatto.
 
@@ -230,9 +256,9 @@ Se viene giocata immediatamente dopo una Carta Gold (12, 23, 34, 45, 56, 67 o 78
 67 → 78
 78 → 89
 
-Se in questo modo assume il valore 89, viene attivato il Giro di Vantaggio.
+Se assume il valore 23, 34, 45, 56, 67 o 78, viene risolta come una Carta Gold normale e attiva il Giro Sicuro. Se assume il valore 89, viene risolta come Carta Gold Speciale e attiva il Giro di Vantaggio.
 
-Durante un Giro di Vantaggio, la carta +11 può essere giocata come se fosse una Carta Arancione e assegna immediatamente la vittoria al giocatore che la utilizza.
+Durante un Giro di Vantaggio, la carta +11 assegna immediatamente la vittoria al giocatore che la utilizza.
 
 ---
 
@@ -243,33 +269,56 @@ Il Giro di Vantaggio inizia esclusivamente quando viene giocata la carta 89; il 
 Durante il Giro di Vantaggio:
 
 * soltanto il giocatore in Vantaggio può vincere;
-* possono essere giocate esclusivamente Carte Arancioni.
+* possono essere giocate esclusivamente Carte Incremento.
 
-### Regola del rimbalzo
+Il Giro di Vantaggio termina immediatamente dopo il successivo turno del giocatore in Vantaggio. In pratica, dopo che viene giocata la carta 89, ogni altro giocatore effettua un ultimo turno; successivamente il giocatore in Vantaggio svolge il proprio turno finale, al termine del quale il Giro di Vantaggio termina, indipendentemente dal fatto che abbia vinto o meno.
 
-Per tutti i giocatori **che non sono in Vantaggio**, il piatto non può superare 100.
+# Regola del rimbalzo
 
-Se una Carta Arancione farebbe superare 100, il piatto raggiunge prima 100 e poi **rimbalza** all'indietro di un numero di punti pari all'eccedenza.
+Se una Carta Incremento porterebbe il Piatto oltre 100, viene applicata la Regola del Rimbalzo.
+
+Il Piatto raggiunge idealmente 100 e prosegue all'indietro per i punti eccedenti. Il nuovo valore del Piatto è quindi:
+
+200 − (valore precedente del Piatto + valore della Carta Incremento).
 
 Esempi:
 
-* Piatto 99, carta +1 → piatto 99.
-* Piatto 99, carta +5 → piatto 95.
-* Piatto 97, carta +8 → piatto 94.
+Piatto 99, carta +1 → Piatto 100.
+Piatto 99, carta +2 → totale 101 → Piatto 99.
+Piatto 99, carta +5 → totale 104 → Piatto 96.
+Piatto 97, carta +8 → totale 105 → Piatto 95.
+Piatto 95, carta +8 → totale 103 → Piatto 97.
 
-Questa regola si applica esclusivamente ai giocatori che non sono in Vantaggio.
+Questa regola si applica durante tutta la partita.
 
-### Eccezione
+## Durante il Giro di Vantaggio
 
-La carta **+11** può essere giocata come una Carta Arancione e assegna immediatamente la vittoria al giocatore che la gioca. La carta **+11** non è influenzata dalla regola del rimbalzo.
+Il giocatore in Vantaggio ignora la Regola del Rimbalzo:
+Durante il proprio turno, se una carta giocata dal giocatore in Vantaggio porta il Piatto a 100 o più, quel giocatore vince immediatamente.
 
-Il Giro di Vantaggio termina immediatamente dopo il successivo turno del giocatore in Vantaggio. In pratica, dopo che viene giocata la carta 89, ogni altro giocatore effettua un ultimo turno; successivamente il giocatore in Vantaggio svolge il proprio turno finale, al termine del quale il Giro di Vantaggio termina, indipendentemente dal fatto che abbia vinto o meno.
+Un giocatore che non è in Vantaggio non può vincere portando il Piatto a 100. Se una sua Carta Incremento porta il Piatto esattamente a 100, il Piatto viene invece impostato a 99.
+
+Se la Carta Incremento porta il Piatto oltre 100, viene applicata normalmente la Regola del Rimbalzo.
+
+Esempi:
+
+Piatto 99, carta +1 → totale 100 → Piatto 99.
+Piatto 98, carta +2 → totale 100 → Piatto 99.
+Piatto 97, carta +3 → totale 100 → Piatto 99.
+Piatto 97, carta +8 → totale 105 → Piatto 95.
+Piatto 95, carta +8 → totale 103 → Piatto 97.
+
+Eccezione:
+
+Durante un Giro di Vantaggio, la carta +11 assegna immediatamente la vittoria al giocatore che la utilizza.
+
+La carta +11 non è influenzata dalla Regola del Rimbalzo.
 
 ---
 
 # Regola speciale durante il Giro di Vantaggio
 
-Se un giocatore che non è in Vantaggio non possiede alcuna Carta Arancione nella propria mano, durante il proprio turno può:
+Se un giocatore che non è in Vantaggio non possiede alcuna Carta Incremento nella propria mano, durante il proprio turno può:
 
 1. mostrare la propria mano a tutti i giocatori;
 2. rimettere tutte le carte della propria mano nel Mazzo;
@@ -281,28 +330,34 @@ Se un giocatore che non è in Vantaggio non possiede alcuna Carta Arancione nell
 
 # Composizione del Mazzo
 
-40 Carte Arancioni
+40 Carte Incremento arancioni:
 
-- 30 carte numeriche (+1 ... +10 ×3)
-- 10 Carte Jolly
+- 30 numeriche;
 
-7 Carte Gold
+- 10 Jolly.
 
-3 Carte 89
+5 Carte Incremento Speciali +11.
 
-5 Carte +11
+7 Carte Gold normali.
 
-5 Carte Imbroglio
+3 Carte Gold Speciali 89.
+
+5 Carte Imbroglio.
 
 Totale:
 
 60 carte.
 
+
+
+
+
+
 ---
 
 # Carte Piatto
 
-Esiste un mazzo virtuale composto da 100 Carte Piatto.
+Esiste un mazzo virtuale composto da 100 Carte Piatto di colore blu.
 
 Queste carte non fanno parte del Mazzo.
 

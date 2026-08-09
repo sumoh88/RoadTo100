@@ -137,7 +137,7 @@ func _update_plateau(stack):
 			# Match PlateauValueCard dimensions from Main.tscn
 			p.rect_min_size = Vector2(203, 292)
 			p.rect_size = Vector2(203, 292)
-			p.rect_position = Vector2(0, 0)
+			p.rect_position = Vector2(0, -12)
 
 			# Value label overlay
 			var lbl = Label.new()

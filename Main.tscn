@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=2]
+[gd_scene load_steps=17 format=2]
 
 [ext_resource path="res://imgs/table.png" type="Texture" id=1]
 [ext_resource path="res://imgs/plate.png" type="Texture" id=2]
@@ -18,6 +18,15 @@
 size = 105
 extra_spacing_char = -10
 font_data = ExtResource( 5 )
+
+[sub_resource type="DynamicFontData" id=5]
+font_path = "res://fonts/Dyuthi.ttf"
+
+[sub_resource type="DynamicFont" id=6]
+size = 23
+use_mipmaps = true
+use_filter = true
+font_data = SubResource( 5 )
 
 [sub_resource type="DynamicFont" id=2]
 size = 84
@@ -128,8 +137,8 @@ mouse_filter = 2
 [node name="ValueLabel" type="Label" parent="GameArea/BoardArea/PlateauZone/ValueLayer"]
 anchor_right = 1.0
 anchor_bottom = 1.0
-margin_left = -10.0
-margin_top = 50.0
+margin_left = -6.0
+margin_top = 69.0
 custom_colors/font_color = Color( 0, 0, 0, 1 )
 custom_fonts/font = SubResource( 4 )
 text = "0"
@@ -151,18 +160,31 @@ mouse_filter = 2
 texture = ExtResource( 3 )
 expand = true
 
-[node name="CountLabel" type="Label" parent="GameArea/BoardArea/DrawPile"]
-visible = false
+[node name="CountLabelName" type="Label" parent="GameArea/BoardArea/DrawPile"]
 anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-margin_left = -50.0
-margin_top = 4.0
-margin_right = 50.0
-margin_bottom = 28.0
+margin_left = -60.5
+margin_top = -251.0
+margin_right = 21.5
+margin_bottom = -227.0
+custom_colors/font_color = Color( 0, 0, 0, 1 )
+custom_fonts/font = SubResource( 6 )
+text = "Rimaste:"
+
+[node name="CountLabel" type="Label" parent="GameArea/BoardArea/DrawPile"]
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+margin_left = 29.5
+margin_top = -251.0
+margin_right = 71.5
+margin_bottom = -227.0
+custom_colors/font_color = Color( 0, 0, 0, 1 )
+custom_fonts/font = SubResource( 6 )
 text = "0"
-align = 1
 
 [node name="DiscardPile" type="Control" parent="GameArea/BoardArea"]
 margin_left = 480.0
@@ -286,6 +308,8 @@ mouse_filter = 2
 [node name="OverlayLayer" type="Control" parent="."]
 anchor_right = 1.0
 anchor_bottom = 1.0
+margin_top = -2.0
+margin_bottom = -2.0
 mouse_filter = 1
 
 [node name="InputBlocker" type="ColorRect" parent="OverlayLayer"]

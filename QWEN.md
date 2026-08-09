@@ -210,18 +210,19 @@ python3 -m unittest test_roadto100_rules
 
 | Component | Status |
 |---|---|
-| Domain (CardData, Deck, Hand, etc.) | ✅ Completed |
-| Rules (RoadTo100Rules GDScript) | ✅ Completed and approved |
-| Provider (GameStateProvider + LocalGameEngine) | ✅ Completed |
-| Presenter/UI (Board, Hand, Turn, CardFace) | ✅ Completed and verified |
-| GameController (8 states, input, popup, animation) | ✅ Completed (Steps 1–8) |
+| Domain (CardData, Deck, Hand, etc.) | ✅ Completed (Passaggio A) |
+| Rules (RoadTo100Rules GDScript) | ✅ Completed and approved (Passaggio B) |
+| Provider (GameStateProvider + LocalGameEngine) | ✅ Completed (Passaggio C) |
+| Presenter/UI (Board, Hand, Turn, CardFace) | ✅ Completed and verified (Passaggio D) |
+| GameController (8 states, input, popup, animation) | ✅ Completed (Passaggio E, Steps 1–8) |
 | CardAnimator (FIFO, multi-player, play+draw, 0.7s/0.6s) | ✅ Implemented and verified (Steps 5+8) |
 | DebugDemo (Auto demo, integrated with GC) | ✅ Functional |
 | Python Simulator | ✅ Complete and frozen |
+| **Special Round / Giro Sicuro** | 📋 **Planned (Passaggio F)** — Generalizes GdV into common `Special Round` + adds Safe Round. Not yet implemented. |
 | Multiplayer | ❌ Not started |
 | AI (bot.py) | ❌ Not started |
 
-See `PROJECT_STATE.md` and `ROADMAP.md` for the full roadmap and detailed status.
+See `PROJECT_STATE.md` and `ROADMAP.md` for the full roadmap and detailed status, including Passaggio F step breakdown.
 
 ---
 

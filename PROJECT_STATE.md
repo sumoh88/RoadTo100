@@ -292,9 +292,37 @@ Completato il Passaggio E (Step 8) con animazioni multi-player funzionanti per t
 - `tests/card_animator_test2.gd` + `.tscn` — 20 test: find_card per player, opponent, clone, dest, hide_drawn, event routing
 - `tests/demo_verification_test.gd` + `.tscn` — verifica eventi 4 giocatori in partita reale
 
-### Prossimo passo consigliato
+### Prossimo passo: Passaggio F — Special Round (Giro Sicuro)
 
-**Migliorie UI/UX** — Texture carte definitive, effetti sonori, schermata di vittoria, animazioni più ricche. L'infrastruttura di gameplay del client Godot è completa (Passaggio A→E), manca la rifinitura visiva per un'esperienza giocabile.
+**Stato:** 📋 Pianificato, non ancora implementato.
+
+**Obiettivo:** Generalizzare il Giro di Vantaggio esistente in un sistema comune `Special Round`, aggiungendo il Giro Sicuro.
+
+**Decisioni chiave:**
+- Gold 12–78 → attiva Special Round di tipo `"safe"` (Giro Sicuro); il giocatore sceglie la tipologia da bloccare (`Incremento` / `Gold` / `Imbroglio`) via popup UI riutilizzando `WAITING_FOR_CHOICE`. La scelta è parte della stessa azione `play_card` (nessuno stato persistente con `blocked_type == null`).
+- 89 → attiva Special Round di tipo `"advantage"` (Giro di Vantaggio, comportamento esistente).
+- +11 giocata immediatamente dopo una Gold assume la Gold successiva: se 23–78 → Safe Round; se 89 → Advantage Round.
+- Safe Round e Advantage Round condividono lo stesso lifecycle: terminano alla fine del successivo turno dell'attivatore. Un nuovo Special Round sostituisce immediatamente quello precedente.
+- Il giocatore in Vantaggio ignora il rimbalzo e vince se porta il Piatto a 100 o più. Durante GdV, i giocatori normali non possono vincere a 100 (il Piatto va a 99). Fuori da GdV, il giocatore normale che porta il Piatto esattamente a 100 vince; se supera 100, si applica la Regola del Rimbalzo universale.
+- **Correzione formula rimbalzo:** Il regolamento usa `200 − (piatto + incremento)`, non `199 − (piatto + incremento)` come nel codice attuale. Correzione necessaria in entrambe le codebase.
+
+**Step pianificati (F1–F8):**
+- **F1:** Rinomina metadata (`advantage_turn` → `special_round_active`, `advantage_player_id` → `special_round_player_id`, nuova chiave `special_round_type`).
+- **F2:** Attivazione Safe Round da Gold normale e logica +11 da catena Gold.
+- **F3:** UI popup Safe Round choice riutilizzando `_open_value_choice` esistente; passaggio `blocked_type` in `send_action`.
+- **F4:** Branch Safe Round in `get_available_actions` e `validate_action` (blocco tipo carta per i non-attivatori).
+- **F5:** Correzione formula rimbalzo (`200 − raw_total`), condizione biforcata `>`/`>=` (fuori SR: `> 100`; durante GdV normali: `>= 100` → forza 99; durante GdV vantaggio: ignora).
+- **F6–F8:** Test Python/Godot + regressione.
+
+**File coinvolti:** `games/roadto100/rules.py`, `engine/RoadTo100Rules.gd`, `engine/LocalGameEngine.gd`, `scripts/GameController.gd`, `scripts/TurnPresenter.gd`, `test_roadto100_rules.py`, `tests/rules_test.gd`.
+
+**Pronto per:** `Implementa F1`
+
+---
+
+### Prossimo passo consigliato (alternative post-F)
+
+**Migliorie UI/UX** — Texture carte definitive, effetti sonori, schermata di vittoria, animazioni più ricche. Dopo Passaggio F l'infrastruttura di gameplay del client Godot sarà completa (Passaggio A→F), manca la rifinitura visiva per un'esperienza giocabile.
 
 Alternative:
 - **AI per simulatore Python** (`simulator/ai/bot.py`): scheletro vuoto, strategie di gioco.
