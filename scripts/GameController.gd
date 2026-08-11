@@ -62,6 +62,10 @@ var _selected_card_id = ""
 var _pending_action_type = ""
 var _pending_card_id = ""
 var _pending_valid_values = []
+var _pending_blocked_type = false  # F3: true when waiting for Safe Round blocked_type choice
+
+# F3: Safe Round card type choices
+const SAFE_ROUND_CHOICES = ["Incremento", "Gold", "Imbroglio"]
 
 
 # ---------------------------------------------------------------------------
@@ -427,6 +431,99 @@ func _on_action_completed(result):
 		_finish_post_action()
 
 
+# ---------------------------------------------------------------------------
+# F3: Safe Round choice popup (triggered after Gold/+11 chain → Safe Round)
+# ---------------------------------------------------------------------------
+
+func _check_safe_round_choice(snapshot):
+	"""Open Safe Round choice popup if special_round_type is 'safe'.
+	Called after action_completed to let the activator choose blocked_type."""
+	if snapshot == null:
+		return
+	if _state != State.READY_FOR_INPUT and _state != State.CARD_SELECTED:
+		return  # Only open if we're not already in a popup or animation
+
+	var sr_active = snapshot.get("special_round_active", false)
+	var sr_type = snapshot.get("special_round_type", "")
+	var sr_player_id = snapshot.get("special_round_player_id", "")
+	var local_id = snapshot.get("local_player_id", "player_1")
+
+	if not sr_active or sr_type != "safe" or sr_player_id != local_id:
+		return  # Not a Safe Round for the local player, or already ended
+
+	# Open Safe Round choice popup for the activator (local player)
+	_open_safe_round_choice()
+
+
+func _open_safe_round_choice():
+	"""Open ValueChoicePopup for Safe Round blocked_type selection."""
+	_state = State.WAITING_FOR_CHOICE
+	_pending_action_type = "play_card"
+	_pending_card_id = ""  # Will be set from snapshot when choosing
+	_pending_valid_values = SAFE_ROUND_CHOICES.duplicate()
+	_pending_blocked_type = true
+
+	if _value_choice_label != null:
+		_value_choice_label.text = "Scegli la tipologia da bloccare"
+
+	# Clear old buttons and create Safe Round type buttons
+	if _value_btn_grid != null:
+		for c in _value_btn_grid.get_children():
+			_value_btn_grid.remove_child(c)
+			c.queue_free()
+
+		for choice in SAFE_ROUND_CHOICES:
+			var btn = Button.new()
+			btn.text = choice
+			btn.rect_min_size = Vector2(80, 40)
+			btn.connect("pressed", self, "_on_safe_round_choice_chosen", [choice])
+			_value_btn_grid.add_child(btn)
+
+	if _value_choice_popup != null:
+		_value_choice_popup.popup()
+
+
+func _on_safe_round_choice_chosen(choice):
+	"""Handle Safe Round blocked_type choice."""
+	if _state != State.WAITING_FOR_CHOICE:
+		return
+	if _pending_blocked_type != true:
+		return
+
+	if _value_choice_popup != null:
+		_value_choice_popup.hide()
+
+	# Get the card_id from the last action (the Gold/+11 that activated Safe Round)
+	var cid = ""
+	if _last_snapshot != null:
+		var acts = _last_snapshot.get("available_actions", [])
+		for a in acts:
+			if a.get("action_type", "") == "play_card" and a.has("card_id"):
+				cid = a.get("card_id", "")
+				break
+
+	var action = {"action_type": "play_card", "card_id": cid}
+	action["blocked_type"] = choice
+
+	_pending_action_type = ""
+	_pending_card_id = ""
+	_pending_valid_values = []
+	_pending_blocked_type = false
+
+	perform_action(action)
+
+
+func _on_safe_round_choice_cancel():
+	"""Cancel Safe Round choice and close popup."""
+	if _value_choice_popup != null:
+		_value_choice_popup.hide()
+	_pending_action_type = ""
+	_pending_card_id = ""
+	_pending_valid_values = []
+	_pending_blocked_type = false
+	_state = State.READY_FOR_INPUT
+
+
 func _on_animation_finished():
 	_finish_post_action()
 
@@ -438,6 +535,8 @@ func _finish_post_action():
 	else:
 		_state = State.CARD_SELECTED
 	_check_gold_reveal(_last_snapshot)
+	# F3: Check for Safe Round choice popup (after Gold/+11 chain)
+	_check_safe_round_choice(_last_snapshot)
 
 
 func _on_action_rejected(error_message):

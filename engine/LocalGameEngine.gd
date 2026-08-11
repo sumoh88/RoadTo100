@@ -78,6 +78,9 @@ func send_action(action_dict):
 		rules_action["card"] = card
 	if action_dict.has("selected_value"):
 		rules_action["selected_value"] = action_dict["selected_value"]
+	# F3: pass blocked_type through to rules if present
+	if action_dict.has("blocked_type"):
+		rules_action["blocked_type"] = action_dict["blocked_type"]
 
 	# Capture before-state for event generation
 	var before = _capture_before_state()
@@ -101,8 +104,13 @@ func send_action(action_dict):
 	for e in turn_events:
 		events.append(e)
 
+	# Debug: check metadata before snapshot
+	print("[DBG send_action] before snapshot: sr_active=" + str(game_state.metadata.get("special_round_active", "NONE")) + " sr_type='" + str(game_state.metadata.get("special_round_type", "NONE")) + "'")
+
 	# Build final snapshot
+	print("[DBG send_action] about to call _build_snapshot")
 	var snapshot = _build_snapshot()
+	print("[DBG send_action] after _build_snapshot, snapshot has special_round_type=" + str(snapshot.get("special_round_type", "MISSING")))
 
 	emit_signal("action_completed", {
 		"snapshot": snapshot,
@@ -198,6 +206,9 @@ func _build_snapshot():
 	# Alternates between {"type":"plate","value":N} and {"type":"card","card":{...}}
 	var plateau_visual_stack = _build_plateau_visual_stack(game_state)
 
+	var sr_val = game_state.metadata.get("special_round_active", "NOT_FOUND")
+	var st_val = game_state.metadata.get("special_round_type", "NOT_FOUND")
+	print("[DBG _build_snapshot] sr=" + str(sr_val) + " st='" + str(st_val) + "'")
 	var snapshot = {
 		"players": players_data,
 		"current_player_index": game_state.current_player_index,
@@ -206,8 +217,9 @@ func _build_snapshot():
 		"discard_top": discard_top,
 		"plateau_cards": plateau,
 		"plateau_visual_stack": plateau_visual_stack,
-		"advantage_turn": game_state.metadata.get("advantage_turn", false),
-		"advantage_player_id": game_state.metadata.get("advantage_player_id", null),
+		"special_round_active": sr_val,
+		"special_round_player_id": game_state.metadata.get("special_round_player_id", null),
+		"special_round_type": st_val,
 		"winner": game_state.winner.player_id if game_state.winner != null else null,
 		"turn_number": game_state.turn_number,
 		"available_actions": _build_available_actions(),
@@ -359,7 +371,7 @@ func _build_available_actions():
 func _get_phase_string():
 	if game_state.winner != null:
 		return "game_over"
-	if game_state.metadata.get("advantage_turn", false):
+	if game_state.metadata.get("special_round_active", false):
 		return "advantage"
 	return "playing"
 
@@ -373,8 +385,8 @@ func _capture_before_state():
 	var cp = game_state.current_player()
 	return {
 		"piatto": game_state.metadata.get("piatto", 0),
-		"advantage_turn": game_state.metadata.get("advantage_turn", false),
-		"advantage_player_id": game_state.metadata.get("advantage_player_id", null),
+		"special_round_active": game_state.metadata.get("special_round_active", false),
+		"special_round_player_id": game_state.metadata.get("special_round_player_id", null),
 		"winner": game_state.winner,
 		"current_player_index": game_state.current_player_index,
 		"current_player_id": cp.player_id if cp != null else null,
@@ -447,7 +459,7 @@ func _generate_events(before, rules_action, card):
 	events.append({"type": "card_played", "player_id": cp_id, "card_id": card_id, "destination": dest})
 
 	var is_plus11 = rules._is_plus11_card(card)
-	var was_advantage = before.get("advantage_turn", false)
+	var was_advantage = before.get("special_round_active", false)
 	var winner_emitted = false
 
 	# Step 2: +11 in GdV — winner set BEFORE piatto in Python (+11 handler)
@@ -456,10 +468,10 @@ func _generate_events(before, rules_action, card):
 		winner_emitted = true
 
 	# Step 3: advantage_started (89 / gold chain) — set during increment calc
-	if not before.get("advantage_turn", false) and game_state.metadata.get("advantage_turn", false):
+	if not before.get("special_round_active", false) and game_state.metadata.get("special_round_active", false):
 		events.append({
 			"type": "advantage_started",
-			"player_id": game_state.metadata.get("advantage_player_id", cp_id),
+			"player_id": game_state.metadata.get("special_round_player_id", cp_id),
 		})
 
 	# Step 4: piatto_changed (after all effects)
@@ -501,7 +513,7 @@ func _generate_turn_events(before, rules_action, card):
 		})
 
 	# Advantage ended
-	if before.get("advantage_turn", false) and not game_state.metadata.get("advantage_turn", false):
+	if before.get("special_round_active", false) and not game_state.metadata.get("special_round_active", false):
 		events.append({"type": "advantage_ended"})
 
 	return events

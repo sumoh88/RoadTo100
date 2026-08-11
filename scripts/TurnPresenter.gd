@@ -72,10 +72,10 @@ func show_tip(msg):
 func apply_snapshot(s):
 	if s == null: return
 	var t = s.get("turn_number", 0); var w = s.get("winner", null)
-	var a = s.get("advantage_turn", false); var lid = s.get("local_player_id", "p1")
+	var sr = s.get("special_round_active", false); var lid = s.get("local_player_id", "p1")
 	var acts = s.get("available_actions", [])
 	if _turn_label != null: _turn_label.visible = t > 0; _turn_label.text = "Turno " + str(t)
-	if _advantage_label != null: _advantage_label.visible = a
+	if _advantage_label != null: _advantage_label.visible = sr
 	if _instruction_label != null:
 		if w != null:
 			var wn = ""
@@ -86,7 +86,7 @@ func apply_snapshot(s):
 					wn = player.get("name", "")
 					break
 			_instruction_label.text = wn + " vince!"
-		elif a: _instruction_label.text = "GIRO DI VANTAGGIO"
+		elif sr: _instruction_label.text = "GIRO DI VANTAGGIO"
 		else:
 			var ci = s.get("current_player_index", 0); var pl = s.get("players", [])
 			if ci < pl.size():

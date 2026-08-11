@@ -87,10 +87,10 @@ def main() -> None:
 
         while not ruleset.is_game_over(game):
             # --- Detect fresh GdV activation ---
-            gdv_now = bool(game.metadata.get("advantage_turn", False))
+            gdv_now = bool(game.metadata.get("special_round_active", False))
             if gdv_now and not gdv_active:
                 gdv_active = True
-                gdv_adv_player = game.metadata.get("advantage_player_id")
+                gdv_adv_player = game.metadata.get("special_round_player_id")
                 gdv_start_piatto = game.metadata.get("piatto", 0)
                 non_adv_orange_played = False
 
@@ -144,7 +144,7 @@ def main() -> None:
             ruleset.advance_turn(game)
 
             # --- Detect GdV ending ---
-            if gdv_active and not bool(game.metadata.get("advantage_turn", False)):
+            if gdv_active and not bool(game.metadata.get("special_round_active", False)):
                 if game.winner is None or game.winner is prev_winner:
                     gdv_ended_without_win += 1
                 gdv_active = False

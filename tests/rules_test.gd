@@ -189,6 +189,18 @@ func _run_all():
 	out += _test_no_bounce_plus11_non_advantage()
 	tests_run += 1
 
+	# --- F2: Safe Round activation ---
+	out += _test_gold_12_activates_safe_round()
+	tests_run += 1
+	out += _test_gold_78_activates_safe_round()
+	tests_run += 1
+	out += _test_plus11_from_67_chain_activates_safe_round()
+	tests_run += 1
+	out += _test_plus11_from_78_chain_activates_advantage()
+	tests_run += 1
+	out += _test_new_safe_round_overwrites()
+	tests_run += 1
+
 	out += "\n--- Summary ---\n"
 	out += "  Tests executed: " + str(tests_run) + "\n"
 	out += "  Passed: " + str(passed) + "\n"
@@ -214,8 +226,8 @@ func _run_gold_chain(gold_value, expected):
 		{
 			"piatto": gold_value,
 			"plateau_cards": [gold_card(gold_value)],
-			"advantage_turn": false,
-			"advantage_player_id": null,
+			"special_round_active": false,
+			"special_round_player_id": null,
 			"turn_phase": "start",
 			"target_score": 100,
 		}
@@ -266,8 +278,8 @@ func _test_gold_chain_78_triggers_gdv():
 		{
 			"piatto": 78,
 			"plateau_cards": [gold_card(78)],
-			"advantage_turn": false,
-			"advantage_player_id": null,
+			"special_round_active": false,
+			"special_round_player_id": null,
 			"turn_phase": "start",
 			"target_score": 100,
 		}
@@ -280,9 +292,9 @@ func _test_gold_chain_78_triggers_gdv():
 
 	var piatto_ok = _assert_eq(game.metadata["piatto"], 89,
 		"78+11 piatto", "expected 89")
-	var gdv_ok = _assert_true(game.metadata.get("advantage_turn", false),
+	var gdv_ok = _assert_true(game.metadata.get("special_round_active", false),
 		"78+11 GdV", "advantage_turn should be true")
-	var adv_ok = _assert_eq(game.metadata.get("advantage_player_id", null), "p1",
+	var adv_ok = _assert_eq(game.metadata.get("special_round_player_id", null), "p1",
 		"78+11 adv player", "expected p1")
 
 	if piatto_ok and gdv_ok and adv_ok:
@@ -307,8 +319,8 @@ func _test_gdv_lifecycle():
 		{
 			"piatto": 89,
 			"plateau_cards": [card89(0)],
-			"advantage_turn": true,
-			"advantage_player_id": "p1",
+			"special_round_active": true,
+			"special_round_player_id": "p1",
 			"turn_phase": "action",
 			"target_score": 100,
 		}
@@ -316,21 +328,21 @@ func _test_gdv_lifecycle():
 
 	# Step 1: advance_turn from P1 (after 89) → P2
 	rules.advance_turn(game)
-	var step1_gdv = _assert_true(game.metadata.get("advantage_turn", false),
+	var step1_gdv = _assert_true(game.metadata.get("special_round_active", false),
 		"GdV lifecycle step1", "GdV should stay active after P1's turn ends")
 	var step1_player = _assert_eq(game.current_player().player_id, "p2",
 		"GdV lifecycle step1 player", "expected p2")
 
 	# Step 2: P2's turn ends → back to P1 (NEXT turn for P1)
 	rules.advance_turn(game)
-	var step2_gdv = _assert_true(game.metadata.get("advantage_turn", false),
+	var step2_gdv = _assert_true(game.metadata.get("special_round_active", false),
 		"GdV lifecycle step2", "GdV should be active during P1's NEXT turn")
 	var step2_player = _assert_eq(game.current_player().player_id, "p1",
 		"GdV lifecycle step2 player", "expected p1")
 
 	# Step 3: P1's NEXT turn ends → GdV must end
 	rules.advance_turn(game)
-	var step3_gdv_end = _assert_true(!bool(game.metadata.get("advantage_turn", false)),
+	var step3_gdv_end = _assert_true(!bool(game.metadata.get("special_round_active", false)),
 		"GdV lifecycle step3", "GdV should end after P1's NEXT turn completes")
 	var step3_player = _assert_eq(game.current_player().player_id, "p2",
 		"GdV lifecycle step3 player", "expected p2")
@@ -357,8 +369,8 @@ func _test_89_not_playable_during_gdv():
 		{
 			"piatto": 50,
 			"plateau_cards": [],
-			"advantage_turn": true,
-			"advantage_player_id": "p2",
+			"special_round_active": true,
+			"special_round_player_id": "p2",
 			"turn_phase": "start",
 			"target_score": 100,
 		}
@@ -407,8 +419,8 @@ func _test_plus11_during_gdv():
 		{
 			"piatto": 50,
 			"plateau_cards": [],
-			"advantage_turn": true,
-			"advantage_player_id": "p1",
+			"special_round_active": true,
+			"special_round_player_id": "p1",
 			"turn_phase": "start",
 			"target_score": 100,
 		}
@@ -452,8 +464,8 @@ func _run_89_asserts(piatto_before):
 		{
 			"piatto": piatto_before,
 			"plateau_cards": [],
-			"advantage_turn": false,
-			"advantage_player_id": null,
+			"special_round_active": false,
+			"special_round_player_id": null,
 			"turn_phase": "start",
 			"target_score": 100,
 		}
@@ -465,9 +477,9 @@ func _run_89_asserts(piatto_before):
 
 	var piatto_ok = _assert_eq(game.metadata["piatto"], 89,
 		"89 piatto " + str(piatto_before), "expected piatto=89")
-	var gdv_ok = _assert_true(game.metadata.get("advantage_turn", false),
+	var gdv_ok = _assert_true(game.metadata.get("special_round_active", false),
 		"89 GdV " + str(piatto_before), "advantage_turn should be true")
-	var adv_ok = _assert_eq(game.metadata.get("advantage_player_id", null), "p1",
+	var adv_ok = _assert_eq(game.metadata.get("special_round_player_id", null), "p1",
 		"89 adv player " + str(piatto_before), "expected p1")
 	var winner_ok = _assert_true(game.winner == null,
 		"89 no win " + str(piatto_before), "winner should be null")
@@ -548,8 +560,8 @@ func _test_change_card_insufficient_deck():
 		{
 			"piatto": 10,
 			"plateau_cards": [],
-			"advantage_turn": false,
-			"advantage_player_id": null,
+			"special_round_active": false,
+			"special_round_player_id": null,
 			"turn_phase": "start",
 			"target_score": 100,
 		}
@@ -592,8 +604,8 @@ func _test_reset_hand_reconstitutes():
 		{
 			"piatto": 50,
 			"plateau_cards": [],
-			"advantage_turn": true,
-			"advantage_player_id": "p2",
+			"special_round_active": true,
+			"special_round_player_id": "p2",
 			"turn_phase": "start",
 			"target_score": 100,
 		}
@@ -631,8 +643,8 @@ func _make_gdv_game(piatto, card, advantage_player = "p1", current_player = "p2"
 		{
 			"piatto": piatto,
 			"plateau_cards": [],
-			"advantage_turn": true,
-			"advantage_player_id": advantage_player,
+			"special_round_active": true,
+			"special_round_player_id": advantage_player,
 			"turn_phase": "start",
 			"target_score": 100,
 		}
@@ -717,8 +729,8 @@ func _test_no_bounce_advantage_player():
 		{
 			"piatto": 95,
 			"plateau_cards": [],
-			"advantage_turn": true,
-			"advantage_player_id": "p1",
+			"special_round_active": true,
+			"special_round_player_id": "p1",
 			"turn_phase": "start",
 			"target_score": 100,
 		}
@@ -746,8 +758,8 @@ func _test_no_bounce_plus11_non_advantage():
 		{
 			"piatto": 99,
 			"plateau_cards": [],
-			"advantage_turn": true,
-			"advantage_player_id": "p1",
+			"special_round_active": true,
+			"special_round_player_id": "p1",
 			"turn_phase": "start",
 			"target_score": 100,
 		}
@@ -760,3 +772,167 @@ func _test_no_bounce_plus11_non_advantage():
 		_test("+11 non-advantage")
 		return "  +11 non-adv GdV:      [PASS]\n"
 	return "  +11 non-adv GdV:      [FAIL]\n"
+
+
+# ===========================================================================
+# F2 — Safe Round activation from Gold cards and +11 chain
+# ===========================================================================
+
+func _test_gold_12_activates_safe_round():
+	var rules = Rules.new()
+	var p = PlayerData.new("p1", "Player 1")
+	p.receive_card(gold_card(12))
+	var game = make_game(
+		[p],
+		[increment_card(1, 0)],
+		null,
+		{
+			"piatto": 0,
+			"plateau_cards": [],
+			"special_round_active": false,
+			"special_round_player_id": null,
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+	game.set_current_player(p)
+	var action = {"action_type": "play_card", "card": p.hand.cards[0]}
+	rules.apply_action(game, action)
+	var o1 = _assert_true(game.metadata["piatto"] == 12, "gold_12 piatto", "plateau should be 12")
+	var o2 = _assert_true(game.metadata.get("special_round_active", false), "gold_12 sr active", "Safe Round activates")
+	var o3 = _assert_true(game.metadata.get("special_round_player_id", "") == "p1", "gold_12 activator", "P1 is activator")
+	var o4 = _assert_true(str(game.metadata.get("special_round_type", "")) == "safe", "gold_12 type safe", "Type is safe")
+	if o1 and o2 and o3 and o4:
+		_test("Gold 12 Safe Round")
+		return "  Gold 12 Safe Round:    [PASS]\n"
+	return "  Gold 12 Safe Round:    [FAIL]\n"
+
+
+func _test_gold_78_activates_safe_round():
+	var rules = Rules.new()
+	var p = PlayerData.new("p1", "Player 1")
+	p.receive_card(gold_card(78))
+	var game = make_game(
+		[p],
+		[increment_card(1, 0)],
+		null,
+		{
+			"piatto": 0,
+			"plateau_cards": [],
+			"special_round_active": false,
+			"special_round_player_id": null,
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+	game.set_current_player(p)
+	var action = {"action_type": "play_card", "card": p.hand.cards[0]}
+	rules.apply_action(game, action)
+	var o1 = _assert_true(game.metadata["piatto"] == 78, "gold_78 piatto", "plateau should be 78")
+	var o2 = _assert_true(game.metadata.get("special_round_active", false), "gold_78 sr active", "Safe Round activates")
+	var o3 = _assert_true(str(game.metadata.get("special_round_type", "")) == "safe", "gold_78 type safe", "Type is safe")
+	if o1 and o2 and o3:
+		_test("Gold 78 Safe Round")
+		return "  Gold 78 Safe Round:    [PASS]\n"
+	return "  Gold 78 Safe Round:    [FAIL]\n"
+
+
+func _test_plus11_from_67_chain_activates_safe_round():
+	var rules = Rules.new()
+	var p = PlayerData.new("p1", "Player 1")
+	p.receive_card(plus11_card(0))
+	var game = make_game(
+		[p],
+		[increment_card(1, 0)],
+		null,
+		{
+			"piatto": 67,
+			"plateau_cards": [gold_card(67)],
+			"special_round_active": false,
+			"special_round_player_id": null,
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+	game.set_current_player(p)
+	var action = {"action_type": "play_card", "card": p.hand.cards[0]}
+	rules.apply_action(game, action)
+	var o1 = _assert_true(game.metadata["piatto"] == 78, "+11_67 plateau", "plateau should be 78")
+	var o2 = _assert_true(game.metadata.get("special_round_active", false), "+11_67 sr active", "Safe Round activates")
+	var o3 = _assert_true(str(game.metadata.get("special_round_type", "")) == "safe", "+11_67 type safe", "Type is safe")
+	if o1 and o2 and o3:
+		_test("+11 from 67 chain Safe Round")
+		return "  +11 from 67 Safe Round:[PASS]\n"
+	return "  +11 from 67 Safe Round:[FAIL]\n"
+
+
+func _test_plus11_from_78_chain_activates_advantage():
+	var rules = Rules.new()
+	var p = PlayerData.new("p1", "Player 1")
+	p.receive_card(plus11_card(0))
+	var game = make_game(
+		[p],
+		[increment_card(1, 0)],
+		null,
+		{
+			"piatto": 78,
+			"plateau_cards": [gold_card(78)],
+			"special_round_active": false,
+			"special_round_player_id": null,
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+	game.set_current_player(p)
+	var action = {"action_type": "play_card", "card": p.hand.cards[0]}
+	rules.apply_action(game, action)
+	var o1 = _assert_true(game.metadata["piatto"] == 89, "+11_78 plateau", "plateau should be 89")
+	var o2 = _assert_true(game.metadata.get("special_round_active", false), "+11_78 sr active", "Special Round activates")
+	var o3 = _assert_true(str(game.metadata.get("special_round_type", "")) == "advantage", "+11_78 type adv", "Type is advantage")
+	if o1 and o2 and o3:
+		_test("+11 from 78 chain Advantage Round")
+		return "  +11 from 78 Adv Round: [PASS]\n"
+	return "  +11 from 78 Adv Round: [FAIL]\n"
+
+
+func _test_new_safe_round_overwrites():
+	var rules = Rules.new()
+	var p1 = PlayerData.new("p1", "Player 1")
+	p1.receive_card(gold_card(12))
+	var p2 = PlayerData.new("p2", "Player 2")
+	p2.receive_card(gold_card(34))
+	var game = make_game(
+		[p1, p2],
+		[increment_card(1, 0)],
+		null,
+		{
+			"piatto": 0,
+			"plateau_cards": [],
+			"special_round_active": false,
+			"special_round_player_id": null,
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+
+	# P1 plays Gold 12 → Safe Round for P1
+	game.set_current_player(p1)
+	var action1 = {"action_type": "play_card", "card": p1.hand.cards[0]}
+	rules.apply_action(game, action1)
+	var o1 = _assert_true(game.metadata.get("special_round_player_id", "") == "p1", "sr p1", "P1 activator after Gold 12")
+	var o2 = _assert_true(game.metadata["piatto"] == 12, "sr piatto 12", "plateau is 12")
+
+	# Advance turn to P2, P2 plays Gold 34 → replaces for P2
+	game.current_player_index = 1
+	game.set_current_player(p2)
+	game.metadata["turn_phase"] = "start"
+	game.turn_number += 1
+	var action2 = {"action_type": "play_card", "card": p2.hand.cards[0]}
+	rules.apply_action(game, action2)
+	var o3 = _assert_true(game.metadata.get("special_round_player_id", "") == "p2", "sr p2", "P2 becomes new activator")
+	var o4 = _assert_true(game.metadata["piatto"] == 34, "sr piatto 34", "plateau set to 34 by Gold 34")
+
+	if o1 and o2 and o3 and o4:
+		_test("Safe Round replace")
+		return "  New Safe replaces old: [PASS]\n"
+	return "  New Safe replaces old: [FAIL]\n"

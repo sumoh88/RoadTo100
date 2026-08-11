@@ -67,6 +67,8 @@ func _capture_snapshot(snapshot):
 	_last_snapshot = snapshot
 
 func _capture_result(result):
+	var sr = result.get("snapshot", {}).get("special_round_type", "NONE")
+	print("[DBG _capture_result] sr_type=" + str(sr))
 	_last_action_result = result
 
 func _capture_rejected(msg):
@@ -120,6 +122,9 @@ func _run_all():
 	out += _test_visual_stack_seq_B()
 	out += _test_visual_stack_seq_C()
 	out += _test_visual_stack_seq_D()
+
+	# --- F3: Safe Round blocked_type flow ---
+	out += _test_safe_round_blocked_type_flow()
 
 	out += "\n--- Summary ---\n"
 	out += "  Assertions passed: " + str(passed) + "\n"
@@ -175,7 +180,7 @@ func _test_snapshot_format():
 	e.start_game(2)
 	var s = _last_snapshot
 	var keys = ["players","current_player_index","piatto","deck_count","discard_top",
-		"plateau_cards","plateau_visual_stack","advantage_turn","advantage_player_id",
+		"plateau_cards","plateau_visual_stack","special_round_active","special_round_player_id",
 		"winner","turn_number","available_actions","phase","local_player_id"]
 	var all_ok = true
 	for k in keys:
@@ -381,8 +386,8 @@ func _test_plus11_in_gdv_order():
 	cp.receive_card(p11)
 
 	# Set GdV state
-	gs.metadata["advantage_turn"] = true
-	gs.metadata["advantage_player_id"] = "player_1"
+	gs.metadata["special_round_active"] = true
+	gs.metadata["special_round_player_id"] = "player_1"
 	gs.metadata["turn_phase"] = "start"
 	gs.metadata["piatto"] = 50
 
@@ -518,8 +523,8 @@ func _test_reset_hand_order():
 	cp.receive_card(gold)
 
 	# Set GdV active for another player so RESET_HAND is the only option
-	gs.metadata["advantage_turn"] = true
-	gs.metadata["advantage_player_id"] = "some_other_player"
+	gs.metadata["special_round_active"] = true
+	gs.metadata["special_round_player_id"] = "some_other_player"
 	gs.metadata["turn_phase"] = "start"
 	gs.metadata["piatto"] = 30
 
@@ -562,7 +567,7 @@ func _test_gdv_ends_order():
 	e.start_game(2)
 	var gs = e.game_state
 
-	# Set up: GdV active for player_1, it's P1's NEXT turn so _advantage_turn_done
+	# Set up: GdV active for player_1, it's P1's NEXT turn so _activator_has_played_next
 	# should be true. When advance_turn runs, GdV will end.
 	var p1 = gs.players[0]
 	var p2 = gs.players[1]
@@ -579,18 +584,18 @@ func _test_gdv_ends_order():
 	for i in range(5):
 		gs.deck.add_card(_card("d" + str(i), "+1", 1, "arancione", {"card_type": "increment"}))
 
-	# Set GdV: active, P1 is advantage player, it's P1's turn, _advantage_turn_done = true
+	# Set GdV: active, P1 is advantage player, it's P1's turn, _activator_has_played_next = true
 	gs.current_player_index = 0
 	gs.set_current_player(p1)
-	gs.metadata["advantage_turn"] = true
-	gs.metadata["advantage_player_id"] = "player_1"
-	gs.metadata["_advantage_turn_done"] = true
+	gs.metadata["special_round_active"] = true
+	gs.metadata["special_round_player_id"] = "player_1"
+	gs.metadata["_activator_has_played_next"] = true
 	gs.metadata["turn_phase"] = "start"
 	gs.metadata["piatto"] = 50
 	gs.turn_number = 5
 
 	_last_action_result = null
-	# P1 plays a card → advance_turn sees _advantage_turn_done = true → GdV ends
+	# P1 plays a card → advance_turn sees _activator_has_played_next = true → GdV ends
 	e.send_action({"action_type": "play_card", "card_id": "p1card"})
 	if _last_action_result == null: return "  GdV ends order:        [FAIL - no result]\n"
 
@@ -606,8 +611,8 @@ func _test_gdv_ends_order():
 
 	# GdV must be false in snapshot
 	var snap = _last_action_result["snapshot"]
-	var o4 = _assert(snap["advantage_turn"] == false, "advantage_turn false in snapshot")
-	var o5 = _assert(snap["advantage_player_id"] == null, "advantage_player_id null")
+	var o4 = _assert(snap["special_round_active"] == false, "advantage_turn false in snapshot")
+	var o5 = _assert(snap["special_round_player_id"] == null, "advantage_player_id null")
 
 	return "  GdV ends order:        " + ("[PASS]\n" if (o1 and o2 and o3 and o4 and o5) else "[FAIL] order: " + str(types) + "\n")
 
@@ -780,3 +785,46 @@ func _test_visual_stack_seq_D():
 	var o14 = _assert(!non_gold_in_stack, "D: no non-gold card in stack")
 
 	return "  VS seq D:              " + ("[PASS]\n" if (o1 and o2 and o3 and o4 and o5 and o6 and o7 and o8 and o9 and o10 and o11 and o12 and o13 and o14) else "[FAIL]\n")
+
+
+# ===========================================================================
+# F3: Safe Round blocked_type flows through send_action
+# ===========================================================================
+
+func _test_safe_round_blocked_type_flow():
+	var e = _new_engine()
+	e.connect("game_started", self, "_capture_snapshot")
+	e.connect("action_completed", self, "_capture_result")
+	e.connect("action_rejected", self, "_capture_rejected")
+	e.start_game(2)
+
+	# Manually set up player 1 with a Gold card (12) to trigger Safe Round
+	var gs = e.game_state
+	var cp = gs.current_player()
+	if cp == null:
+		return "  Safe Round blocked_type flow: [SKIP]\n"
+
+	cp.clear_hand()
+	var gold = _card("gold_12", "12", 12, "dorato", {"card_type": "gold"})
+	cp.receive_card(gold)
+
+	# Send play_card action with blocked_type (simulating F3 popup choice)
+	e.send_action({
+		"action_type": "play_card",
+		"card_id": gold.card_id,
+		"blocked_type": "Incremento",
+	})
+
+	if _last_action_result == null:
+		return "  Safe Round blocked_type flow: [FAIL - no result]\n"
+
+	var snap = _last_action_result.get("snapshot", null)
+	if snap == null:
+		return "  Safe Round blocked_type flow: [FAIL - null snapshot]\n"
+
+	var sr_active = snap.get("special_round_active", false)
+	var sr_type = snap.get("special_round_type", "")
+	var sr_pid = snap.get("special_round_player_id", null)
+	print("[DBG] SR: full snap keys=" + str(snap.keys()))
+	print("[DBG] SR: active=" + str(sr_active) + " type='" + str(sr_type) + "' pid='" + str(sr_pid) + "'")
+	return "  Safe Round blocked_type flow: " + ("[PASS]\n" if (sr_active and sr_type == "safe" and sr_pid == "player_1") else "[FAIL]\n")

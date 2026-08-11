@@ -121,8 +121,8 @@ class TestGoldChain(unittest.TestCase):
             metadata={
                 "piatto": gold_value,
                 "plateau_cards": [gold_card(gold_value)],
-                "advantage_turn": False,
-                "advantage_player_id": None,
+                "special_round_active": False,
+                "special_round_player_id": None,
                 "turn_phase": "start",
                 "target_score": TARGET_SCORE,
             },
@@ -163,8 +163,8 @@ class TestGoldChain(unittest.TestCase):
             metadata={
                 "piatto": 78,
                 "plateau_cards": [gold_card(78)],
-                "advantage_turn": False,
-                "advantage_player_id": None,
+                "special_round_active": False,
+                "special_round_player_id": None,
                 "turn_phase": "start",
                 "target_score": TARGET_SCORE,
             },
@@ -176,8 +176,8 @@ class TestGoldChain(unittest.TestCase):
         rules.apply_action(game, action)
 
         self.assertEqual(game.metadata["piatto"], 89)
-        self.assertTrue(game.metadata.get("advantage_turn"))
-        self.assertEqual(game.metadata.get("advantage_player_id"), "p1")
+        self.assertTrue(game.metadata.get("special_round_active"))
+        self.assertEqual(game.metadata.get("special_round_player_id"), "p1")
 
 
 class TestGdvLifecycle(unittest.TestCase):
@@ -196,8 +196,8 @@ class TestGdvLifecycle(unittest.TestCase):
             metadata={
                 "piatto": 89,
                 "plateau_cards": [card89()],
-                "advantage_turn": True,
-                "advantage_player_id": "p1",
+                "special_round_active": True,
+                "special_round_player_id": "p1",
                 "turn_phase": "action",
                 "target_score": TARGET_SCORE,
             },
@@ -205,19 +205,19 @@ class TestGdvLifecycle(unittest.TestCase):
 
         # Step 1: P1 just played 89. advance_turn → P2.
         rules.advance_turn(game)
-        self.assertTrue(game.metadata["advantage_turn"],
+        self.assertTrue(game.metadata["special_round_active"],
                         "GdV should stay active after P1's 89 turn ends")
         self.assertEqual(game.current_player().player_id, "p2")
 
         # Step 2: P2's turn ends → back to P1 (NEXT turn for P1).
         rules.advance_turn(game)
-        self.assertTrue(game.metadata["advantage_turn"],
+        self.assertTrue(game.metadata["special_round_active"],
                         "GdV should be active during P1's NEXT turn")
         self.assertEqual(game.current_player().player_id, "p1")
 
         # Step 3: P1's NEXT turn ends → GdV must end.
         rules.advance_turn(game)
-        self.assertFalse(game.metadata.get("advantage_turn"),
+        self.assertFalse(game.metadata.get("special_round_active"),
                          "GdV should end after P1's NEXT turn completes")
         self.assertEqual(game.current_player().player_id, "p2")
 
@@ -235,8 +235,8 @@ class TestCard89NotPlayableDuringGdv(unittest.TestCase):
             metadata={
                 "piatto": 50,
                 "plateau_cards": [],
-                "advantage_turn": True,
-                "advantage_player_id": "p2",
+                "special_round_active": True,
+                "special_round_player_id": "p2",
                 "turn_phase": "start",
                 "target_score": TARGET_SCORE,
             },
@@ -271,8 +271,8 @@ class TestPlus11DuringGdv(unittest.TestCase):
             metadata={
                 "piatto": 50,
                 "plateau_cards": [],
-                "advantage_turn": True,
-                "advantage_player_id": "p1",
+                "special_round_active": True,
+                "special_round_player_id": "p1",
                 "turn_phase": "start",
                 "target_score": TARGET_SCORE,
             },
@@ -306,8 +306,8 @@ class TestCard89SetsPiatto(unittest.TestCase):
             metadata={
                 "piatto": piatto_before,
                 "plateau_cards": [],
-                "advantage_turn": False,
-                "advantage_player_id": None,
+                "special_round_active": False,
+                "special_round_player_id": None,
                 "turn_phase": "start",
                 "target_score": TARGET_SCORE,
             },
@@ -318,9 +318,9 @@ class TestCard89SetsPiatto(unittest.TestCase):
 
         self.assertEqual(game.metadata["piatto"], 89,
                          f"89 from piatto={piatto_before} must set piatto to 89")
-        self.assertTrue(game.metadata.get("advantage_turn"),
+        self.assertTrue(game.metadata.get("special_round_active"),
                         "advantage_turn must be set after 89")
-        self.assertEqual(game.metadata.get("advantage_player_id"), "p1",
+        self.assertEqual(game.metadata.get("special_round_player_id"), "p1",
                          "advantage_player_id must be the player who played 89")
         self.assertIsNone(game.winner,
                           "89 must not trigger an immediate win")
@@ -389,8 +389,8 @@ class TestDeckReconstitution(unittest.TestCase):
             metadata={
                 "piatto": 10,
                 "plateau_cards": [],
-                "advantage_turn": False,
-                "advantage_player_id": None,
+                "special_round_active": False,
+                "special_round_player_id": None,
                 "turn_phase": "start",
                 "target_score": TARGET_SCORE,
             },
@@ -427,8 +427,8 @@ class TestDeckReconstitution(unittest.TestCase):
             metadata={
                 "piatto": 50,
                 "plateau_cards": [],
-                "advantage_turn": True,
-                "advantage_player_id": "p2",
+                "special_round_active": True,
+                "special_round_player_id": "p2",
                 "turn_phase": "start",
                 "target_score": TARGET_SCORE,
             },
@@ -458,8 +458,8 @@ class TestGdvBounce(unittest.TestCase):
             metadata={
                 "piatto": piatto,
                 "plateau_cards": [],
-                "advantage_turn": True,
-                "advantage_player_id": advantage_player,
+                "special_round_active": True,
+                "special_round_player_id": advantage_player,
                 "turn_phase": "start",
                 "target_score": TARGET_SCORE,
             },
@@ -523,8 +523,8 @@ class TestGdvBounce(unittest.TestCase):
             metadata={
                 "piatto": 95,
                 "plateau_cards": [],
-                "advantage_turn": True,
-                "advantage_player_id": "p1",
+                "special_round_active": True,
+                "special_round_player_id": "p1",
                 "turn_phase": "start",
                 "target_score": TARGET_SCORE,
             },
@@ -548,8 +548,8 @@ class TestGdvBounce(unittest.TestCase):
             metadata={
                 "piatto": 99,
                 "plateau_cards": [],
-                "advantage_turn": True,
-                "advantage_player_id": "p1",
+                "special_round_active": True,
+                "special_round_player_id": "p1",
                 "turn_phase": "start",
                 "target_score": TARGET_SCORE,
             },
@@ -560,6 +560,143 @@ class TestGdvBounce(unittest.TestCase):
         rules.apply_action(game, action)
         self.assertIs(game.winner, p2, "+11 must win for non-advantage player during GdV")
         # Piatto can be anything, but should NOT be bounced (game already won)
+
+
+class TestSafeRoundActivation(unittest.TestCase):
+    """F2: Normal Gold cards activate Safe Round, +11 from Gold chain activates Safe/Advantage."""
+
+    def test_gold_12_activates_safe_round(self) -> None:
+        """Normal Gold 12 sets piatto=12 and activates Safe Round (type=safe)."""
+        rules = RoadTo100RuleSet()
+        p = Player("p1", "P1", Hand([gold_card(12)]))
+        game = make_game(
+            players=[p],
+            deck_cards=[increment_card(1)],
+            metadata={
+                "piatto": 0,
+                "plateau_cards": [],
+                "special_round_active": False,
+                "special_round_player_id": None,
+                "turn_phase": "start",
+                "target_score": TARGET_SCORE,
+            },
+        )
+
+        action = RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": p.hand.cards[0]})
+        rules.apply_action(game, action)
+
+        self.assertEqual(game.metadata["piatto"], 12, "Gold 12 sets piatto to 12")
+        self.assertTrue(game.metadata.get("special_round_active"), "Safe Round activates after Gold")
+        self.assertEqual(game.metadata.get("special_round_player_id"), "p1", "P1 is activator")
+        self.assertEqual(game.metadata.get("special_round_type"), "safe", "Type is safe")
+
+    def test_gold_78_activates_safe_round(self) -> None:
+        """Normal Gold 78 sets piatto=78 and activates Safe Round (type=safe)."""
+        rules = RoadTo100RuleSet()
+        p = Player("p1", "P1", Hand([gold_card(78)]))
+        game = make_game(
+            players=[p],
+            deck_cards=[increment_card(1)],
+            metadata={
+                "piatto": 0,
+                "plateau_cards": [],
+                "special_round_active": False,
+                "special_round_player_id": None,
+                "turn_phase": "start",
+                "target_score": TARGET_SCORE,
+            },
+        )
+
+        action = RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": p.hand.cards[0]})
+        rules.apply_action(game, action)
+
+        self.assertEqual(game.metadata["piatto"], 78, "Gold 78 sets piatto to 78")
+        self.assertTrue(game.metadata.get("special_round_active"), "Safe Round activates after Gold")
+        self.assertEqual(game.metadata.get("special_round_type"), "safe", "Type is safe")
+
+    def test_plus11_from_78_gold_chain_activates_advantage(self) -> None:
+        """+11 after 78 Gold → plateau=89, activates Advantage Round (type=advantage)."""
+        rules = RoadTo100RuleSet()
+        p = Player("p1", "P1", Hand([plus11_card()]))
+        game = make_game(
+            players=[p],
+            deck_cards=[increment_card(1)],
+            metadata={
+                "piatto": 78,
+                "plateau_cards": [gold_card(78)],
+                "special_round_active": False,
+                "special_round_player_id": None,
+                "turn_phase": "start",
+                "target_score": TARGET_SCORE,
+            },
+        )
+
+        action = RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": p.hand.cards[0]})
+        rules.apply_action(game, action)
+
+        self.assertEqual(game.metadata["piatto"], 89, "+11 from 78 chain sets plateau to 89")
+        self.assertTrue(game.metadata.get("special_round_active"), "Special Round activates")
+        self.assertEqual(game.metadata.get("special_round_type"), "advantage", "Type is advantage")
+
+    def test_plus11_from_67_gold_chain_activates_safe_round(self) -> None:
+        """+11 after 67 Gold → plateau=78, activates Safe Round (type=safe)."""
+        rules = RoadTo100RuleSet()
+        p = Player("p1", "P1", Hand([plus11_card()]))
+        game = make_game(
+            players=[p],
+            deck_cards=[increment_card(1)],
+            metadata={
+                "piatto": 67,
+                "plateau_cards": [gold_card(67)],
+                "special_round_active": False,
+                "special_round_player_id": None,
+                "turn_phase": "start",
+                "target_score": TARGET_SCORE,
+            },
+        )
+
+        action = RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": p.hand.cards[0]})
+        rules.apply_action(game, action)
+
+        self.assertEqual(game.metadata["piatto"], 78, "+11 from 67 chain sets plateau to 78")
+        self.assertTrue(game.metadata.get("special_round_active"), "Safe Round activates")
+        self.assertEqual(game.metadata.get("special_round_type"), "safe", "Type is safe")
+
+    def test_new_safe_round_overwrites_previous(self) -> None:
+        """New Safe Round immediately replaces previous Special Round."""
+        rules = RoadTo100RuleSet()
+        p1 = Player("p1", "P1", Hand([gold_card(12)]))
+        p2 = Player("p2", "P2", Hand([gold_card(34)]))
+
+        # Start: P1 plays Gold 12 → Safe Round for P1
+        game = make_game(
+            players=[p1, p2],
+            deck_cards=[increment_card(1)],
+            metadata={
+                "piatto": 0,
+                "plateau_cards": [],
+                "special_round_active": False,
+                "special_round_player_id": None,
+                "turn_phase": "start",
+                "target_score": TARGET_SCORE,
+            },
+        )
+
+        action1 = RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": p1.hand.cards[0]})
+        rules.apply_action(game, action1)
+        self.assertEqual(game.metadata["special_round_player_id"], "p1")
+        self.assertEqual(game.metadata["piatto"], 12)
+
+        # Advance turn to P2, P2 plays Gold 34 → Safe Round replaces for P2
+        game.current_player_index = 1
+        game.set_current_player(p2)
+        game.metadata["turn_phase"] = "start"
+        game.turn_number += 1
+
+        action2 = RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": p2.hand.cards[0]})
+        rules.apply_action(game, action2)
+        self.assertEqual(game.metadata["special_round_player_id"], "p2", "P2 becomes new activator")
+        self.assertEqual(game.metadata["piatto"], 34, "Piatto set to 34 by Gold 34")
 
 
 if __name__ == "__main__":

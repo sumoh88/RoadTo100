@@ -81,7 +81,7 @@
 | C — Provider | ✅ Completato | GameStateProvider, LocalGameEngine, snapshot, eventi |
 | D — Presenter/UI | ✅ **Completato e verificato** | Bug risolti (incluse schermata vittoria e carta 89). Test verificati con 10+ Demo. |
 | E — Input/Animazioni | ✅ **Completato (Step 1–8)** | GameController, card selection, bottoni, popup Jolly/Imbroglio/Gold Reveal, CardAnimator multi-player (giocata 0.7s + pesca 0.6s per tutti e 4 i giocatori), DebugDemo integrato, perform_action(). Step 8: correzione animazioni non visibili e multi-player, 20+9 test di verifica. |
-| F — Special Round (Giro Sicuro) | 📋 **Pianificato** | Generalizzazione GdV in "Special Round" comune + implementazione Giro Sicuro. Passaggio E completato (Step 1–8). |
+| F — Special Round (Giro Sicuro) | 🔨 **F1–F3 completati** | Step F1 (metadata rename), F2 (Safe Round activation), F3 (UI popup blocked_type) implementati e verificati. Prossimo step: F4. |
 
 ---
 
@@ -116,9 +116,9 @@ Queste decisioni NON devono essere rimesse in discussione:
 | `engine/GameState.gd` | Domain port da Python | ✅ |
 | `engine/GameConstants.gd` | Domain port da Python | ✅ |
 | `engine/CardDatabase.gd` | Domain port da Python | ✅ |
-| `engine/RoadTo100Rules.gd` | Rules port da Python | ✅ |
+| `engine/RoadTo100Rules.gd` | Rules port da Python + F2 Safe Round activation | ✅ |
 | `engine/GameStateProvider.gd` | Contratto astratto provider | ✅ |
-| `engine/LocalGameEngine.gd` | Provider concreto locale | ✅ |
+| `engine/LocalGameEngine.gd` | Provider concreto locale + F3 blocked_type passthrough + snapshot special_round_type | ✅ |
 | `engine/TextureResolver.gd` | Risoluzione texture centralizzata | ✅ |
 
 ### Script UI
@@ -131,7 +131,21 @@ Queste decisioni NON devono essere rimesse in discussione:
 | `scripts/CardAnimator.gd` | Coda animazioni FIFO, card_played + card_drawn, ricerca carte per player_id, coordinate globali, 0.7s/0.6s (Passaggio E, Step 5+8) | ✅ Multi-player verificato |
 | `scripts/CardFace.gd` | Carta visuale riutilizzabile | ✅ Scaffold |
 | `scripts/DebugDemo.gd` | Demo automatica 4 giocatori — integrata con GameController (Passaggio E, Step 6) | ✅ Integrata |
-| `scripts/GameController.gd` | Orchestratore centrale: 8 stati, input, popup, animazioni, perform_action() (Passaggio E, Step 1–8) | ✅ Implementato |
+| `scripts/GameController.gd` | Orchestratore centrale: 8 stati, input, popup, animazioni, perform_action() (Passaggio E, Step 1–8) + F3 Safe Round popup choice | ✅ Implementato |
+
+### Python Rules (simulatore)
+
+| File | Motivo | Stato |
+|---|---|---|
+| `games/roadto100/rules.py` | Rules reference implementation + F2 Safe Round activation + metadata rename | ✅ Modificato F1–F2 |
+
+### Test aggiunti (F1–F3)
+
+| File | Cosa aggiunge | Stato |
+|---|---|---|
+| `test_roadto100_rules.py` | 5 test Safe Round activation (`TestSafeRoundActivation`) | ✅ 28 test totali, 0 FAIL |
+| `tests/rules_test.gd` | 5 test Godot specchiati F2 Safe Round | ✅ 73 assert totali, 0 FAIL |
+| `tests/provider_test.gd` | 1 test F3 Safe Round blocked_type flow | ✅ 104 assert totali, 0 FAIL |
 
 ### Scene
 
@@ -153,8 +167,8 @@ Queste decisioni NON devono essere rimesse in discussione:
 | Suite | File | Cosa verifica | Stato |
 |---|---|---|---|
 | **Domain** | `tests/domain_test.gd` + `.tscn` | Deck 60 carte, card_id univoci, Deck/Hand/Player/GameState operazioni | ✅ 60 card, 0 FAIL |
-| **Rules** | `tests/rules_test.gd` + `.tscn` | 14 test: Gold chain, GdV lifecycle, 89/+11, deck reconstitution, reset hand | ✅ 48 assert, 0 FAIL |
-| **Provider** | `tests/provider_test.gd` + `.tscn` | start_game 2/3/4p, snapshot, card_id, event order, plateau visual stack (4 sequenze) | ✅ 104 assert, 0 FAIL |
+| **Rules** | `tests/rules_test.gd` + `.tscn` | 29 test: Gold chain, GdV lifecycle, 89/+11, deck reconstitution, reset hand, Safe Round activation (5 nuovi) | ✅ 73 assert, 0 FAIL |
+| **Provider** | `tests/provider_test.gd` + `.tscn` | start_game 2/3/4p, snapshot, card_id, event order, plateau visual stack (4 sequenze), Safe Round blocked_type flow (1 nuovo) | ✅ 104 assert, 0 FAIL |
 | **Presenter** | `tests/presenter_test.gd` + `.tscn` | Texture resolution, fallback, CardFace, Board/Hand/Turn presenter, button signals, selection, no rules, no auto-start | ✅ 84 assert, 0 FAIL |
 | **Board** | `tests/board_test.gd` + `.tscn` | Plateau visual stack, gold/non-gold separation, opponent centering, rotation setup, chronological order | ✅ 42 assert, 0 FAIL |
 | **GameController** | `tests/game_controller_test.gd` + `.tscn` | Stati, card selection, bottoni, popup, animazioni, integrazione Demo, input GUI reale | ✅ 145 assert, 0 FAIL |
@@ -318,20 +332,19 @@ Bug risolti:
 
 **Passaggio E completato (Step 1–8).** Tutte le animazioni sono ora visibili in-game. Il GameController gestisce correttamente l'intero flusso di gioco: selezione carte → bottoni → popup → animazioni → snapshot.
 
-### Passaggio F — Special Round (Giro Sicuro) — pianificato
+### Passaggio F — Special Round (Giro Sicuro) — F1–F3 completati
 
-Il prossimo lavoro è il **Passaggio F**, che generalizza il Giro di Vantaggio esistente in un sistema comune `Special Round` e aggiunge il **Giro Sicuro**.
+I primi tre step del **Passaggio F** sono stati implementati e verificati:
 
-**Cosa cambia:**
-- Gold 12–78 → attiva Special Round `"safe"` con scelta del tipo bloccato (popup riutilizzando `WAITING_FOR_CHOICE`)
-- 89 → attiva Special Round `"advantage"` (comportamento esistente)
-- +11 dopo Gold → segue la catena: 23–78 → Safe Round; 89 → Advantage Round
-- Safe Round e Advantage Round condividono lo stesso lifecycle
-- Regola del Rimbalzo universalizzata: formula corretta `200 − (piatto + incremento)`
+| Step | Descrizione | Stato |
+|---|---|---|
+| F1 | Rinomina metadata (`advantage_turn` → `special_round_active`, add `special_round_type`) | ✅ Completato |
+| F2 | Attivazione Safe Round da Gold (12–78) e +11 chain logic | ✅ Completato (6 test Python + 5 Godot) |
+| F3 | UI popup Safe Round choice (`blocked_type`), passthrough `send_action` | ✅ Completato (1 test provider) |
 
-**Step F1–F8:** definiti in `PROJECT_STATE.md` nella sezione "Prossimo passo: Passaggio F".
+**Prossimo step: F4** — Branch Safe Round in `get_available_actions` e `validate_action` (blocco tipo carta per i non-attivatori).
 
-**Pronto per:** `Implementa F1`
+Dettagli completi di F1–F3 e piano F1–F8 in `PROJECT_STATE.md` sezione "F1–F3 completati".
 
 ### Attività successive al Passaggio F
 

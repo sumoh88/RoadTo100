@@ -154,7 +154,7 @@ func _test_board_presenter_piatto():
 			"color": "dorato", "card_type": "gold"},
 		"plateau_cards": [],
 		"plateau_visual_stack": [{"type":"plate","value":0}],
-		"advantage_turn": false,
+		"special_round_active": false,
 		"current_player_index": 0,
 	}
 
@@ -500,7 +500,7 @@ func _test_turn_presenter_labels():
 		"turn_number": 5,
 		"phase": "playing",
 		"winner": null,
-		"advantage_turn": false,
+		"special_round_active": false,
 		"current_player_index": 0,
 		"local_player_id": "p1",
 		"players": [
@@ -517,7 +517,7 @@ func _test_turn_presenter_labels():
 
 	# Advantage turn
 	var adv_snap = snap.duplicate()
-	adv_snap["advantage_turn"] = true
+	adv_snap["special_round_active"] = true
 	tp.apply_snapshot(adv_snap)
 	_assert(true, "turn advantage no crash")
 
@@ -566,7 +566,7 @@ func _test_winner_all_players():
 	var expected_p4 = "Player 4 vince!"
 
 	# Test player_1
-	var snap1 = {"turn_number":10,"phase":"game_over","winner":"player_1","advantage_turn":false,"current_player_index":0,"local_player_id":"player_1","players":players,"available_actions":[]}
+	var snap1 = {"turn_number":10,"phase":"game_over","winner":"player_1","special_round_active":false,"current_player_index":0,"local_player_id":"player_1","players":players,"available_actions":[]}
 
 	# Directly test the indexed access pattern from the fix
 	var players_arr = snap1["players"]

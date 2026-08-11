@@ -48,10 +48,10 @@ def run(num_games: int, player_count: int) -> None:
         prev_winner = None
 
         while not ruleset.is_game_over(game):
-            gdv_now = bool(game.metadata.get("advantage_turn", False))
+            gdv_now = bool(game.metadata.get("special_round_active", False))
             if gdv_now and not gdv_active:
                 gdv_active = True
-                gdv_adv = game.metadata.get("advantage_player_id")
+                gdv_adv = game.metadata.get("special_round_player_id")
                 gdv_start = game.metadata.get("piatto", 0)
                 non_adv_orange = False
                 pc = game.metadata.get("plateau_cards", [])
@@ -87,7 +87,7 @@ def run(num_games: int, player_count: int) -> None:
 
             ruleset.advance_turn(game)
 
-            if gdv_active and not bool(game.metadata.get("advantage_turn", False)):
+            if gdv_active and not bool(game.metadata.get("special_round_active", False)):
                 if game.winner is None or game.winner is prev_winner:
                     gdvnowin += 1
                 gdv_active = False

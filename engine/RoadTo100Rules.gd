@@ -107,8 +107,9 @@ func initialize_game(game):
 	game.discard_pile.clear()
 	game.metadata["piatto"] = 0
 	game.metadata["plateau_cards"] = []
-	game.metadata["advantage_turn"] = false
-	game.metadata["advantage_player_id"] = null
+	game.metadata["special_round_active"] = false
+	game.metadata["special_round_player_id"] = null
+	game.metadata["special_round_type"] = "advantage"
 	game.metadata["target_score"] = 100  # TARGET_SCORE
 	game.metadata["turn_phase"] = "start"
 
@@ -138,8 +139,8 @@ func get_available_actions(game):
 
 	var actions = []
 
-	var advantage_turn = bool(game.metadata.get("advantage_turn", false))
-	var advantage_player_id = game.metadata.get("advantage_player_id", null)
+	var advantage_turn = bool(game.metadata.get("special_round_active", false))
+	var advantage_player_id = game.metadata.get("special_round_player_id", null)
 	var is_advantage_player = false
 	if advantage_turn and advantage_player_id != null and current_player.player_id == advantage_player_id:
 		is_advantage_player = true
@@ -225,8 +226,8 @@ func validate_action(game, action_dict):
 		if card == null or typeof(card) != TYPE_OBJECT or not current_player.has_card(card):
 			return false
 
-	var advantage_turn = bool(game.metadata.get("advantage_turn", false))
-	var advantage_player_id = game.metadata.get("advantage_player_id", null)
+	var advantage_turn = bool(game.metadata.get("special_round_active", false))
+	var advantage_player_id = game.metadata.get("special_round_player_id", null)
 	var is_advantage_player = false
 	if advantage_turn and advantage_player_id != null and current_player.player_id == advantage_player_id:
 		is_advantage_player = true
@@ -330,10 +331,11 @@ func apply_action(game, action_dict):
 		increment = int(action_dict.get("selected_value", 0))
 	elif _is_special_89_card(card):
 		increment = 89
-		game.metadata["advantage_turn"] = true
-		game.metadata["advantage_player_id"] = current_player.player_id
+		game.metadata["special_round_active"] = true
+		game.metadata["special_round_player_id"] = current_player.player_id
+		game.metadata["special_round_type"] = "advantage"
 	elif _is_plus11_card(card):
-		var at = bool(game.metadata.get("advantage_turn", false))
+		var at = bool(game.metadata.get("special_round_active", false))
 		if at:
 			increment = 11
 			game.winner = current_player
@@ -347,8 +349,14 @@ func apply_action(game, action_dict):
 			if gold_chain_value != null:
 				increment = gold_chain_value
 				if increment == 89:
-					game.metadata["advantage_turn"] = true
-					game.metadata["advantage_player_id"] = current_player.player_id
+					game.metadata["special_round_active"] = true
+					game.metadata["special_round_player_id"] = current_player.player_id
+					game.metadata["special_round_type"] = "advantage"
+				elif gold_chain_value in [23, 34, 45, 56, 67, 78]:
+					# F2: +11 from Gold chain assumes Safe Round value
+					game.metadata["special_round_active"] = true
+					game.metadata["special_round_player_id"] = current_player.player_id
+					game.metadata["special_round_type"] = "safe"
 				game.metadata["_plus11_gold_chain"] = true
 			else:
 				increment = 11
@@ -358,6 +366,10 @@ func apply_action(game, action_dict):
 		var gold_cards = game.metadata.get("gold_cards", [])
 		gold_cards.append(card)
 		game.metadata["gold_cards"] = gold_cards
+		# F2: Normal Gold (12-78) activates Safe Round
+		game.metadata["special_round_active"] = true
+		game.metadata["special_round_player_id"] = current_player.player_id
+		game.metadata["special_round_type"] = "safe"
 	else:
 		increment = int(card.value)
 
@@ -370,8 +382,8 @@ func apply_action(game, action_dict):
 		plateau += increment
 
 	# Bounce rule: during GdV, non-advantage players bounce at TARGET_SCORE
-	if bool(game.metadata.get("advantage_turn", false)):
-		var adv_pid = game.metadata.get("advantage_player_id", null)
+	if bool(game.metadata.get("special_round_active", false)):
+		var adv_pid = game.metadata.get("special_round_player_id", null)
 		if adv_pid != null and current_player.player_id != adv_pid and not _is_plus11_card(card):
 			var raw_total = int(game.metadata.get("piatto", 0)) + increment
 			if raw_total >= 100:  # TARGET_SCORE
@@ -385,8 +397,8 @@ func apply_action(game, action_dict):
 
 	current_player.metadata["score"] = int(current_player.metadata.get("score", 0)) + increment
 	if int(game.metadata.get("piatto", 0)) >= 100:  # TARGET_SCORE
-		var at = bool(game.metadata.get("advantage_turn", false))
-		var adv_pid = game.metadata.get("advantage_player_id", null)
+		var at = bool(game.metadata.get("special_round_active", false))
+		var adv_pid = game.metadata.get("special_round_player_id", null)
 		if not at or (adv_pid != null and current_player.player_id == adv_pid):
 			game.winner = current_player
 
@@ -413,17 +425,17 @@ func advance_turn(game):
 	game.turn_number += 1
 
 	# GdV ends when the advantage player completes their NEXT turn
-	var advantage_turn = bool(game.metadata.get("advantage_turn", false))
-	var advantage_player_id = game.metadata.get("advantage_player_id", null)
+	var advantage_turn = bool(game.metadata.get("special_round_active", false))
+	var advantage_player_id = game.metadata.get("special_round_player_id", null)
 	if advantage_turn and advantage_player_id != null:
 		var prev_player = game.players[previous_player_index]
 		if prev_player.player_id == advantage_player_id:
-			if game.metadata.get("_advantage_turn_done", false):
-				game.metadata["advantage_turn"] = false
-				game.metadata["advantage_player_id"] = null
-				game.metadata["_advantage_turn_done"] = false
+			if game.metadata.get("_activator_has_played_next", false):
+				game.metadata["special_round_active"] = false
+				game.metadata["special_round_player_id"] = null
+				game.metadata["_activator_has_played_next"] = false
 			else:
-				game.metadata["_advantage_turn_done"] = true
+				game.metadata["_activator_has_played_next"] = true
 
 func is_game_over(game):
 	"""Return whether the game has reached a terminal state."""
