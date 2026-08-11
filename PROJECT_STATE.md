@@ -12,7 +12,7 @@ Il progetto è composto da due codebase separati:
 | Componente | Stato |
 |---|---|
 | Simulatore Python | **Completato e congelato** |
-| Client Godot — Passaggio F, Step 1–3 | **F1, F2, F3 completati e verificati** |
+| Client Godot — Passaggio F, Step 1–4 | **F1–F4 completati e verificati** |
 
 ---
 
@@ -168,8 +168,8 @@ Tutte le azioni transitano esclusivamente per `GameController.perform_action(act
 | Suite | File | Assert | Esito |
 |---|---|---|---|
 | Domain | `tests/domain_test.gd` | 55+ | ✅ All PASS |
-| Rules | `tests/rules_test.gd` | 73 | ✅ 0 FAIL (29 test, include rimbalzo GdV + 5 Safe Round) |
-| Provider | `tests/provider_test.gd` | 104 | ✅ 0 FAIL (include F3 Safe Round blocked_type flow) |
+| Rules | `tests/rules_test.gd` | 78 | ✅ 0 FAIL (39 test, include F4 Safe Round blocked type) |
+| Provider | `tests/provider_test.gd` | 104 | ✅ 0 FAIL |
 | Presenter | `tests/presenter_test.gd` | 84 | ✅ 0 FAIL |
 | Board | `tests/board_test.gd` | 42 | ✅ 0 FAIL |
 | GameController | `tests/game_controller_test.gd` | 145 | ✅ 0 FAIL, nessun memory leak |
@@ -179,7 +179,7 @@ Tutte le azioni transitano esclusivamente per `GameController.perform_action(act
 | Demo Verifica Eventi | `tests/demo_verification_test.gd` | 9 | ✅ 0 FAIL — 4 giocatori verificati |
 | Demo Automatica | — | — | ✅ Funzionante via GC |
 
-**Test Python:** `test_roadto100_rules.py` — 28 test, 0 FAIL (6 nuovi: 5 Safe Round + 1 rimbalzo correttivo).
+**Test Python:** `test_roadto100_rules.py` — 38 test, 0 FAIL (10 nuovi: 5 Safe Round activation + 10 Safe Round blocked type).
 
 ---
 
@@ -296,7 +296,7 @@ Completato il Passaggio E (Step 8) con animazioni multi-player funzionanti per t
 
 ### Passaggio F — Special Round (Giro Sicuro)
 
-**Stato attuale:** Step F1, F2, F3 completati e verificati; prossimi step F4–F8 da implementare.
+**Stato attuale:** Step F1, F2, F3, F4 completati e verificati; prossimo step F5.
 
 #### F1 — Rinomina metadata (completato)
 - `advantage_turn` → `special_round_active`
@@ -334,7 +334,35 @@ Completato il Passaggio E (Step 8) con animazioni multi-player funzionanti per t
 - Godot provider_test: 104 assert, 0 FAIL
 - Tutte le altre suite invariate e verdi
 
-**Prossimo step: F4** — Branch Safe Round in `get_available_actions` e `validate_action` (blocco tipo carta per i non-attivatori).
+#### F4 — Branch Safe Round in `get_available_actions` e `validate_action` (completato)
+- **Helper `_is_blocked_type(card, blocked_type)`:** mappa `blocked_type` a tipologie carte:
+  - `"Incremento"` → blocca increment, jolly E +11 (per regolamento: +11 appartiene a Incremento tipo)
+  - `"Gold"` → blocca Gold normali E 89 (Carta Gold Speciale)
+  - `"Imbroglio"` → blocca Imbroglio
+- **`get_available_actions`:** durante Safe Round, non-attivatori hanno carte del tipo bloccato filtrate PRIMA del filtro Orange/+11
+- **`validate_action`:** stessa logica — rifiuta carte di tipo bloccato per non-attivatori
+- **Cambio Carta:** rimane disponibile per tutte le carte durante Safe Round
+- File: Python `rules.py`, Godot `RoadTo100Rules.gd`
+- **Test Python:** `TestSafeRoundBlockedType` — 10 test
+  - `test_blocked_incremento_blocks_normal_increment`
+  - `test_blocked_incremento_blocks_plus11`
+  - `test_blocked_gold_blocks_normal_gold`
+  - `test_blocked_gold_blocks_89`
+  - `test_blocked_gold_allows_plus11`
+  - `test_blocked_imbroglio_blocks_imbroglio`
+  - `test_change_card_always_available_during_safe_round`
+  - `test_validate_action_blocks_incremento_card`
+  - `test_validate_action_allows_plus11_when_gold_blocked`
+  - `test_validate_action_blocks_89_when_gold_blocked`
+- **Test Godot:** 10 test specchiati in `tests/rules_test.gd`, helper `_make_safe_round_game`
+
+**Stato test dopo F1–F4:**
+- Python: 38/38 OK (10 nuovi F4)
+- Godot rules_test: 78 assert (39 test), 0 FAIL (10 nuovi F4)
+- Godot provider_test: 104 assert, 0 FAIL
+- Tutte le altre suite invariate e verdi
+
+**Prossimo step: F5** — Correzione formula rimbalzo (`200 − raw_total`) e condizione biforcata `>`/`>=`.
 
 ---
 
@@ -354,15 +382,15 @@ Completato il Passaggio E (Step 8) con animazioni multi-player funzionanti per t
 - [x] **F1:** Rinomina metadata (`advantage_turn` → `special_round_active`, `advantage_player_id` → `special_round_player_id`, nuova chiave `special_round_type`). ✅ Completato e verificato.
 - [x] **F2:** Attivazione Safe Round da Gold normale e logica +11 da catena Gold. ✅ Completato e verificato (6 test Python + 5 Godot).
 - [x] **F3:** UI popup Safe Round choice riutilizzando `_open_value_choice` esistente; passaggio `blocked_type` in `send_action`. ✅ Completato e verificato (1 test provider).
-- [ ] **F4:** Branch Safe Round in `get_available_actions` e `validate_action` (blocco tipo carta per i non-attivatori).
+- [x] **F4:** Branch Safe Round in `get_available_actions` e `validate_action` (blocco tipo carta per i non-attivatori). ✅ Completato e verificato (10 test Python + 10 Godot).
 - [ ] **F5:** Correzione formula rimbalzo (`200 − raw_total`), condizione biforcata `>`/`>=` (fuori SR: `> 100`; durante GdV normali: `>= 100` → forza 99; durante GdV vantaggio: ignora).
 - [ ] **F6–F8:** Test Python/Godot + regressione.
 
-**Prossimo step da implementare:** F4
+**Prossimo step da implementare:** F5
 
 **File coinvolti:** `games/roadto100/rules.py`, `engine/RoadTo100Rules.gd`, `engine/LocalGameEngine.gd`, `scripts/GameController.gd`, `scripts/TurnPresenter.gd`, `test_roadto100_rules.py`, `tests/rules_test.gd`.
 
-**Pronto per:** `Implementa F4`
+**Pronto per:** `Implementa F5`
 
 ---
 

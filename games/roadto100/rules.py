@@ -52,6 +52,30 @@ class RoadTo100RuleSet(RuleSet):
         return str(card.metadata.get("card_type", "")).lower() == "special" and card.name == "+11"
 
     @staticmethod
+    def _is_blocked_type(card: Card, blocked_type: str) -> bool:
+        """Return whether the provided card belongs to the blocked type during Safe Round.
+
+        Per GAME_RULES.md Giro Sicuro rules:
+        - "Incremento" blocks normal Incremento cards AND +11 (which belongs to Incremento type)
+        - "Gold" blocks normal Gold cards AND 89 (special Gold card)
+        - "Imbroglio" blocks Imbroglio cards
+        """
+        bt = str(blocked_type).lower()
+        if bt == "incremento":
+            # Blocks increment, jolly, AND +11 (per rules: +11 belongs to Incremento type)
+            return (
+                RoadTo100RuleSet._is_increment_card(card)
+                or RoadTo100RuleSet._is_jolly_card(card)
+                or RoadTo100RuleSet._is_plus11_card(card)
+            )
+        elif bt == "gold":
+            # Blocks normal Gold cards AND 89 (special Gold card, per rules: 89 is Carta Gold Speciale)
+            return RoadTo100RuleSet._is_gold_card(card) or RoadTo100RuleSet._is_special_89_card(card)
+        elif bt == "imbroglio":
+            return RoadTo100RuleSet._is_imbroglio_card(card)
+        return False
+
+    @staticmethod
     def _reshuffle_discard_into_deck(game: Game) -> None:
         """Move discard cards (except the last) back to deck, then shuffle.
 
@@ -189,7 +213,13 @@ class RoadTo100RuleSet(RuleSet):
 
         # Card play actions
         for card in current_player.hand.cards:
-            # During Special Round: only Orange cards and +11 can be played
+            # During Safe Round: non-activator players have blocked card types
+            if special_round_active and not is_special_round_active:
+                blocked_type = game.metadata.get("blocked_type", "")
+                if blocked_type and self._is_blocked_type(card, blocked_type):
+                    continue
+
+            # During Advantage Round: only Orange cards and +11 can be played
             if special_round_active:
                 if not (self._is_increment_card(card) or self._is_jolly_card(card) or self._is_plus11_card(card)):
                     continue
@@ -268,7 +298,13 @@ class RoadTo100RuleSet(RuleSet):
         if action.action_type == CHANGE_CARD_ACTION:
             return isinstance(card, Card) and current_player.has_card(card)
 
-        # Card play actions during Special Round: only Orange and +11 allowed
+        # Card play actions during Safe Round: non-activators have blocked card types
+        if special_round_active and not is_special_round_player:
+            blocked_type = game.metadata.get("blocked_type", "")
+            if blocked_type and self._is_blocked_type(card, blocked_type):
+                return False
+
+        # Card play actions during Advantage Round: only Orange and +11 allowed
         if special_round_active:
             if not (self._is_increment_card(card) or self._is_jolly_card(card) or self._is_plus11_card(card)):
                 return False
@@ -400,24 +436,45 @@ class RoadTo100RuleSet(RuleSet):
         else:
             plateau += increment
 
-        # Bounce rule: during Special Round, non-activator players bounce at TARGET_SCORE
-        if bool(game.metadata.get("special_round_active", False)):
-            sr_pid = game.metadata.get("special_round_player_id")
-            if sr_pid is not None and current_player.player_id != sr_pid and not self._is_plus11_card(card):
-                raw_total = int(game.metadata.get("piatto", 0)) + increment
-                if raw_total >= TARGET_SCORE:
-                    plateau = (2 * TARGET_SCORE - 1) - raw_total  # = 199 - raw
+        # Determine raw_total for bounce/victory logic (for non-Gold/89/+11-gold-chain cards).
+        # Gold/89/Gold-chain cards set plateau directly, no bounce.
+        raw_total = None
+        if not self._is_gold_card(card) and not self._is_special_89_card(card):
+            raw_total = plateau  # plateau already has increment added
 
-        game.metadata["piatto"] = min(plateau, TARGET_SCORE)
+        sr_active = bool(game.metadata.get("special_round_active", False))
+        sr_pid = game.metadata.get("special_round_player_id")
+        is_adv_player = sr_pid is not None and current_player.player_id == sr_pid
+        is_plus11 = self._is_plus11_card(card)
+
+        # --- Plateau value computation (bounce / GdV cap) ---
+        if raw_total is not None:
+            # Advantage player: no bounce ever.
+            if is_adv_player:
+                pass  # plateau stays as computed
+            elif sr_active and not is_plus11:
+                # Special Round (includes GdV): non-activator logic.
+                if raw_total == TARGET_SCORE:
+                    plateau = TARGET_SCORE - 1  # 100 → 99, no win
+                elif raw_total > TARGET_SCORE:
+                    plateau = (2 * TARGET_SCORE) - raw_total  # bounce: 200 - raw_total
+            else:
+                # Outside SR / GdV: universal bounce for raw_total > 100.
+                if raw_total > TARGET_SCORE:
+                    plateau = (2 * TARGET_SCORE) - raw_total  # bounce: 200 - raw_total
+
         game.metadata.setdefault("plateau_cards", []).append(card)
 
-        current_player.metadata["score"] = int(current_player.metadata.get("score", 0)) + increment
-        if int(game.metadata.get("piatto", 0)) >= TARGET_SCORE:
-            # During Special Round, only the activator player can win by reaching 100
-            special_round_active = bool(game.metadata.get("special_round_active", False))
-            special_round_player_id = game.metadata.get("special_round_player_id")
-            if not special_round_active or (special_round_player_id is not None and current_player.player_id == special_round_player_id):
-                game.winner = current_player
+        # Victory check: advantage player wins at plateau >= 100;
+        # non-advantage outside SR wins at plateau == 100.
+        if is_adv_player and plateau >= TARGET_SCORE:
+            game.winner = current_player
+        elif not sr_active and (plateau == TARGET_SCORE or plateau > TARGET_SCORE):
+            plateau = TARGET_SCORE
+            game.winner = current_player
+
+        # Store capped plateau value (advantage wins may show raw value for display).
+        game.metadata["piatto"] = min(plateau, TARGET_SCORE) if not is_adv_player else plateau
 
         game.metadata["turn_phase"] = "action"
         drawn_card = self._draw_or_reshuffle(game)

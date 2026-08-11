@@ -43,6 +43,27 @@ func _is_plus11_card(card):
 	return ct == "special" and card.name == "+11"
 
 # ---------------------------------------------------------------------------
+# Safe Round blocked type check (F4)
+# ---------------------------------------------------------------------------
+
+func _is_blocked_type(card, blocked_type):
+	"""Check if a card belongs to the blocked type during Safe Round.
+
+	Per GAME_RULES.md Giro Sicuro rules:
+	- "Incremento" blocks normal Incremento cards AND +11
+	- "Gold" blocks normal Gold cards AND 89
+	- "Imbroglio" blocks Imbroglio cards
+	"""
+	var bt = str(blocked_type).to_lower()
+	if bt == "incremento":
+		return _is_increment_card(card) or _is_jolly_card(card) or _is_plus11_card(card)
+	elif bt == "gold":
+		return _is_gold_card(card) or _is_special_89_card(card)
+	elif bt == "imbroglio":
+		return _is_imbroglio_card(card)
+	return false
+
+# ---------------------------------------------------------------------------
 # Deck helpers (mirror Python staticmethods)
 # ---------------------------------------------------------------------------
 
@@ -173,6 +194,12 @@ func get_available_actions(game):
 
 	# Card play actions
 	for card in current_player.hand.cards:
+		# During Safe Round: non-activator players have blocked card types
+		if advantage_turn and not is_advantage_player:
+			var blocked_type = game.metadata.get("blocked_type", "")
+			if blocked_type != "" and _is_blocked_type(card, blocked_type):
+				continue
+
 		# During GdV: only Orange cards and +11 can be played
 		if advantage_turn:
 			if not (_is_increment_card(card) or _is_jolly_card(card) or _is_plus11_card(card)):
@@ -246,6 +273,12 @@ func validate_action(game, action_dict):
 
 	if action_dict["action_type"] == CHANGE_CARD_ACTION:
 		return card != null and typeof(card) == TYPE_OBJECT and current_player.has_card(card)
+
+	# Card play actions during Safe Round: non-activators have blocked card types
+	if advantage_turn and not is_advantage_player:
+		var blocked_type = game.metadata.get("blocked_type", "")
+		if blocked_type != "" and _is_blocked_type(card, blocked_type):
+			return false
 
 	# Card play actions during GdV: only Orange and +11 allowed
 	if advantage_turn:
@@ -381,26 +414,54 @@ func apply_action(game, action_dict):
 	else:
 		plateau += increment
 
-	# Bounce rule: during GdV, non-advantage players bounce at TARGET_SCORE
-	if bool(game.metadata.get("special_round_active", false)):
-		var adv_pid = game.metadata.get("special_round_player_id", null)
-		if adv_pid != null and current_player.player_id != adv_pid and not _is_plus11_card(card):
-			var raw_total = int(game.metadata.get("piatto", 0)) + increment
-			if raw_total >= 100:  # TARGET_SCORE
-				plateau = 199 - raw_total
+	# Determine raw_total for bounce/victory logic (for non-Gold/89/+11-gold-chain cards).
+	# Gold/89/Gold-chain cards set plateau directly, no bounce.
+	var raw_total = null
+	if not _is_gold_card(card) and not _is_special_89_card(card):
+		raw_total = plateau  # plateau already has increment added
 
-	game.metadata["piatto"] = min(plateau, 100)  # TARGET_SCORE
+	var sr_active = bool(game.metadata.get("special_round_active", false))
+	var sr_pid = game.metadata.get("special_round_player_id", null)
+	var is_adv_player = sr_pid != null and current_player.player_id == sr_pid
+	var is_plus11 = _is_plus11_card(card)
+
+	# --- Plateau value computation (bounce / GdV cap) ---
+	if raw_total != null:
+		# Advantage player: no bounce ever.
+		if is_adv_player:
+			pass  # plateau stays as computed
+		elif sr_active and not is_plus11:
+			# Special Round (includes GdV): non-activator logic.
+			if raw_total == 100:
+				plateau = 99  # 100 → 99, no win
+			elif raw_total > 100:
+				plateau = 200 - raw_total  # bounce: 200 - raw_total
+		else:
+			# Outside SR / GdV: universal bounce for raw_total > 100.
+			if raw_total > 100:
+				plateau = 200 - raw_total  # bounce: 200 - raw_total
 
 	if not game.metadata.has("plateau_cards"):
 		game.metadata["plateau_cards"] = []
 	game.metadata["plateau_cards"].append(card)
 
-	current_player.metadata["score"] = int(current_player.metadata.get("score", 0)) + increment
-	if int(game.metadata.get("piatto", 0)) >= 100:  # TARGET_SCORE
-		var at = bool(game.metadata.get("special_round_active", false))
-		var adv_pid = game.metadata.get("special_round_player_id", null)
-		if not at or (adv_pid != null and current_player.player_id == adv_pid):
-			game.winner = current_player
+	# Victory check: advantage player wins at plateau >= 100;
+	# non-advantage outside SR wins at plateau == 100 (capped).
+	if is_adv_player and plateau >= 100:
+		current_player.metadata["score"] = int(current_player.metadata.get("score", 0)) + increment
+		game.winner = current_player
+	elif not sr_active and (plateau == 100 or plateau > 100):
+		plateau = 100
+		current_player.metadata["score"] = int(current_player.metadata.get("score", 0)) + increment
+		game.winner = current_player
+	else:
+		current_player.metadata["score"] = int(current_player.metadata.get("score", 0)) + increment
+
+	# Store capped plateau value (advantage wins may show raw value for display).
+	if is_adv_player:
+		game.metadata["piatto"] = plateau
+	else:
+		game.metadata["piatto"] = min(plateau, 100)
 
 	game.metadata["turn_phase"] = "action"
 	var drawn_card = _draw_or_reshuffle(game)

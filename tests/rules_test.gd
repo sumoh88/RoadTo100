@@ -75,6 +75,7 @@ func imbroglio_card(copy):
 # ---------------------------------------------------------------------------
 
 func make_game(players, deck_cards, discard = null, metadata = null):
+	var meta_copy = metadata.duplicate(true) if metadata != null else {}
 	var g = GameState.new(
 		players,
 		Deck.new(deck_cards.duplicate()),
@@ -83,7 +84,7 @@ func make_game(players, deck_cards, discard = null, metadata = null):
 		0,  # turn_number
 		1,  # phase = PLAYING
 		null,  # winner
-		metadata.duplicate(true) if metadata != null else {}
+		meta_copy
 	)
 	g.set_current_player(players[0])
 	return g
@@ -189,6 +190,22 @@ func _run_all():
 	out += _test_no_bounce_plus11_non_advantage()
 	tests_run += 1
 
+	# --- F5: Bounce formula and bifurcation ---
+	out += _test_normal_bounce_99_plus_1()
+	tests_run += 1
+	out += _test_normal_bounce_99_plus_2()
+	tests_run += 1
+	out += _test_normal_bounce_97_plus_8()
+	tests_run += 1
+	out += _test_normal_bounce_95_plus_8()
+	tests_run += 1
+	out += _test_gdv_non_adv_exact_100()
+	tests_run += 1
+	out += _test_gdv_advantage_97_plus_8()
+	tests_run += 1
+	out += _test_safe_round_victory()
+	tests_run += 1
+
 	# --- F2: Safe Round activation ---
 	out += _test_gold_12_activates_safe_round()
 	tests_run += 1
@@ -199,6 +216,27 @@ func _run_all():
 	out += _test_plus11_from_78_chain_activates_advantage()
 	tests_run += 1
 	out += _test_new_safe_round_overwrites()
+	tests_run += 1
+
+	# --- F4: Safe Round blocked type ---
+	out += _test_blocked_incremento_blocks_normal()
+	tests_run += 1
+	out += _test_blocked_incremento_blocks_plus11()
+	tests_run += 1
+	out += _test_blocked_gold_blocks_normal()
+	tests_run += 1
+	out += _test_blocked_gold_blocks_89()
+	out += _test_blocked_gold_allows_plus11()
+	tests_run += 1
+	out += _test_blocked_imbroglio_blocks_imbroglio()
+	tests_run += 1
+	out += _test_change_card_available_during_safe_round()
+	tests_run += 1
+	out += _test_validate_action_blocks_incremento()
+	tests_run += 1
+	out += _test_validate_allows_plus11_gold_blocked()
+	tests_run += 1
+	out += _test_validate_blocks_89_gold_blocked()
 	tests_run += 1
 
 	out += "\n--- Summary ---\n"
@@ -670,11 +708,12 @@ func _test_bounce_99_plus_1():
 	return "  Bounce 99+1:          [FAIL]\n"
 
 func _test_bounce_99_plus_5():
+	"""Non-advantage GdV: 99+5=104 → bounce (200-104=96)."""
 	var r = _make_gdv_game(99, increment_card(5, 0))
 	var rules = r[0]; var player = r[1]; var game = r[2]
 	var action = {"action_type": "play_card", "card": player.hand.cards[0]}
 	rules.apply_action(game, action)
-	var o1 = _assert_eq(game.metadata["piatto"], 95, "bounce 99+5", "expected 95")
+	var o1 = _assert_eq(game.metadata["piatto"], 96, "bounce 99+5", "expected 96")
 	var o2 = _assert_true(game.winner == null, "bounce 99+5 no win", "no winner")
 	if o1 and o2:
 		_test("bounce 99+5")
@@ -694,11 +733,12 @@ func _test_bounce_90_plus_10():
 	return "  Bounce 90+10:         [FAIL]\n"
 
 func _test_bounce_97_plus_8():
+	"""Non-advantage GdV: 97+8=105 → bounce (200-105=95)."""
 	var r = _make_gdv_game(97, increment_card(8, 0))
 	var rules = r[0]; var player = r[1]; var game = r[2]
 	var action = {"action_type": "play_card", "card": player.hand.cards[0]}
 	rules.apply_action(game, action)
-	var o1 = _assert_eq(game.metadata["piatto"], 94, "bounce 97+8", "expected 94")
+	var o1 = _assert_eq(game.metadata["piatto"], 95, "bounce 97+8", "expected 95")
 	var o2 = _assert_true(game.winner == null, "bounce 97+8 no win", "no winner")
 	if o1 and o2:
 		_test("bounce 97+8")
@@ -718,6 +758,7 @@ func _test_bounce_70_plus_10_no_bounce():
 	return "  Bounce 70+10:         [FAIL]\n"
 
 func _test_no_bounce_advantage_player():
+	"""Advantage player: piatto 95 +10 → 105, wins (no bounce)."""
 	var rules = Rules.new()
 	var p1 = PlayerData.new("p1", "P1")
 	p1.receive_card(increment_card(10, 0))
@@ -738,7 +779,7 @@ func _test_no_bounce_advantage_player():
 	game.set_current_player(p1)
 	var action = {"action_type": "play_card", "card": p1.hand.cards[0]}
 	rules.apply_action(game, action)
-	var o1 = _assert_eq(game.metadata["piatto"], 100, "adv player 95+10", "expected 100")
+	var o1 = _assert_eq(game.metadata["piatto"], 105, "adv player 95+10", "expected 105")
 	var o2 = _assert_true(game.winner == p1, "adv player wins", "expected p1 winner")
 	if o1 and o2:
 		_test("no bounce advantage")
@@ -772,6 +813,205 @@ func _test_no_bounce_plus11_non_advantage():
 		_test("+11 non-advantage")
 		return "  +11 non-adv GdV:      [PASS]\n"
 	return "  +11 non-adv GdV:      [FAIL]\n"
+
+
+# ===========================================================================
+# F5 — Bounce formula (200 - raw_total) and bifurcation logic
+# ===========================================================================
+
+func _test_normal_bounce_99_plus_1():
+	"""Normal play: 99+1=100 → victory."""
+	var rules = Rules.new()
+	var p = PlayerData.new("p1", "P1")
+	p.receive_card(increment_card(1, 0))
+	var game = make_game(
+		[p],
+		[],
+		null,
+		{
+			"piatto": 99,
+			"plateau_cards": [],
+			"special_round_active": false,
+			"special_round_player_id": null,
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+	var action = {"action_type": "play_card", "card": p.hand.cards[0]}
+	rules.apply_action(game, action)
+	var o1 = _assert_eq(game.metadata["piatto"], 100, "normal 99+1", "expected 100")
+	var o2 = _assert_true(game.winner == p, "normal 99+1 win", "p1 wins")
+	if o1 and o2:
+		_test("normal bounce 99+1")
+		return "  Normal 99+1:          [PASS]\n"
+	return "  Normal 99+1:          [FAIL]\n"
+
+func _test_normal_bounce_99_plus_2():
+	"""Normal play: 99+2=101 → bounce (200-101=99)."""
+	var rules = Rules.new()
+	var p = PlayerData.new("p1", "P1")
+	p.receive_card(increment_card(2, 0))
+	var game = make_game(
+		[p],
+		[],
+		null,
+		{
+			"piatto": 99,
+			"plateau_cards": [],
+			"special_round_active": false,
+			"special_round_player_id": null,
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+	var action = {"action_type": "play_card", "card": p.hand.cards[0]}
+	rules.apply_action(game, action)
+	var o1 = _assert_eq(game.metadata["piatto"], 99, "normal 99+2", "expected 99")
+	var o2 = _assert_true(game.winner == null, "normal 99+2 no win", "no winner")
+	if o1 and o2:
+		_test("normal bounce 99+2")
+		return "  Normal 99+2:          [PASS]\n"
+	return "  Normal 99+2:          [FAIL]\n"
+
+func _test_normal_bounce_97_plus_8():
+	"""Normal play: 97+8=105 → bounce (200-105=95)."""
+	var rules = Rules.new()
+	var p = PlayerData.new("p1", "P1")
+	p.receive_card(increment_card(8, 0))
+	var game = make_game(
+		[p],
+		[],
+		null,
+		{
+			"piatto": 97,
+			"plateau_cards": [],
+			"special_round_active": false,
+			"special_round_player_id": null,
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+	var action = {"action_type": "play_card", "card": p.hand.cards[0]}
+	rules.apply_action(game, action)
+	var o1 = _assert_eq(game.metadata["piatto"], 95, "normal 97+8", "expected 95")
+	var o2 = _assert_true(game.winner == null, "normal 97+8 no win", "no winner")
+	if o1 and o2:
+		_test("normal bounce 97+8")
+		return "  Normal 97+8:          [PASS]\n"
+	return "  Normal 97+8:          [FAIL]\n"
+
+func _test_normal_bounce_95_plus_8():
+	"""Normal play: 95+8=103 → bounce (200-103=97)."""
+	var rules = Rules.new()
+	var p = PlayerData.new("p1", "P1")
+	p.receive_card(increment_card(8, 0))
+	var game = make_game(
+		[p],
+		[],
+		null,
+		{
+			"piatto": 95,
+			"plateau_cards": [],
+			"special_round_active": false,
+			"special_round_player_id": null,
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+	var action = {"action_type": "play_card", "card": p.hand.cards[0]}
+	rules.apply_action(game, action)
+	var o1 = _assert_eq(game.metadata["piatto"], 97, "normal 95+8", "expected 97")
+	var o2 = _assert_true(game.winner == null, "normal 95+8 no win", "no winner")
+	if o1 and o2:
+		_test("normal bounce 95+8")
+		return "  Normal 95+8:          [PASS]\n"
+	return "  Normal 95+8:          [FAIL]\n"
+
+func _test_gdv_non_adv_exact_100():
+	"""GdV non-advantage: plateau exactly 100 → Piatto=99, no win."""
+	var rules = Rules.new()
+	var p1 = PlayerData.new("p1", "P1")
+	var p2 = PlayerData.new("p2", "P2")
+	p2.receive_card(increment_card(1, 0))
+	var game = make_game(
+		[p1, p2],
+		[],
+		null,
+		{
+			"piatto": 99,
+			"plateau_cards": [],
+			"special_round_active": true,
+			"special_round_player_id": "p1",
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+	game.set_current_player(p2)
+	var action = {"action_type": "play_card", "card": p2.hand.cards[0]}
+	rules.apply_action(game, action)
+	var o1 = _assert_eq(game.metadata["piatto"], 99, "gdv non-adv 99+1", "expected 99")
+	var o2 = _assert_true(game.winner == null, "gdv non-adv 99+1 no win", "no winner")
+	if o1 and o2:
+		_test("gdv non-adv exact 100")
+		return "  GdV non-adv 99+1:     [PASS]\n"
+	return "  GdV non-adv 99+1:     [FAIL]\n"
+
+func _test_gdv_advantage_97_plus_8():
+	"""GdV advantage: 97+8=105 → 105, immediate win (no bounce)."""
+	var rules = Rules.new()
+	var p1 = PlayerData.new("p1", "P1")
+	p1.receive_card(increment_card(8, 0))
+	var p2 = PlayerData.new("p2", "P2")
+	var game = make_game(
+		[p1, p2],
+		[],
+		null,
+		{
+			"piatto": 97,
+			"plateau_cards": [],
+			"special_round_active": true,
+			"special_round_player_id": "p1",
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+	game.set_current_player(p1)
+	var action = {"action_type": "play_card", "card": p1.hand.cards[0]}
+	rules.apply_action(game, action)
+	var o1 = _assert_eq(game.metadata["piatto"], 105, "gdv adv 97+8", "expected 105")
+	var o2 = _assert_true(game.winner == p1, "gdv adv 97+8 win", "p1 wins")
+	if o1 and o2:
+		_test("gdv advantage no bounce")
+		return "  GdV advantage 97+8:   [PASS]\n"
+	return "  GdV advantage 97+8:   [FAIL]\n"
+
+func _test_safe_round_victory():
+	"""Safe Round: activator player wins at 100."""
+	var rules = Rules.new()
+	var p1 = PlayerData.new("p1", "P1")
+	p1.receive_card(increment_card(1, 0))
+	var game = make_game(
+		[p1],
+		[],
+		null,
+		{
+			"piatto": 99,
+			"plateau_cards": [],
+			"special_round_active": true,
+			"special_round_player_id": "p1",
+			"special_round_type": "safe",
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+	var action = {"action_type": "play_card", "card": p1.hand.cards[0]}
+	rules.apply_action(game, action)
+	var o1 = _assert_eq(game.metadata["piatto"], 100, "safe round 99+1", "expected 100")
+	var o2 = _assert_true(game.winner == p1, "safe round 99+1 win", "p1 wins")
+	if o1 and o2:
+		_test("safe round victory")
+		return "  Safe Round victory:   [PASS]\n"
+	return "  Safe Round victory:   [FAIL]\n"
 
 
 # ===========================================================================
@@ -936,3 +1176,222 @@ func _test_new_safe_round_overwrites():
 		_test("Safe Round replace")
 		return "  New Safe replaces old: [PASS]\n"
 	return "  New Safe replaces old: [FAIL]\n"
+
+
+# ===========================================================================
+# F4 — Safe Round blocked type (card type blocking for non-activators)
+# ===========================================================================
+
+func _make_safe_round_game(players, blocked_type, current_player_idx):
+	"""Create a 2-player game with Safe Round active for p1 and blocked_type set."""
+	var p1 = PlayerData.new("p1", "P1")
+	var p2id = "p2"
+	if current_player_idx == 0:
+		p2id = "p1"
+	var p2 = PlayerData.new(p2id, "P" + str(current_player_idx + 1))
+	var game = make_game(
+		players,
+		[increment_card(1, 0)],
+		null,
+		{
+			"piatto": 50,
+			"plateau_cards": [],
+			"special_round_active": true,
+			"special_round_player_id": "p1",
+			"special_round_type": "safe",
+			"blocked_type": blocked_type,
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+	game.set_current_player(players[current_player_idx])
+	return [game, p1, p2]
+
+
+func _test_blocked_incremento_blocks_normal():
+	var r = _make_safe_round_game([PlayerData.new("p1"), PlayerData.new("p2")], "Incremento", 1)
+	var game = r[0]
+	var p2 = game.current_player()
+	p2.receive_card(increment_card(5, 0))
+	var rules = Rules.new()
+	var actions = rules.get_available_actions(game)
+	# Verify increment card NOT in play actions
+	var found_play = false
+	for a in actions:
+		if a["action_type"] == "play_card" and a.get("card", null) == p2.hand.cards[0]:
+			found_play = true
+			break
+	var ok = _assert_true(!found_play, "blocked_inc play", "Increment card not playable when Incremento blocked")
+	if ok:
+		_test("blocked incremento normal")
+		return "  Blocked Incremento normal:[PASS]\n"
+	return "  Blocked Incremento normal:[FAIL]\n"
+
+
+func _test_blocked_incremento_blocks_plus11():
+	var r = _make_safe_round_game([PlayerData.new("p1"), PlayerData.new("p2")], "Incremento", 1)
+	var game = r[0]
+	var p2 = game.current_player()
+	var c11 = plus11_card(0)
+	p2.receive_card(c11)
+	var rules = Rules.new()
+	var actions = rules.get_available_actions(game)
+	var found_play = false
+	for a in actions:
+		if a["action_type"] == "play_card" and a.get("card", null) == c11:
+			found_play = true
+			break
+	var ok = _assert_true(!found_play, "blocked_inc_plus11", "+11 not playable when Incremento blocked")
+	if ok:
+		_test("blocked incremento +11")
+		return "  Blocked Incremento +11:   [PASS]\n"
+	return "  Blocked Incremento +11:   [FAIL]\n"
+
+
+func _test_blocked_gold_blocks_normal():
+	var r = _make_safe_round_game([PlayerData.new("p1"), PlayerData.new("p2")], "Gold", 1)
+	var game = r[0]
+	var p2 = game.current_player()
+	var c_gold = gold_card(23)
+	p2.receive_card(c_gold)
+	var rules = Rules.new()
+	var actions = rules.get_available_actions(game)
+	var found_play = false
+	for a in actions:
+		if a["action_type"] == "play_card" and a.get("card", null) == c_gold:
+			found_play = true
+			break
+	var ok = _assert_true(!found_play, "blocked_gold", "Gold card not playable when Gold blocked")
+	if ok:
+		_test("blocked gold normal")
+		return "  Blocked Gold normal:     [PASS]\n"
+	return "  Blocked Gold normal:     [FAIL]\n"
+
+
+func _test_blocked_gold_blocks_89():
+	var r = _make_safe_round_game([PlayerData.new("p1"), PlayerData.new("p2")], "Gold", 1)
+	var game = r[0]
+	var p2 = game.current_player()
+	var c89 = card89(0)
+	p2.receive_card(c89)
+	var rules = Rules.new()
+	var actions = rules.get_available_actions(game)
+	var found_play = false
+	for a in actions:
+		if a["action_type"] == "play_card" and a.get("card", null) == c89:
+			found_play = true
+			break
+	var ok = _assert_true(!found_play, "blocked_gold_89", "89 not playable when Gold blocked")
+	if ok:
+		_test("blocked gold 89")
+		return "  Blocked Gold 89:         [PASS]\n"
+	return "  Blocked Gold 89:         [FAIL]\n"
+
+
+func _test_blocked_gold_allows_plus11():
+	var r = _make_safe_round_game([PlayerData.new("p1"), PlayerData.new("p2")], "Gold", 1)
+	var game = r[0]
+	# Use game's player objects (the ones stored in the game, not local vars)
+	var p2 = game.current_player()
+	var c11 = plus11_card(0)
+	p2.receive_card(c11)
+	var rules = Rules.new()
+	var actions = rules.get_available_actions(game)
+	var found_play = false
+	for a in actions:
+		if a["action_type"] == "play_card" and a.get("card", null) == c11:
+			found_play = true
+			break
+	var ok = _assert_true(found_play, "gold_allows_plus11", "+11 playable when Gold blocked")
+	if ok:
+		_test("blocked gold allows +11")
+		return "  Blocked Gold allows +11: [PASS]\n"
+	return "  Blocked Gold allows +11: [FAIL]\n"
+
+
+func _test_blocked_imbroglio_blocks_imbroglio():
+	var r = _make_safe_round_game([PlayerData.new("p1"), PlayerData.new("p2")], "Imbroglio", 1)
+	var game = r[0]
+	var p2 = game.current_player()
+	var imb = imbroglio_card(0)
+	p2.receive_card(imb)
+	var rules = Rules.new()
+	var actions = rules.get_available_actions(game)
+	var found_play = false
+	for a in actions:
+		if a["action_type"] == "play_card" and a.get("card", null) == imb:
+			found_play = true
+			break
+	var ok = _assert_true(!found_play, "blocked_imbroglio", "Imbroglio card not playable when Imbroglio blocked")
+	if ok:
+		_test("blocked imbroglio")
+		return "  Blocked Imbroglio:       [PASS]\n"
+	return "  Blocked Imbroglio:       [FAIL]\n"
+
+
+func _test_change_card_available_during_safe_round():
+	var r = _make_safe_round_game([PlayerData.new("p1"), PlayerData.new("p2")], "Incremento", 1)
+	var game = r[0]
+	var p2 = game.current_player()
+	var c = increment_card(5, 0)
+	p2.receive_card(c)
+	var rules = Rules.new()
+	var actions = rules.get_available_actions(game)
+	var found_change = false
+	for a in actions:
+		if a["action_type"] == "change_card" and a.get("card", null) == c:
+			found_change = true
+			break
+	var ok = _assert_true(found_change, "change_available", "Change card available during Safe Round")
+	if ok:
+		_test("change card during safe round")
+		return "  Change Card available:     [PASS]\n"
+	return "  Change Card available:     [FAIL]\n"
+
+
+func _test_validate_action_blocks_incremento():
+	var r = _make_safe_round_game([PlayerData.new("p1"), PlayerData.new("p2")], "Incremento", 1)
+	var game = r[0]
+	var p2 = game.current_player()
+	var c = increment_card(5, 0)
+	p2.receive_card(c)
+	var rules = Rules.new()
+	var action = {"action_type": "play_card", "card": c}
+	var ok = _assert_true(!rules.validate_action(game, action), "validate_blocks_inc",
+		"validate_action rejects blocked Incremento card")
+	if ok:
+		_test("validate blocks incremento")
+		return "  Validate blocks inc:       [PASS]\n"
+	return "  Validate blocks inc:       [FAIL]\n"
+
+
+func _test_validate_allows_plus11_gold_blocked():
+	var r = _make_safe_round_game([PlayerData.new("p1"), PlayerData.new("p2")], "Gold", 1)
+	var game = r[0]
+	var p2 = game.current_player()
+	var c11 = plus11_card(0)
+	p2.receive_card(c11)
+	var rules = Rules.new()
+	var action = {"action_type": "play_card", "card": c11}
+	var ok = _assert_true(rules.validate_action(game, action), "validate_plus11_gold_ok",
+		"validate_action accepts +11 when Gold blocked")
+	if ok:
+		_test("validate allows +11 gold blocked")
+		return "  Validate allows +11:       [PASS]\n"
+	return "  Validate allows +11:       [FAIL]\n"
+
+
+func _test_validate_blocks_89_gold_blocked():
+	var r = _make_safe_round_game([PlayerData.new("p1"), PlayerData.new("p2")], "Gold", 1)
+	var game = r[0]
+	var p2 = game.current_player()
+	var c89 = card89(0)
+	p2.receive_card(c89)
+	var rules = Rules.new()
+	var action = {"action_type": "play_card", "card": c89}
+	var ok = _assert_true(!rules.validate_action(game, action), "validate_89_blocked",
+		"validate_action rejects 89 when Gold blocked")
+	if ok:
+		_test("validate blocks 89 gold")
+		return "  Validate blocks 89:        [PASS]\n"
+	return "  Validate blocks 89:        [FAIL]\n"

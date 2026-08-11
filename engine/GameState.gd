@@ -27,7 +27,7 @@ func _init(p_players = [], p_deck = null, p_discard = [],
 	turn_number = p_turn_number
 	phase = p_phase
 	winner = p_winner
-	metadata = p_metadata.duplicate()
+	metadata = p_metadata.duplicate(true)
 
 func add_player(player):
 	players.append(player)
