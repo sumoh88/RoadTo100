@@ -77,18 +77,29 @@ func _t1_stacked_position():
 	# Gold + plate
 	bp._update_plateau([{"type":"plate","value":0},{"type":"card","card":gold}])
 	_a(bp._permanent_layer.get_child_count() == 2, "plate+gold: 2 children: " + str(bp._permanent_layer.get_child_count()))
-	var all_origin = true
+	# SV (card faces) positioned at (0,0); PL (plate value cards) at (0,-12) per BoardPresenter.
+	var sv_all_origin = true
+	var pl_all_at_offset = true
 	for c in bp._permanent_layer.get_children():
-		if c.rect_position != Vector2(0,0): all_origin = false
-	_a(all_origin, "all at (0,0)")
+		if c.name.begins_with("SV"):
+			if c.rect_position != Vector2(0,0): sv_all_origin = false
+		elif c.name.begins_with("PL"):
+			if c.rect_position != Vector2(0,-12): pl_all_at_offset = false
+	_a(sv_all_origin, "SV at (0,0)")
+	_a(pl_all_at_offset, "PL at (0,-12)")
 
 	# Multiple items: plate, card, plate
 	bp._update_plateau([{"type":"plate","value":0},{"type":"card","card":gold},{"type":"plate","value":28}])
 	_a(bp._permanent_layer.get_child_count() == 3, "3 items: " + str(bp._permanent_layer.get_child_count()))
-	all_origin = true
+	sv_all_origin = true
+	pl_all_at_offset = true
 	for c in bp._permanent_layer.get_children():
-		if c.rect_position != Vector2(0,0): all_origin = false
-	_a(all_origin, "3 at (0,0)")
+		if c.name.begins_with("SV"):
+			if c.rect_position != Vector2(0,0): sv_all_origin = false
+		elif c.name.begins_with("PL"):
+			if c.rect_position != Vector2(0,-12): pl_all_at_offset = false
+	_a(sv_all_origin, "SV at (0,0)")
+	_a(pl_all_at_offset, "PL at (0,-12)")
 	_cleanup_board(bp)
 	return "  Plateau stacking:      [PASS]\n"
 
