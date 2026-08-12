@@ -35,8 +35,12 @@ func _assert(cond, msg):
 # Helpers
 # ===========================================================================
 
+var _engines_created = []
+
 func _new_engine():
-	return _LocalGameEngine.new()
+	var e = _LocalGameEngine.new()
+	_engines_created.append(e)
+	return e
 
 func _card(card_id, name, value, color, metadata):
 	return _CardData.new(card_id, name, value, color, metadata)
@@ -134,6 +138,10 @@ func _run_all():
 		for m in failure_msgs:
 			out += "  - " + m + "\n"
 	out += "\n========================================\n"
+	# Cleanup: free all LocalGameEngine instances (they extend Node).
+	for e in _engines_created:
+		e.free()
+
 	return out
 
 

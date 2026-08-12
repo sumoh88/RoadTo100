@@ -59,7 +59,18 @@ func _ready():
 			yield(get_tree(), "idle_frame")
 			continue
 
-		var chosen = acts[0]
+		# Pick a play_card action (not change_card / reveal_gold / reset_hand)
+		# so that every turn generates card_played + card_drawn events.
+		var chosen = null
+		for a in acts:
+			if a.get("action_type", "") == "play_card":
+				chosen = a
+				break
+		if chosen == null:
+			_snapshot = null
+			yield(get_tree(), "idle_frame")
+			continue
+
 		var action_dict = {"action_type": chosen.get("action_type", "")}
 		if chosen.has("card_id"): action_dict["card_id"] = chosen.get("card_id", "")
 		if chosen.has("value"):   action_dict["value"] = chosen.get("value", 0)

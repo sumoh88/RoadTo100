@@ -80,6 +80,8 @@ func _test_all_textures():
 	var imb = {"card_type": "imbroglio", "name": "Imbroglio", "value": null}
 	ok = ok and _assert(r.texture(imb) != null, "imb texture")
 	_assert(r.path(imb).ends_with("imb.png"), "imb path: " + str(r.path(imb)))
+	# TextureResolver extends Reference — ref-counted, no explicit free needed.
+	r = null
 
 	return "  Texture resolution:    " + ("[PASS]\n" if ok else "[FAIL]\n")
 
@@ -100,6 +102,7 @@ func _test_fallback():
 	# Empty
 	var emp = r.texture({})
 	var ok3 = _assert(emp != null, "empty fallback not null")
+	r = null  # Reference: ref-counted, no explicit free
 
 	return "  Texture fallback:      " + ("[PASS]\n" if (ok1 and ok2 and ok3) else "[FAIL]\n")
 
@@ -167,6 +170,7 @@ func _test_board_presenter_piatto():
 	# Since there's no UI node, we just verify the method doesn't error
 	bp.apply_snapshot({"piatto": 100, "deck_count": 0, "plateau_visual_stack": [], "plateau_cards": []})
 	_assert(true, "board update piatto=100 no crash")
+	bp.free()
 
 	return "  Board presenter:       [PASS]\n"
 

@@ -40,6 +40,19 @@ func _mk_bp():
 	bp._permanent_layer.rect_size = Vector2(203, 266)
 	return bp
 
+# Cleanup helper for board_test
+func _cleanup_board(bp):
+	if bp == null:
+		return
+	if bp.get("_resolver") != null:
+		# TextureResolver extends Reference — ref-counted, set to null to drop ref.
+		bp._resolver = null
+	if bp.get("_permanent_layer") != null:
+		bp._permanent_layer.free()
+		bp._permanent_layer = null
+	if is_instance_valid(bp):
+		bp.free()
+
 
 # ===========================================================================
 # Test 1: Plateau visual stack — items at (0,0), no lateral offset
@@ -76,6 +89,7 @@ func _t1_stacked_position():
 	for c in bp._permanent_layer.get_children():
 		if c.rect_position != Vector2(0,0): all_origin = false
 	_a(all_origin, "3 at (0,0)")
+	_cleanup_board(bp)
 	return "  Plateau stacking:      [PASS]\n"
 
 
@@ -122,6 +136,7 @@ func _t2_non_gold_not_on_plateau():
 	for c in bp._permanent_layer.get_children():
 		if c.name.begins_with("SV"): card_face_count += 1
 	_a(card_face_count == 0, "increment only: no card face, got " + str(card_face_count))
+	_cleanup_board(bp)
 	return "  Non-gold not on plat:  [PASS]\n"
 
 
@@ -155,6 +170,7 @@ func _t3_gold_on_plateau():
 	for c in bp._permanent_layer.get_children():
 		if c.name.begins_with("SV"): found_sv = true
 	_a(found_sv, "89 card face present")
+	_cleanup_board(bp)
 
 	return "  Gold on plateau:       [PASS]\n"
 
@@ -207,6 +223,7 @@ func _t4_mixed_sequence_separation():
 			# CardFace instances have card_id property
 			var cid = c.card_id if c.get("card_id") != null else ""
 			_a(cid.begins_with("g"), "card face must be gold: " + cid)
+	_cleanup_board(bp)
 
 	return "  Mixed separation:      [PASS]\n"
 
@@ -274,6 +291,7 @@ func _t5_chronological_stack():
 		_a(plate_values[0] == 0, "first plate value 0, got " + str(plate_values[0]))
 		_a(plate_values[1] == 26, "second plate value 26, got " + str(plate_values[1]))
 		_a(plate_values[2] == 36, "third plate value 36, got " + str(plate_values[2]))
+	_cleanup_board(bp)
 
 	return "  Chronological order:   [PASS]\n"
 
@@ -354,6 +372,13 @@ func _t6_opponent_centering():
 		_a(top_first.rect_position.x == expected_sx_1card,
 			"1 card center x=" + str(expected_sx_1card) + ", got " + str(top_first.rect_position.x))
 
+	# Cleanup for _t6: bp + layers
+	if bp.get("_resolver") != null:
+		bp._resolver = null  # Reference — drop ref, don't free
+	bp.free()
+	for l in layers:
+		l.free()
+
 	return "  Opponent centering:    [PASS]\n"
 
 
@@ -375,4 +400,9 @@ func _t7_rotation_preserved():
 		l.rect_rotation = expected[i]
 		_a(l.rect_pivot_offset == Vector2(79, 60), "pivot " + str(i) + ": " + str(l.rect_pivot_offset))
 		_a(l.rect_rotation == expected[i], "rotation " + str(i) + ": " + str(l.rect_rotation) + " expected " + str(expected[i]))
+
+	# Cleanup layers
+	for l in layers:
+		l.free()
+
 	return "  Rotation preserved:    [PASS]\n"
