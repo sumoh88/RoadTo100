@@ -431,11 +431,18 @@ func apply_action(game, action_dict):
 		if is_adv_player:
 			pass  # plateau stays as computed
 		elif sr_active and not is_plus11:
-			# Special Round (includes GdV): non-activator logic.
-			if raw_total == 100:
-				plateau = 99  # 100 → 99, no win
-			elif raw_total > 100:
-				plateau = 200 - raw_total  # bounce: 200 - raw_total
+			# Special Round non-activator logic.
+			var sr_type = game.metadata.get("special_round_type", "advantage")
+			if sr_type == "advantage":
+				# GdV: non-activator gets the cap (100→99, no win).
+				if raw_total == 100:
+					plateau = 99  # 100 → 99, free no win
+				elif raw_total > 100:
+					plateau = 200 - raw_total  # bounce: 200 - raw_total
+			else:
+				# Safe Round: non-activator plays normally (win at 100, normal bounce).
+				if raw_total > 100:
+					plateau = 200 - raw_total  # bounce: 200 - raw_total
 		else:
 			# Outside SR / GdV: universal bounce for raw_total > 100.
 			if raw_total > 100:
@@ -446,10 +453,17 @@ func apply_action(game, action_dict):
 	game.metadata["plateau_cards"].append(card)
 
 	# Victory check: advantage player wins at plateau >= 100;
-	# non-advantage outside SR wins at plateau == 100 (capped).
+	# non-advantage outside SR wins at plateau == 100 or >100.
+	# During Safe Round (type="safe"), normal victory applies for all players.
 	if is_adv_player and plateau >= 100:
 		current_player.metadata["score"] = int(current_player.metadata.get("score", 0)) + increment
 		game.winner = current_player
+	elif sr_active and game.metadata.get("special_round_type") == "safe":
+		# Safe Round: non-activator wins normally at 100 or >100.
+		if plateau == 100 or plateau > 100:
+			plateau = 100
+			current_player.metadata["score"] = int(current_player.metadata.get("score", 0)) + increment
+			game.winner = current_player
 	elif not sr_active and (plateau == 100 or plateau > 100):
 		plateau = 100
 		current_player.metadata["score"] = int(current_player.metadata.get("score", 0)) + increment

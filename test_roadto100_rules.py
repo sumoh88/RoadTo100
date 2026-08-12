@@ -831,6 +831,157 @@ class TestSafeRoundVictory(unittest.TestCase):
         self.assertIs(game.winner, p1)
 
 
+class TestSafeRoundLifecycle(unittest.TestCase):
+    """F6: Safe Round lifecycle — ends after activator's NEXT turn."""
+
+    def test_safe_round_ends_after_activator_next_turn(self) -> None:
+        """Safe Round stays active through other players' turns, until activator
+        finishes their NEXT turn."""
+        rules = RoadTo100RuleSet()
+        p1 = Player("p1", "P1", Hand([increment_card(1)]))
+        p2 = Player("p2", "P2", Hand([increment_card(2)]))
+
+        # Simulate: P1 just played Gold 12 → Safe Round for P1
+        game = make_game(
+            players=[p1, p2],
+            deck_cards=[increment_card(3)],
+            metadata={
+                "piatto": 12,
+                "plateau_cards": [gold_card(12)],
+                "special_round_active": True,
+                "special_round_player_id": "p1",
+                "special_round_type": "safe",
+                "turn_phase": "action",
+                "target_score": TARGET_SCORE,
+            },
+        )
+
+        # advance_turn → P2
+        rules.advance_turn(game)
+        self.assertTrue(game.metadata["special_round_active"],
+                        "Safe Round should stay active after P1's Gold turn ends")
+        self.assertEqual(game.current_player().player_id, "p2")
+
+        # advance_turn → P1 (NEXT turn for P1)
+        rules.advance_turn(game)
+        self.assertTrue(game.metadata["special_round_active"],
+                        "Safe Round should be active during P1's NEXT turn")
+        self.assertEqual(game.current_player().player_id, "p1")
+
+        # advance_turn → P2 (P1's NEXT turn ends)
+        rules.advance_turn(game)
+        self.assertFalse(game.metadata.get("special_round_active"),
+                         "Safe Round should end after P1's NEXT turn completes")
+
+
+class TestSafeRoundNonActivatorPlay(unittest.TestCase):
+    """F6: During Safe Round, non-activators play normally (no GdV cap)."""
+
+    def test_safe_round_non_adv_99_plus_1(self) -> None:
+        """Safe Round non-activator: 99+1=100 → wins normally."""
+        rules = RoadTo100RuleSet()
+        p1 = Player("p1", "P1", Hand())  # activator
+        p2 = Player("p2", "P2", Hand([increment_card(1)]))  # non-activator playing
+        game = make_game(
+            players=[p1, p2],
+            deck_cards=[],
+            metadata={
+                "piatto": 99,
+                "plateau_cards": [],
+                "special_round_active": True,
+                "special_round_player_id": "p1",
+                "special_round_type": "safe",
+                "turn_phase": "start",
+                "target_score": TARGET_SCORE,
+            },
+        )
+        game.set_current_player(p2)
+        action = RoadTo100Action(action_type=PLAY_CARD_ACTION,
+                                 parameters={"card": p2.hand.cards[0]})
+        rules.apply_action(game, action)
+        self.assertEqual(game.metadata["piatto"], 100)
+        self.assertIs(game.winner, p2, "non-activator should win at 100 during Safe Round")
+
+    def test_safe_round_non_adv_97_plus_8(self) -> None:
+        """Safe Round non-activator: 97+8=105 → normal bounce (200-105=95)."""
+        rules = RoadTo100RuleSet()
+        p1 = Player("p1", "P1", Hand())  # activator
+        p2 = Player("p2", "P2", Hand([increment_card(8)]))  # non-activator playing
+        game = make_game(
+            players=[p1, p2],
+            deck_cards=[],
+            metadata={
+                "piatto": 97,
+                "plateau_cards": [],
+                "special_round_active": True,
+                "special_round_player_id": "p1",
+                "special_round_type": "safe",
+                "turn_phase": "start",
+                "target_score": TARGET_SCORE,
+            },
+        )
+        game.set_current_player(p2)
+        action = RoadTo100Action(action_type=PLAY_CARD_ACTION,
+                                 parameters={"card": p2.hand.cards[0]})
+        rules.apply_action(game, action)
+        self.assertEqual(game.metadata["piatto"], 95)
+        self.assertIsNone(game.winner)
+
+    def test_safe_round_non_adv_99_plus_5(self) -> None:
+        """Safe Round non-activator: 99+5=104 → normal bounce (200-104=96)."""
+        rules = RoadTo100RuleSet()
+        p1 = Player("p1", "P1", Hand())
+        p2 = Player("p2", "P2", Hand([increment_card(5)]))
+        game = make_game(
+            players=[p1, p2],
+            deck_cards=[],
+            metadata={
+                "piatto": 99,
+                "plateau_cards": [],
+                "special_round_active": True,
+                "special_round_player_id": "p1",
+                "special_round_type": "safe",
+                "turn_phase": "start",
+                "target_score": TARGET_SCORE,
+            },
+        )
+        game.set_current_player(p2)
+        action = RoadTo100Action(action_type=PLAY_CARD_ACTION,
+                                 parameters={"card": p2.hand.cards[0]})
+        rules.apply_action(game, action)
+        self.assertEqual(game.metadata["piatto"], 96)
+        self.assertIsNone(game.winner)
+
+
+class TestAdvantageNonActivatorExact100(unittest.TestCase):
+    """F6: During GdV (advantage), non-activator brings plateau to exactly 100 → Piatto=99."""
+
+    def test_gdv_non_adv_99_plus_1(self) -> None:
+        """GdV non-in-Vantaggio: 99+1=100 → Piatto=99, no win."""
+        rules = RoadTo100RuleSet()
+        p1 = Player("p1", "P1", Hand())
+        p2 = Player("p2", "P2", Hand([increment_card(1)]))
+        game = make_game(
+            players=[p1, p2],
+            deck_cards=[],
+            metadata={
+                "piatto": 99,
+                "plateau_cards": [],
+                "special_round_active": True,
+                "special_round_player_id": "p1",
+                "special_round_type": "advantage",
+                "turn_phase": "start",
+                "target_score": TARGET_SCORE,
+            },
+        )
+        game.set_current_player(p2)
+        action = RoadTo100Action(action_type=PLAY_CARD_ACTION,
+                                 parameters={"card": p2.hand.cards[0]})
+        rules.apply_action(game, action)
+        self.assertEqual(game.metadata["piatto"], 99)
+        self.assertIsNone(game.winner)
+
+
 class TestSafeRoundActivation(unittest.TestCase):
     """F2: Normal Gold cards activate Safe Round, +11 from Gold chain activates Safe/Advantage."""
 

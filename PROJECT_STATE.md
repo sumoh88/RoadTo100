@@ -383,14 +383,15 @@ Completato il Passaggio E (Step 8) con animazioni multi-player funzionanti per t
 - [x] **F2:** Attivazione Safe Round da Gold normale e logica +11 da catena Gold. ✅ Completato e verificato (6 test Python + 5 Godot).
 - [x] **F3:** UI popup Safe Round choice riutilizzando `_open_value_choice` esistente; passaggio `blocked_type` in `send_action`. ✅ Completato e verificato (1 test provider).
 - [x] **F4:** Branch Safe Round in `get_available_actions` e `validate_action` (blocco tipo carta per i non-attivatori). ✅ Completato e verificato (10 test Python + 10 Godot).
-- [ ] **F5:** Correzione formula rimbalzo (`200 − raw_total`), condizione biforcata `>`/`>=` (fuori SR: `> 100`; durante GdV normali: `>= 100` → forza 99; durante GdV vantaggio: ignora).
-- [ ] **F6–F8:** Test Python/Godot + regressione.
+- [x] **F5:** Correzione formula rimbalzo (`200 − raw_total`), condizione biforcata `>`/`>=` (fuori SR: `> 100`; durante GdV normali: `>= 100` → forza 99; durante GdV vantaggio: ignora). ✅ Completato e verificato.
+- [x] **F6:** Test Python/Godot + regressione. Aggiunti 5 nuovi test (Safe Round lifecycle, non-activator play, GdV non-adv exact 100). Scoperti e corretti 2 bug: plateau cap e victory condition per Safe Round non-activators. ✅ Completato e verificato (54 test Python tutti OK, 7 suite Godot tutte OK).
+- [ ] **F7–F8:** (non ancora definiti)
 
-**Prossimo step da implementare:** F5
+**Prossimo step da implementare:** F7 (da definire)
 
 **File coinvolti:** `games/roadto100/rules.py`, `engine/RoadTo100Rules.gd`, `engine/LocalGameEngine.gd`, `scripts/GameController.gd`, `scripts/TurnPresenter.gd`, `test_roadto100_rules.py`, `tests/rules_test.gd`.
 
-**Pronto per:** `Implementa F5`
+**Pronto per:** Definire e implementare F7
 
 ---
 
