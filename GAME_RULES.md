@@ -71,7 +71,6 @@ Quando il Mazzo termina:
 - tutte le carte degli Scarti, ad eccezione dell'ultima carta, vengono rimescolate nel Mazzo;
 - le Carte Gold non vengono mai rimescolate e rimangono nel Piatto fino al termine della partita.
 
-
 ---
 
 # Inizio della partita
@@ -110,10 +109,9 @@ Ordine:
 
 Vince immediatamente il giocatore che porta il Piatto esattamente a 100.
 
-Durante un **Giro di Vantaggio** possono vincere esclusivamente:
+Durante un **Giro di Vantaggio** può vincere esclusivamente il giocatore in Vantaggio.
 
-- il giocatore in Vantaggio;
-- un giocatore che utilizza la carta +11.
+La carta +11 ignora questa restrizione.
 
 ---
 
@@ -200,6 +198,7 @@ se sono vietate le Carte Gold, non possono essere giocate le Gold normali né la
 Può essere attivo un solo Giro Sicuro alla volta. Se viene attivato un nuovo Giro Sicuro, questo sostituisce immediatamente quello precedente. Ciò avviene anche quando una +11 giocata immediatamente dopo una Gold normale assume il valore e gli effetti della Gold successiva.
 
 La carta 89 non attiva il Giro Sicuro, ma il Giro di Vantaggio. Se è già attivo un Giro Sicuro, il Giro di Vantaggio lo sostituisce immediatamente. Un Giro Sicuro sostituito dal Giro di Vantaggio termina definitivamente.
+
 ---
 
 ## Carte Imbroglio
@@ -215,7 +214,9 @@ Il giocatore può scegliere esclusivamente uno dei valori rimanenti.
 Il valore scelto viene aggiunto al Piatto.
 
 ---
+
 ## Carte con effetti speciali
+
 Alcune Carte Incremento e Carte Gold possiedono effetti aggiuntivi.
 
 In particolare:
@@ -258,7 +259,11 @@ Se viene giocata immediatamente dopo una Carta Gold (12, 23, 34, 45, 56, 67 o 78
 
 Se assume il valore 23, 34, 45, 56, 67 o 78, viene risolta come una Carta Gold normale e attiva il Giro Sicuro. Se assume il valore 89, viene risolta come Carta Gold Speciale e attiva il Giro di Vantaggio.
 
-Durante un Giro di Vantaggio, la carta +11 assegna immediatamente la vittoria al giocatore che la utilizza.
+La carta +11 ignora sempre la Regola del Rimbalzo.
+
+Durante un Giro di Vantaggio, ignora inoltre la restrizione che permette di vincere esclusivamente al giocatore in Vantaggio.
+
+La vittoria viene quindi determinata normalmente in base al valore del Piatto risultante dalla giocata della +11.
 
 ---
 
@@ -310,9 +315,7 @@ Piatto 95, carta +8 → totale 103 → Piatto 97.
 
 Eccezione:
 
-Durante un Giro di Vantaggio, la carta +11 assegna immediatamente la vittoria al giocatore che la utilizza.
-
-La carta +11 non è influenzata dalla Regola del Rimbalzo.
+La carta +11 non è influenzata dalla Regola del Rimbalzo e, durante un Giro di Vantaggio, ignora la restrizione che permette di vincere esclusivamente al giocatore in Vantaggio.
 
 ---
 
@@ -347,11 +350,6 @@ Se un giocatore che non è in Vantaggio non possiede alcuna Carta Incremento nel
 Totale:
 
 60 carte.
-
-
-
-
-
 
 ---
 
@@ -407,4 +405,4 @@ Se il Mazzo è già vuoto quando deve iniziare una pesca:
 - il Mazzo viene mescolato;
 - la pesca viene eseguita normalmente.
 
-Le Carte Gold presenti sul Piatto o comunque escluse dagli Scarti non vengono utilizzate per ricostituire il Mazzo.
+Le Carte Gold presenti sul Piatto o comunque escluse dagli Scarti non vengono utilizzate per ricostruire il Mazzo.

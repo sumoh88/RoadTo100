@@ -12,7 +12,7 @@ Il progetto è composto da due codebase separati:
 | Componente | Stato |
 |---|---|
 | Simulatore Python | **Completato e congelato** |
-| Client Godot — Passaggio F, Step 1–4 | **F1–F4 completati e verificati** |
+| Client Godot — Passaggio F, Step 1–6 | **F1–F6 completati e verificati** |
 
 ---
 
@@ -296,7 +296,7 @@ Completato il Passaggio E (Step 8) con animazioni multi-player funzionanti per t
 
 ### Passaggio F — Special Round (Giro Sicuro)
 
-**Stato attuale:** Step F1, F2, F3, F4 completati e verificati; prossimo step F5.
+**Stato attuale:** Step F1–F6 completati e verificati; prossimo step F7.
 
 #### F1 — Rinomina metadata (completato)
 - `advantage_turn` → `special_round_active`
@@ -356,13 +356,14 @@ Completato il Passaggio E (Step 8) con animazioni multi-player funzionanti per t
   - `test_validate_action_blocks_89_when_gold_blocked`
 - **Test Godot:** 10 test specchiati in `tests/rules_test.gd`, helper `_make_safe_round_game`
 
-**Stato test dopo F1–F4:**
-- Python: 38/38 OK (10 nuovi F4)
-- Godot rules_test: 78 assert (39 test), 0 FAIL (10 nuovi F4)
-- Godot provider_test: 104 assert, 0 FAIL
-- Tutte le altre suite invariate e verdi
+**Stato test dopo F6:**
+- Python: 60/60 OK (incl. regressioni +11, 89, Gold chain)
+- Godot rules_test: 131 assert, 0 FAIL
+- Godot provider_test: 92 assert, 0 FAIL (verificato ×5 run consecutive)
+- Godot board_test: 44 assert, 0 FAIL
+- Tutte le altre suite verdi
 
-**Prossimo step: F5** — Correzione formula rimbalzo (`200 − raw_total`) e condizione biforcata `>`/`>=`.
+**Prossimo step: F7** — Da definire.
 
 ---
 
@@ -384,7 +385,10 @@ Completato il Passaggio E (Step 8) con animazioni multi-player funzionanti per t
 - [x] **F3:** UI popup Safe Round choice riutilizzando `_open_value_choice` esistente; passaggio `blocked_type` in `send_action`. ✅ Completato e verificato (1 test provider).
 - [x] **F4:** Branch Safe Round in `get_available_actions` e `validate_action` (blocco tipo carta per i non-attivatori). ✅ Completato e verificato (10 test Python + 10 Godot).
 - [x] **F5:** Correzione formula rimbalzo (`200 − raw_total`), condizione biforcata `>`/`>=` (fuori SR: `> 100`; durante GdV normali: `>= 100` → forza 99; durante GdV vantaggio: ignora). ✅ Completato e verificato.
-- [x] **F6:** Test Python/Godot + regressione. Aggiunti 5 nuovi test (Safe Round lifecycle, non-activator play, GdV non-adv exact 100). Scoperti e corretti 2 bug: plateau cap e victory condition per Safe Round non-activators. ✅ Completato e verificato (54 test Python tutti OK, 7 suite Godot tutte OK).
+- [x] **F6:** Test Python/Godot + regressione. ✅ Completato e verificato (60 test Python, rules_test 131/0, provider_test 92/0 ×5 run, board_test 44/0).
+  - Bug fix: plateau cap e victory condition per Safe Round non-activators (distinguere type="advantage" da type="safe").
+  - Bug fix: logica +11 secondo GAME_RULES.md — eliminato trigger generico `+11 = vittoria`; la +11 ora verifica sempre la gold chain, ignora Rimbalzo, e durante GdV ignora la restrizione del solo-Vantaggio. La vittoria deriva dal Piatto risultante (>= 100).
+  - Fix: non-deterministicità provider_test (`_playable_card_id` skip choices, `sr_pid` dynamic).
 - [ ] **F7–F8:** (non ancora definiti)
 
 **Prossimo step da implementare:** F7 (da definire)

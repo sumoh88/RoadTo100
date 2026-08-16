@@ -81,7 +81,7 @@
 | C — Provider | ✅ Completato | GameStateProvider, LocalGameEngine, snapshot, eventi |
 | D — Presenter/UI | ✅ **Completato e verificato** | Bug risolti (incluse schermata vittoria e carta 89). Test verificati con 10+ Demo. |
 | E — Input/Animazioni | ✅ **Completato (Step 1–8)** | GameController, card selection, bottoni, popup Jolly/Imbroglio/Gold Reveal, CardAnimator multi-player (giocata 0.7s + pesca 0.6s per tutti e 4 i giocatori), DebugDemo integrato, perform_action(). Step 8: correzione animazioni non visibili e multi-player, 20+9 test di verifica. |
-| F — Special Round (Giro Sicuro) | 🔨 **F1–F4 completati** | Step F1–F4 implementati e verificati. Prossimo step: F5 (formula rimbalzo). |
+| F — Special Round (Giro Sicuro) | 🔨 **F1–F6 completati** | Step F1–F6 implementati e verificati. Prossimo step: F7 (da definire). |
 
 ---
 
@@ -332,9 +332,9 @@ Bug risolti:
 
 **Passaggio E completato (Step 1–8).** Tutte le animazioni sono ora visibili in-game. Il GameController gestisce correttamente l'intero flusso di gioco: selezione carte → bottoni → popup → animazioni → snapshot.
 
-### Passaggio F — Special Round (Giro Sicuro) — F1–F4 completati
+### Passaggio F — Special Round (Giro Sicuro) — F1–F6 completati
 
-I primi quattro step del **Passaggio F** sono stati implementati e verificati:
+I primi sei step del **Passaggio F** sono stati implementati e verificati:
 
 | Step | Descrizione | Stato |
 |---|---|---|
@@ -342,10 +342,12 @@ I primi quattro step del **Passaggio F** sono stati implementati e verificati:
 | F2 | Attivazione Safe Round da Gold (12–78) e +11 chain logic | ✅ Completato (6 test Python + 5 Godot) |
 | F3 | UI popup Safe Round choice (`blocked_type`), passthrough `send_action` | ✅ Completato (1 test provider) |
 | F4 | Branch Safe Round in `get_available_actions` e `validate_action` (blocco tipo carta per i non-attivatori) | ✅ Completato (10 test Python + 10 Godot) |
+| F5 | Correzione formula rimbalzo (`200 − raw_total`), condizioni biforcate per SR/GdV | ✅ Completato |
+| F6 | Test Python/Godot + regressione. Fix: plateau cap e victory Safe Round, logica +11 secondo GAME_RULES.md, non-deterministicità provider_test | ✅ Completato (60 test Python, rules_test 131/0, provider_test 92/0 ×5 run) |
 
-**Prossimo step: F5** — Correzione formula rimbalzo (`200 − raw_total` al posto di `199 − raw_total`).
+**Prossimo step: F7** — Da definire.
 
-Dettagli completi di F1–F8 in `PROJECT_STATE.md` sezione "F1–F4 completati".
+Dettagli completi di F1–F8 in `PROJECT_STATE.md` sezione "Passaggio F".
 
 ### Attività successive al Passaggio F
 

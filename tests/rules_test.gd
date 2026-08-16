@@ -443,7 +443,7 @@ func _test_89_not_playable_during_gdv():
 
 
 # ---------------------------------------------------------------------------
-# +11 during GdV — playable and wins instantly
+# +11 during GdV — playable, ignores bounce and advantage restriction
 # ---------------------------------------------------------------------------
 func _test_plus11_during_gdv():
 	var rules = Rules.new()
@@ -455,10 +455,10 @@ func _test_plus11_during_gdv():
 		[increment_card(1, 0)],
 		null,
 		{
-			"piatto": 50,
+			"piatto": 89,
 			"plateau_cards": [],
 			"special_round_active": true,
-			"special_round_player_id": "p1",
+			"special_round_player_id": "p2",
 			"turn_phase": "start",
 			"target_score": 100,
 		}
@@ -474,11 +474,11 @@ func _test_plus11_during_gdv():
 	var avail_ok = _assert_true(!plus11_play.empty(),
 		"+11 playable", "+11 must be playable during GdV")
 
-	# Apply — should win immediately
+	# Apply — Piatto 89+11=100, +11 ignores bounce and GdV restriction → wins
 	var action = plus11_play[0]
 	rules.apply_action(game, action)
 	var win_ok = _assert_true(game.winner == p,
-		"+11 instant win", "+11 must grant immediate victory during GdV")
+		"+11 reach 100", "+11 reaching 100 must win even as non-advantage player")
 
 	if avail_ok and win_ok:
 		_test("+11 during GdV wins")

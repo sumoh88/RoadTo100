@@ -390,35 +390,29 @@ class RoadTo100RuleSet(RuleSet):
             game.metadata["special_round_player_id"] = current_player.player_id
             game.metadata["special_round_type"] = "advantage"
         elif self._is_plus11_card(card):
-            special_round_active = bool(game.metadata.get("special_round_active", False))
-            if special_round_active:
-                # During Special Round: +11 wins instantly
-                increment = 11
-                game.winner = current_player
-            else:
-                # Check Gold chain: if last plateau card is a Gold (12..78),
-                # the +11 assumes the next Gold value.
-                plateau_cards = game.metadata.get("plateau_cards", [])
-                gold_chain_value: Optional[int] = None
-                if plateau_cards:
-                    last_card = plateau_cards[-1]
-                    if self._is_gold_card(last_card):
-                        gold_chain_value = self.GOLD_CHAIN.get(int(last_card.value or 0))
+            # Check Gold chain: if last played card is a Gold (12..78),
+            # the +11 assumes the next Gold value. Applies regardless of SR status.
+            plateau_cards = game.metadata.get("plateau_cards", [])
+            gold_chain_value: Optional[int] = None
+            if plateau_cards:
+                last_card = plateau_cards[-1]
+                if self._is_gold_card(last_card):
+                    gold_chain_value = self.GOLD_CHAIN.get(int(last_card.value or 0))
 
-                if gold_chain_value is not None:
-                    increment = gold_chain_value
-                    if increment == 89:
-                        game.metadata["special_round_active"] = True
-                        game.metadata["special_round_player_id"] = current_player.player_id
-                        game.metadata["special_round_type"] = "advantage"
-                    elif gold_chain_value in (23, 34, 45, 56, 67, 78):
-                        # F2: +11 from Gold chain assumes Safe Round value
-                        game.metadata["special_round_active"] = True
-                        game.metadata["special_round_player_id"] = current_player.player_id
-                        game.metadata["special_round_type"] = "safe"
-                    game.metadata["_plus11_gold_chain"] = True
-                else:
-                    increment = 11
+            if gold_chain_value is not None:
+                increment = gold_chain_value
+                if increment == 89:
+                    game.metadata["special_round_active"] = True
+                    game.metadata["special_round_player_id"] = current_player.player_id
+                    game.metadata["special_round_type"] = "advantage"
+                elif gold_chain_value in (23, 34, 45, 56, 67, 78):
+                    # +11 from Gold chain assumes Safe Round value
+                    game.metadata["special_round_active"] = True
+                    game.metadata["special_round_player_id"] = current_player.player_id
+                    game.metadata["special_round_type"] = "safe"
+                game.metadata["_plus11_gold_chain"] = True
+            else:
+                increment = 11
         elif self._is_gold_card(card):
             increment = int(card.value or 0)
             game.metadata["plateau_value"] = increment
@@ -449,11 +443,11 @@ class RoadTo100RuleSet(RuleSet):
 
         # --- Plateau value computation (bounce / GdV cap) ---
         if raw_total is not None:
-            # Advantage player: no bounce ever.
-            if is_adv_player:
+            # Advantage player and +11 never bounce.
+            if is_adv_player or is_plus11:
                 pass  # plateau stays as computed
-            elif sr_active and not is_plus11:
-                # Special Round non-activator logic.
+            elif sr_active:
+                # SR non-activator, non-+11 logic.
                 sr_type = game.metadata.get("special_round_type", "advantage")
                 if sr_type == "advantage":
                     # GdV: non-activator gets the cap (100→99, no win).
@@ -462,20 +456,21 @@ class RoadTo100RuleSet(RuleSet):
                     elif raw_total > TARGET_SCORE:
                         plateau = (2 * TARGET_SCORE) - raw_total  # bounce: 200 - raw_total
                 else:
-                    # Safe Round: non-activator plays normally (win at 100, normal bounce).
+                    # Safe Round: non-activator plays normally.
                     if raw_total > TARGET_SCORE:
                         plateau = (2 * TARGET_SCORE) - raw_total  # bounce: 200 - raw_total
             else:
-                # Outside SR / GdV: universal bounce for raw_total > 100.
+                # Outside SR: universal bounce for raw_total > 100.
                 if raw_total > TARGET_SCORE:
                     plateau = (2 * TARGET_SCORE) - raw_total  # bounce: 200 - raw_total
 
         game.metadata.setdefault("plateau_cards", []).append(card)
 
-        # Victory check: advantage player wins at plateau >= 100;
-        # non-advantage outside SR wins at plateau == 100 or >100.
-        # During Safe Round (type="safe"), normal victory applies for all players.
-        if is_adv_player and plateau >= TARGET_SCORE:
+        # Victory check: +11 wins if Piatto >= 100 (ignores GdV restriction).
+        # Advantage player wins at Piatto >= 100. Safe Round: normal victory.
+        if is_plus11 and plateau >= TARGET_SCORE:
+            game.winner = current_player
+        elif is_adv_player and plateau >= TARGET_SCORE:
             game.winner = current_player
         elif sr_active and game.metadata.get("special_round_type") == "safe":
             # Safe Round: non-activator wins normally at 100 or >100.

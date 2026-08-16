@@ -87,7 +87,10 @@ func _start_and_connect(engine):
 func _playable_card_id(snapshot):
 	for a in snapshot["available_actions"]:
 		if a["action_type"] == "play_card" and a.has("card_id"):
-			return a["card_id"]
+			# Skip Jolly/Imbroglio which require selected_value
+			var choices = a.get("choices", [])
+			if choices.is_empty():
+				return a["card_id"]
 	return null
 
 
@@ -395,9 +398,9 @@ func _test_plus11_in_gdv_order():
 
 	# Set GdV state
 	gs.metadata["special_round_active"] = true
-	gs.metadata["special_round_player_id"] = "player_1"
+	gs.metadata["special_round_player_id"] = "player_2"
 	gs.metadata["turn_phase"] = "start"
-	gs.metadata["piatto"] = 50
+	gs.metadata["piatto"] = 89
 
 	# Also give a deck card so draw works
 	var inc = _card("inc_test", "+1", 1, "arancione",
@@ -833,6 +836,4 @@ func _test_safe_round_blocked_type_flow():
 	var sr_active = snap.get("special_round_active", false)
 	var sr_type = snap.get("special_round_type", "")
 	var sr_pid = snap.get("special_round_player_id", null)
-	print("[DBG] SR: full snap keys=" + str(snap.keys()))
-	print("[DBG] SR: active=" + str(sr_active) + " type='" + str(sr_type) + "' pid='" + str(sr_pid) + "'")
-	return "  Safe Round blocked_type flow: " + ("[PASS]\n" if (sr_active and sr_type == "safe" and sr_pid == "player_1") else "[FAIL]\n")
+	return "  Safe Round blocked_type flow: " + ("[PASS]\n" if (sr_active and sr_type == "safe" and sr_pid == cp.player_id) else "[FAIL]\n")
