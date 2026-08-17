@@ -1461,5 +1461,410 @@ class TestSafeRoundBlockedType(unittest.TestCase):
                          "validate_action should reject 89 when Gold is blocked")
 
 
+# ===========================================================================
+# F7 — Safe Round end-to-end: blocked_type persistence, +11 chain during GS,
+# replacement lifecycle, GS/GdV bounce & victory distinction, playability.
+# ===========================================================================
+
+class TestF7BlockedTypePersistence(unittest.TestCase):
+    """F7/G1: blocked_type is chosen once at GS activation (part of the same
+    play_card action) and persisted in metadata until the GS ends or is
+    replaced."""
+
+    def test_gold_persists_blocked_type_and_filters_next_turn(self):
+        """Gold played with blocked_type persists it; next turn's actions are filtered."""
+        p1 = Player("p1", "P1", Hand([gold_card(12)]))
+        p2 = Player("p2", "P2", Hand([increment_card(3), imbroglio_card()]))
+        game = make_game(
+            players=[p1, p2],
+            deck_cards=[],
+            metadata={
+                "piatto": 0,
+                "plateau_cards": [],
+                "special_round_active": False,
+                "special_round_player_id": None,
+                "turn_phase": "start",
+                "target_score": TARGET_SCORE,
+            },
+        )
+        rules = RoadTo100RuleSet()
+        action = RoadTo100Action(action_type=PLAY_CARD_ACTION,
+                                 parameters={"card": p1.hand.cards[0], "blocked_type": "Incremento"})
+        rules.apply_action(game, action)
+
+        self.assertEqual(game.metadata.get("blocked_type"), "Incremento",
+                         "blocked_type must be persisted from the play_card action")
+        self.assertEqual(game.metadata.get("special_round_type"), "safe")
+
+        # Next turn: P2 cannot play +3 (blocked), can play Imbroglio, Cambio available.
+        rules.advance_turn(game)
+        self.assertEqual(game.current_player().player_id, "p2")
+        actions = rules.get_available_actions(game)
+        play_cids = [a.parameters.get("card").card_id for a in actions
+                     if a.action_type == PLAY_CARD_ACTION]
+        change_cids = [a.parameters.get("card").card_id for a in actions
+                       if a.action_type == CHANGE_CARD_ACTION]
+        self.assertNotIn("+3_0", play_cids, "blocked Incremento must be filtered")
+        self.assertIn("imbroglio_0", play_cids, "Imbroglio is playable during GS when not blocked")
+        self.assertIn("+3_0", change_cids)
+        self.assertIn("imbroglio_0", change_cids)
+
+    def test_plus11_chain_persists_blocked_type(self):
+        """+11 chained after Gold 67 resolves as 78 and persists the chosen blocked_type."""
+        p2 = Player("p2", "P2", Hand([plus11_card()]))
+        game = make_game(
+            players=[Player("p1", "P1", Hand()), p2],
+            deck_cards=[],
+            metadata={
+                "piatto": 67,
+                "plateau_cards": [gold_card(67)],
+                "special_round_active": False,
+                "special_round_player_id": None,
+                "turn_phase": "start",
+                "target_score": TARGET_SCORE,
+            },
+        )
+        game.current_player_index = 1
+        game.set_current_player(p2)
+        rules = RoadTo100RuleSet()
+        action = RoadTo100Action(action_type=PLAY_CARD_ACTION,
+                                 parameters={"card": p2.hand.cards[0], "blocked_type": "Gold"})
+        rules.apply_action(game, action)
+
+        self.assertEqual(game.metadata["piatto"], 78)
+        self.assertEqual(game.metadata.get("special_round_player_id"), "p2")
+        self.assertEqual(game.metadata.get("special_round_type"), "safe")
+        self.assertEqual(game.metadata.get("blocked_type"), "Gold",
+                         "chain-activated GS must persist the chosen blocked_type")
+
+    def test_89_replaces_gs_and_clears_blocked_type(self):
+        """Playing 89 during a GS replaces it with GdV and clears the stale blocked_type."""
+        p1 = Player("p1", "P1", Hand())
+        p2 = Player("p2", "P2", Hand([card89()]))
+        game = make_game(
+            players=[p1, p2],
+            deck_cards=[],
+            metadata={
+                "piatto": 12,
+                "plateau_cards": [gold_card(12)],
+                "special_round_active": True,
+                "special_round_player_id": "p1",
+                "special_round_type": "safe",
+                "blocked_type": "Incremento",
+                "turn_phase": "start",
+                "target_score": TARGET_SCORE,
+            },
+        )
+        game.current_player_index = 1
+        game.set_current_player(p2)
+        rules = RoadTo100RuleSet()
+        action = RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": p2.hand.cards[0]})
+        rules.apply_action(game, action)
+
+        self.assertEqual(game.metadata.get("special_round_type"), "advantage")
+        self.assertEqual(game.metadata.get("special_round_player_id"), "p2")
+        self.assertEqual(game.metadata.get("blocked_type"), "",
+                         "stale blocked_type must not leak into the GdV")
+
+    def test_safe_round_end_clears_blocked_type(self):
+        """When the GS ends (activator's next turn completes), blocked_type is cleared."""
+        p1 = Player("p1", "P1", Hand())
+        p2 = Player("p2", "P2", Hand())
+        game = make_game(
+            players=[p1, p2],
+            deck_cards=[],
+            metadata={
+                "piatto": 12,
+                "plateau_cards": [gold_card(12)],
+                "special_round_active": True,
+                "special_round_player_id": "p1",
+                "special_round_type": "safe",
+                "blocked_type": "Gold",
+                "_activator_has_played_next": True,
+                "turn_phase": "action",
+                "target_score": TARGET_SCORE,
+            },
+        )
+        rules = RoadTo100RuleSet()
+        rules.advance_turn(game)
+
+        self.assertFalse(game.metadata.get("special_round_active"))
+        self.assertEqual(game.metadata.get("blocked_type"), "",
+                         "blocked_type must be cleared when the GS ends")
+
+    def test_new_gs_replacement_updates_blocked_type(self):
+        """A new GS replaces the previous one, including its blocked_type."""
+        p1 = Player("p1", "P1", Hand([gold_card(12)]))
+        p2 = Player("p2", "P2", Hand([gold_card(34)]))
+        game = make_game(
+            players=[p1, p2],
+            deck_cards=[],
+            metadata={
+                "piatto": 0,
+                "plateau_cards": [],
+                "special_round_active": False,
+                "special_round_player_id": None,
+                "turn_phase": "start",
+                "target_score": TARGET_SCORE,
+            },
+        )
+        rules = RoadTo100RuleSet()
+        rules.apply_action(game, RoadTo100Action(
+            action_type=PLAY_CARD_ACTION,
+            parameters={"card": p1.hand.cards[0], "blocked_type": "Imbroglio"}))
+        self.assertEqual(game.metadata.get("blocked_type"), "Imbroglio")
+
+        game.current_player_index = 1
+        game.set_current_player(p2)
+        game.metadata["turn_phase"] = "start"
+        rules.apply_action(game, RoadTo100Action(
+            action_type=PLAY_CARD_ACTION,
+            parameters={"card": p2.hand.cards[0], "blocked_type": "Gold"}))
+
+        self.assertEqual(game.metadata.get("special_round_player_id"), "p2")
+        self.assertEqual(game.metadata.get("blocked_type"), "Gold",
+                         "the replacement GS must carry its own blocked_type")
+
+
+class TestF7Plus11DuringSafeRound(unittest.TestCase):
+    """F7: a +11 played during a GS keeps the GS untouched unless the card
+    played immediately before was a normal Gold."""
+
+    def _gs_active(self, p2_cards, plateau_cards, piatto, blocked_type="Imbroglio"):
+        p1 = Player("p1", "P1", Hand())
+        p2 = Player("p2", "P2", Hand(list(p2_cards)))
+        game = make_game(
+            players=[p1, p2],
+            deck_cards=[],
+            metadata={
+                "piatto": piatto,
+                "plateau_cards": list(plateau_cards),
+                "special_round_active": True,
+                "special_round_player_id": "p1",
+                "special_round_type": "safe",
+                "blocked_type": blocked_type,
+                "turn_phase": "start",
+                "target_score": TARGET_SCORE,
+            },
+        )
+        game.set_current_player(p2)
+        return RoadTo100RuleSet(), p1, p2, game
+
+    def test_plus11_without_preceding_gold_keeps_gs(self):
+        """+11 with a non-Gold previous card just adds 11; the GS is unchanged."""
+        rules, p1, p2, game = self._gs_active(
+            [plus11_card()], [increment_card(2)], 50)
+        action = RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": p2.hand.cards[0]})
+        rules.apply_action(game, action)
+
+        self.assertEqual(game.metadata["piatto"], 61, "+11 adds 11 without a Gold chain")
+        self.assertTrue(game.metadata.get("special_round_active"))
+        self.assertEqual(game.metadata.get("special_round_player_id"), "p1",
+                         "GS activator must be unchanged")
+        self.assertEqual(game.metadata.get("special_round_type"), "safe")
+        self.assertEqual(game.metadata.get("blocked_type"), "Imbroglio",
+                         "GS blocked_type must be unchanged")
+        self.assertIsNone(game.winner)
+
+    def test_plus11_after_gold_replaces_gs(self):
+        """+11 immediately after a Gold chains (67→78) and replaces the GS for P2."""
+        rules, p1, p2, game = self._gs_active(
+            [plus11_card()], [gold_card(67)], 67)
+        action = RoadTo100Action(action_type=PLAY_CARD_ACTION,
+                                 parameters={"card": p2.hand.cards[0], "blocked_type": "Incremento"})
+        rules.apply_action(game, action)
+
+        self.assertEqual(game.metadata["piatto"], 78)
+        self.assertEqual(game.metadata.get("special_round_player_id"), "p2",
+                         "the +11 player becomes the new GS activator")
+        self.assertEqual(game.metadata.get("special_round_type"), "safe")
+        self.assertEqual(game.metadata.get("blocked_type"), "Incremento")
+
+
+class TestF7ReplacementLifecycle(unittest.TestCase):
+    """F7/G4: _activator_has_played_next must reset when a new Special Round is
+    activated or replaces the previous one."""
+
+    def test_replacement_survives_advance_turn(self):
+        """A GS replacing another GS stays active through the replacement's turns."""
+        p1 = Player("p1", "P1", Hand([gold_card(12)]))
+        p2 = Player("p2", "P2", Hand([gold_card(34)]))
+        game = make_game(
+            players=[p1, p2],
+            deck_cards=[],
+            metadata={
+                "piatto": 0,
+                "plateau_cards": [],
+                "special_round_active": False,
+                "special_round_player_id": None,
+                "turn_phase": "start",
+                "target_score": TARGET_SCORE,
+            },
+        )
+        rules = RoadTo100RuleSet()
+
+        # P1 activates GS.
+        rules.apply_action(game, RoadTo100Action(
+            action_type=PLAY_CARD_ACTION,
+            parameters={"card": p1.hand.cards[0], "blocked_type": "Imbroglio"}))
+        rules.advance_turn(game)  # flag F→T after P1's activation turn
+        self.assertTrue(game.metadata.get("special_round_active"))
+
+        # P2 replaces the GS with a new one.
+        rules.apply_action(game, RoadTo100Action(
+            action_type=PLAY_CARD_ACTION,
+            parameters={"card": p2.hand.cards[0], "blocked_type": "Gold"}))
+        rules.advance_turn(game)  # G4: must NOT end here (flag was reset on replacement)
+        self.assertTrue(game.metadata.get("special_round_active"),
+                        "replaced GS must survive the first advance after replacement")
+        self.assertEqual(game.metadata.get("special_round_player_id"), "p2")
+
+        rules.advance_turn(game)  # P1's restricted turn ends
+        self.assertTrue(game.metadata.get("special_round_active"))
+        rules.advance_turn(game)  # P2's NEXT turn completes → GS ends
+        self.assertFalse(game.metadata.get("special_round_active"),
+                         "GS must end after the activator's next turn")
+
+    def test_gdv_after_gs_no_stale_block(self):
+        """After 89 replaces a GS, GdV playability is not affected by the stale block."""
+        p1 = Player("p1", "P1", Hand([increment_card(3), gold_card(23)]))
+        p2 = Player("p2", "P2", Hand([card89()]))
+        game = make_game(
+            players=[p1, p2],
+            deck_cards=[],
+            metadata={
+                "piatto": 12,
+                "plateau_cards": [gold_card(12)],
+                "special_round_active": True,
+                "special_round_player_id": "p1",
+                "special_round_type": "safe",
+                "blocked_type": "Incremento",
+                "turn_phase": "start",
+                "target_score": TARGET_SCORE,
+            },
+        )
+        game.set_current_player(p2)
+        rules = RoadTo100RuleSet()
+        rules.apply_action(game, RoadTo100Action(
+            action_type=PLAY_CARD_ACTION, parameters={"card": p2.hand.cards[0]}))
+        rules.advance_turn(game)  # now P1's turn during GdV
+
+        actions = rules.get_available_actions(game)
+        play_cids = [a.parameters.get("card").card_id for a in actions
+                     if a.action_type == PLAY_CARD_ACTION]
+        self.assertIn("+3_0", play_cids,
+                      "increments must be playable in GdV despite stale GS block")
+        self.assertNotIn("gold_23", play_cids, "GdV allows only Orange cards and +11")
+
+
+class TestF7SafeRoundActivatorBounce(unittest.TestCase):
+    """F7/G5: a Safe Round activator follows the universal rules (bounce >100,
+    victory at exactly 100); only GdV grants no-bounce / >=100 victory."""
+
+    def _gs_activator_game(self, card, piatto):
+        p1 = Player("p1", "P1", Hand([card]))
+        game = make_game(
+            players=[p1],
+            deck_cards=[],
+            metadata={
+                "piatto": piatto,
+                "plateau_cards": [],
+                "special_round_active": True,
+                "special_round_player_id": "p1",
+                "special_round_type": "safe",
+                "blocked_type": "Imbroglio",
+                "turn_phase": "start",
+                "target_score": TARGET_SCORE,
+            },
+        )
+        return RoadTo100RuleSet(), p1, game
+
+    def test_activator_over_100_bounces(self):
+        """GS activator: 96+5=101 → bounce to 99, no victory."""
+        rules, p1, game = self._gs_activator_game(increment_card(5), 96)
+        rules.apply_action(game, RoadTo100Action(
+            action_type=PLAY_CARD_ACTION, parameters={"card": p1.hand.cards[0]}))
+        self.assertEqual(game.metadata["piatto"], 99)
+        self.assertIsNone(game.winner, "GS activator must bounce like everyone else")
+
+    def test_activator_exact_100_wins(self):
+        """GS activator: 97+3=100 → normal victory."""
+        rules, p1, game = self._gs_activator_game(increment_card(3), 97)
+        rules.apply_action(game, RoadTo100Action(
+            action_type=PLAY_CARD_ACTION, parameters={"card": p1.hand.cards[0]}))
+        self.assertEqual(game.metadata["piatto"], 100)
+        self.assertIs(game.winner, p1)
+
+
+class TestF7SafeRoundPlayability(unittest.TestCase):
+    """F7/G6: during a GS, Cambio Carta stays available even when the player has
+    no playable card; the Orange-only filter applies to GdV only."""
+
+    def _gs_game(self, p2_cards, blocked_type, piatto=50):
+        p1 = Player("p1", "P1", Hand())
+        p2 = Player("p2", "P2", Hand(list(p2_cards)))
+        game = make_game(
+            players=[p1, p2],
+            deck_cards=[],
+            metadata={
+                "piatto": piatto,
+                "plateau_cards": [gold_card(12)],
+                "special_round_active": True,
+                "special_round_player_id": "p1",
+                "special_round_type": "safe",
+                "blocked_type": blocked_type,
+                "turn_phase": "start",
+                "target_score": TARGET_SCORE,
+            },
+        )
+        game.set_current_player(p2)
+        return RoadTo100RuleSet(), p2, game
+
+    def test_change_card_when_no_playable_in_gs(self):
+        """GS with blocked type == the player's only card type: RESET_HAND + Cambio."""
+        rules, p2, game = self._gs_game([imbroglio_card()], "Imbroglio")
+        actions = rules.get_available_actions(game)
+        types = [a.action_type for a in actions]
+        self.assertIn(RESET_HAND_ACTION, types)
+        self.assertNotIn(PLAY_CARD_ACTION, types)
+        change_cards = [a.parameters.get("card") for a in actions
+                        if a.action_type == CHANGE_CARD_ACTION]
+        self.assertEqual(len(change_cards), 1, "Cambio Carta must stay available")
+
+    def test_imbroglio_playable_in_gs_when_not_blocked(self):
+        """GS blocking Gold: Imbroglio is still playable (Orange filter is GdV-only)."""
+        rules, p2, game = self._gs_game([imbroglio_card(), gold_card(34)], "Gold")
+        actions = rules.get_available_actions(game)
+        play_cids = [a.parameters.get("card").card_id for a in actions
+                     if a.action_type == PLAY_CARD_ACTION]
+        self.assertIn("imbroglio_0", play_cids)
+        self.assertNotIn("gold_34", play_cids, "blocked Gold must be filtered")
+
+    def test_gdv_still_excludes_imbroglio(self):
+        """GdV: only Orange cards and +11, Imbroglio excluded as before."""
+        p1 = Player("p1", "P1", Hand())
+        p2 = Player("p2", "P2", Hand([imbroglio_card(), increment_card(3)]))
+        game = make_game(
+            players=[p1, p2],
+            deck_cards=[],
+            metadata={
+                "piatto": 89,
+                "plateau_cards": [],
+                "special_round_active": True,
+                "special_round_player_id": "p1",
+                "special_round_type": "advantage",
+                "turn_phase": "start",
+                "target_score": TARGET_SCORE,
+            },
+        )
+        game.set_current_player(p2)
+        rules = RoadTo100RuleSet()
+        actions = rules.get_available_actions(game)
+        play_cids = [a.parameters.get("card").card_id for a in actions
+                     if a.action_type == PLAY_CARD_ACTION]
+        self.assertIn("+3_0", play_cids)
+        self.assertNotIn("imbroglio_0", play_cids)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -74,8 +74,16 @@ func apply_snapshot(s):
 	var t = s.get("turn_number", 0); var w = s.get("winner", null)
 	var sr = s.get("special_round_active", false); var lid = s.get("local_player_id", "p1")
 	var acts = s.get("available_actions", [])
+	var sr_type = s.get("special_round_type", "")
 	if _turn_label != null: _turn_label.visible = t > 0; _turn_label.text = "Turno " + str(t)
-	if _advantage_label != null: _advantage_label.visible = sr
+	# F7: top indicator distinguishes the active Special Round type.
+	if _advantage_label != null:
+		_advantage_label.visible = sr
+		if sr:
+			if sr_type == "safe":
+				_advantage_label.text = "GIRO SICURO"
+			else:
+				_advantage_label.text = "GIRO DI VANTAGGIO"
 	if _instruction_label != null:
 		if w != null:
 			var wn = ""
@@ -86,8 +94,9 @@ func apply_snapshot(s):
 					wn = player.get("name", "")
 					break
 			_instruction_label.text = wn + " vince!"
-		elif sr: _instruction_label.text = "GIRO DI VANTAGGIO"
 		else:
+			# F7: the turn info is never replaced by the Special Round —
+			# the Special Round type lives in _advantage_label.
 			var ci = s.get("current_player_index", 0); var pl = s.get("players", [])
 			if ci < pl.size():
 				_instruction_label.text = "Turno di " + pl[ci].get("name", "Giocatore")

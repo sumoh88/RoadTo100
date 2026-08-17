@@ -871,6 +871,141 @@ func _test_gold_reveal_real_card_id():
 
 
 # ===========================================================================
+# Step F7 — Safe Round pre-action choice (single play_card with blocked_type)
+# ===========================================================================
+
+# F7.1 Playing a normal Gold opens the blocked_type popup BEFORE any action
+func _test_f7_gold_opens_popup():
+	var d = _setup_gc_with_hand()
+	var gc = d["gc"]; var mp = d["mp"]; var hp = d["hp"]; var tp = d["tp"]
+
+	var snap = _make_hand_snapshot([
+		{"card_id":"g12","name":"12","value":12,"color":"dorato","card_type":"gold"},
+	])
+	mp.emit_signal("game_started", snap)
+	hp.emit_signal("card_selected", "g12")
+	tp.emit_signal("play_pressed")
+
+	var o1 = _assert_eq(gc.get_state(), 3, "WAITING_FOR_CHOICE (3)")
+	var o2 = _assert(!mp.send_action_called, "action NOT sent before blocked_type choice")
+	_cleanup(d)
+	return "  F7 gold opens popup:     " + ("[PASS]\n" if (o1 and o2) else "[FAIL]\n")
+
+
+# F7.2 Choosing blocked_type sends ONE play_card with card_id + blocked_type
+func _test_f7_choice_sends_single_action():
+	var d = _setup_gc_with_hand()
+	var gc = d["gc"]; var mp = d["mp"]; var hp = d["hp"]; var tp = d["tp"]
+
+	var snap = _make_hand_snapshot([
+		{"card_id":"g12","name":"12","value":12,"color":"dorato","card_type":"gold"},
+	])
+	mp.emit_signal("game_started", snap)
+	hp.emit_signal("card_selected", "g12")
+	tp.emit_signal("play_pressed")
+	_assert_eq(gc.get_state(), 3, "WAITING_FOR_CHOICE")
+
+	mp.auto_emit_action_completed = false
+	gc._on_safe_round_choice_chosen("Gold")
+
+	var o1 = _assert_eq(gc.get_state(), 4, "ACTION_PENDING (4)")
+	var o2 = _assert(mp.send_action_called, "send_action called once")
+	var o3 = _assert_eq(mp.last_send_action_dict.get("action_type"), "play_card", "single play_card action")
+	var o4 = _assert_eq(mp.last_send_action_dict.get("card_id"), "g12", "activating card_id forwarded")
+	var o5 = _assert_eq(str(mp.last_send_action_dict.get("blocked_type", "")), "Gold", "blocked_type on the same action")
+	_cleanup(d)
+	return "  F7 single play_card:     " + ("[PASS]\n" if (o1 and o2 and o3 and o4 and o5) else "[FAIL]\n")
+
+
+# F7.3 +11 immediately after a Gold (chain to 78) opens the popup
+func _test_f7_plus11_after_gold_opens_popup():
+	var d = _setup_gc_with_hand()
+	var gc = d["gc"]; var mp = d["mp"]; var hp = d["hp"]; var tp = d["tp"]
+
+	var snap = _make_hand_snapshot([
+		{"card_id":"p11","name":"+11","value":11,"color":"rosso","card_type":"special"},
+	])
+	snap["plateau_cards"] = [
+		{"card_id":"g67","name":"67","value":67,"color":"dorato","card_type":"gold"},
+	]
+	mp.emit_signal("game_started", snap)
+	hp.emit_signal("card_selected", "p11")
+	tp.emit_signal("play_pressed")
+
+	var o1 = _assert_eq(gc.get_state(), 3, "WAITING_FOR_CHOICE (3)")
+	var o2 = _assert(!mp.send_action_called, "chain to 78 activates GS: choice required first")
+	_cleanup(d)
+	return "  F7 +11 chain opens popup:" + ("[PASS]\n" if (o1 and o2) else "[FAIL]\n")
+
+
+# F7.4 +11 without a preceding Gold plays directly (no popup, no blocked_type)
+func _test_f7_plus11_no_gold_plays_directly():
+	var d = _setup_gc_with_hand()
+	var gc = d["gc"]; var mp = d["mp"]; var hp = d["hp"]; var tp = d["tp"]
+
+	var snap = _make_hand_snapshot([
+		{"card_id":"p11","name":"+11","value":11,"color":"rosso","card_type":"special"},
+	])
+	snap["plateau_cards"] = [
+		{"card_id":"inc3","name":"+3","value":3,"color":"arancione","card_type":"increment"},
+	]
+	mp.emit_signal("game_started", snap)
+	hp.emit_signal("card_selected", "p11")
+	tp.emit_signal("play_pressed")
+
+	var o1 = _assert(mp.send_action_called, "no popup: action sent directly")
+	var o2 = _assert_eq(mp.last_send_action_dict.get("action_type"), "play_card", "play_card action")
+	var o3 = _assert_eq(mp.last_send_action_dict.get("card_id"), "p11", "card_id forwarded")
+	var o4 = _assert(!mp.last_send_action_dict.has("blocked_type"), "no blocked_type without GS activation")
+	_cleanup(d)
+	return "  F7 +11 no chain direct:  " + ("[PASS]\n" if (o1 and o2 and o3 and o4) else "[FAIL]\n")
+
+
+# F7.5 +11 chaining to 89 activates the Advantage Round — no GS popup
+func _test_f7_plus11_chain_89_no_popup():
+	var d = _setup_gc_with_hand()
+	var gc = d["gc"]; var mp = d["mp"]; var hp = d["hp"]; var tp = d["tp"]
+
+	var snap = _make_hand_snapshot([
+		{"card_id":"p11","name":"+11","value":11,"color":"rosso","card_type":"special"},
+	])
+	snap["plateau_cards"] = [
+		{"card_id":"g78","name":"78","value":78,"color":"dorato","card_type":"gold"},
+	]
+	mp.emit_signal("game_started", snap)
+	hp.emit_signal("card_selected", "p11")
+	tp.emit_signal("play_pressed")
+
+	var o1 = _assert(mp.send_action_called, "chain to 89 is GdV: no GS popup, direct play")
+	var o2 = _assert_eq(mp.last_send_action_dict.get("card_id"), "p11", "card_id forwarded")
+	_cleanup(d)
+	return "  F7 +11 chain 89 no pop:  " + ("[PASS]\n" if (o1 and o2) else "[FAIL]\n")
+
+
+# F7.6 Cancel in the Safe Round popup returns to CARD_SELECTED, no action sent
+func _test_f7_choice_cancel():
+	var d = _setup_gc_with_hand()
+	var gc = d["gc"]; var mp = d["mp"]; var hp = d["hp"]; var tp = d["tp"]
+
+	var snap = _make_hand_snapshot([
+		{"card_id":"g12","name":"12","value":12,"color":"dorato","card_type":"gold"},
+	])
+	mp.emit_signal("game_started", snap)
+	hp.emit_signal("card_selected", "g12")
+	tp.emit_signal("play_pressed")
+	_assert_eq(gc.get_state(), 3, "WAITING_FOR_CHOICE before cancel")
+
+	mp.auto_emit_action_completed = false
+	gc._on_value_cancel()
+
+	var o1 = _assert_eq(gc.get_state(), 2, "CARD_SELECTED (2) after cancel")
+	var o2 = _assert(!mp.send_action_called, "action NOT sent after cancel")
+	var o3 = _assert_eq(gc.get_selected_card_id(), "g12", "selection preserved after cancel")
+	_cleanup(d)
+	return "  F7 GS choice cancel:     " + ("[PASS]\n" if (o1 and o2 and o3) else "[FAIL]\n")
+
+
+# ===========================================================================
 # Step 5 tests — CardAnimator integration
 # ===========================================================================
 
@@ -1079,6 +1214,13 @@ func _run_all():
 	out += _test_gold_reveal_not_reopen()
 	out += _test_gold_reveal_not_in_gameover()
 	out += _test_gold_reveal_real_card_id()
+	out += "--- Step F7: Safe Round pre-action choice ---\n"
+	out += _test_f7_gold_opens_popup()
+	out += _test_f7_choice_sends_single_action()
+	out += _test_f7_plus11_after_gold_opens_popup()
+	out += _test_f7_plus11_no_gold_plays_directly()
+	out += _test_f7_plus11_chain_89_no_popup()
+	out += _test_f7_choice_cancel()
 	out += "--- Step 5: card animator ---\n"
 	out += _test_animating_state()
 	out += _test_anim_finishes_ready()

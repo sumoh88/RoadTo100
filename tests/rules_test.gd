@@ -239,6 +239,37 @@ func _run_all():
 	out += _test_validate_blocks_89_gold_blocked()
 	tests_run += 1
 
+	# --- F7: Safe Round end-to-end (blocked_type persistence, +11 chain,
+	#     replacement lifecycle, GS/GdV bounce & victory, playability) ---
+	out += _test_f7_gold_persists_blocked_type()
+	tests_run += 1
+	out += _test_f7_plus11_chain_persists_blocked_type()
+	tests_run += 1
+	out += _test_f7_89_replaces_gs_clears_blocked()
+	tests_run += 1
+	out += _test_f7_gs_end_clears_blocked()
+	tests_run += 1
+	out += _test_f7_new_gs_replacement_updates_blocked()
+	tests_run += 1
+	out += _test_f7_plus11_no_preceding_gold_keeps_gs()
+	tests_run += 1
+	out += _test_f7_plus11_after_gold_replaces_gs()
+	tests_run += 1
+	out += _test_f7_replacement_survives_advance()
+	tests_run += 1
+	out += _test_f7_gdv_after_gs_no_stale_block()
+	tests_run += 1
+	out += _test_f7_activator_over_100_bounces()
+	tests_run += 1
+	out += _test_f7_activator_exact_100_wins()
+	tests_run += 1
+	out += _test_f7_change_when_no_playable_in_gs()
+	tests_run += 1
+	out += _test_f7_imbroglio_playable_in_gs_when_not_blocked()
+	tests_run += 1
+	out += _test_f7_gdv_still_excludes_imbroglio()
+	tests_run += 1
+
 	out += "\n--- Summary ---\n"
 	out += "  Tests executed: " + str(tests_run) + "\n"
 	out += "  Passed: " + str(passed) + "\n"
@@ -1395,3 +1426,516 @@ func _test_validate_blocks_89_gold_blocked():
 		_test("validate blocks 89 gold")
 		return "  Validate blocks 89:        [PASS]\n"
 	return "  Validate blocks 89:        [FAIL]\n"
+
+
+# ===========================================================================
+# F7 — Safe Round end-to-end (blocked_type persistence, +11 chain during GS,
+#      replacement lifecycle, GS/GdV bounce & victory, playability)
+# ===========================================================================
+
+func _f7_play_cids(actions):
+	var cids = []
+	for a in actions:
+		if a["action_type"] == "play_card":
+			cids.append(a.get("card", null))
+	return cids
+
+
+func _f7_change_cids(actions):
+	var cids = []
+	for a in actions:
+		if a["action_type"] == "change_card":
+			cids.append(a.get("card", null))
+	return cids
+
+
+func _test_f7_gold_persists_blocked_type():
+	"""Gold played with blocked_type persists it; next turn's actions are filtered."""
+	var rules = Rules.new()
+	var p1 = PlayerData.new("p1", "P1")
+	p1.receive_card(gold_card(12))
+	var p2 = PlayerData.new("p2", "P2")
+	p2.receive_card(increment_card(3, 0))
+	p2.receive_card(imbroglio_card(0))
+	var game = make_game(
+		[p1, p2],
+		[],
+		null,
+		{
+			"piatto": 0,
+			"plateau_cards": [],
+			"special_round_active": false,
+			"special_round_player_id": null,
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+	var action = {"action_type": "play_card", "card": p1.hand.cards[0], "blocked_type": "Incremento"}
+	rules.apply_action(game, action)
+	var o1 = _assert_eq(str(game.metadata.get("blocked_type", "")), "Incremento",
+		"f7 persist blocked", "blocked_type must be persisted from the play_card action")
+	var o2 = _assert_eq(str(game.metadata.get("special_round_type", "")), "safe",
+		"f7 persist type", "type safe after gold")
+	rules.advance_turn(game)
+	var actions = rules.get_available_actions(game)
+	var play_cids = _f7_play_cids(actions)
+	var change_cids = _f7_change_cids(actions)
+	var inc = increment_card(3, 0)
+	var imb = imbroglio_card(0)
+	# find the actual cards in p2 hand by card_id (factory instances differ)
+	var played_inc = false
+	var played_imb = false
+	for c in play_cids:
+		if c != null and c.card_id == inc.card_id:
+			played_inc = true
+		if c != null and c.card_id == imb.card_id:
+			played_imb = true
+	var o3 = _assert_true(!played_inc, "f7 persist filter inc", "blocked Incremento must be filtered")
+	var o4 = _assert_true(played_imb, "f7 persist filter imb", "Imbroglio is playable during GS when not blocked")
+	var o5 = _assert_eq(change_cids.size(), 2, "f7 persist cambio", "Cambio available for both cards")
+	if o1 and o2 and o3 and o4 and o5:
+		_test("f7 gold persists blocked_type")
+		return "  F7 persist blocked_type: [PASS]\n"
+	return "  F7 persist blocked_type: [FAIL]\n"
+
+
+func _test_f7_plus11_chain_persists_blocked_type():
+	"""+11 chained after Gold 67 resolves as 78 and persists the chosen blocked_type."""
+	var rules = Rules.new()
+	var p1 = PlayerData.new("p1", "P1")
+	var p2 = PlayerData.new("p2", "P2")
+	p2.receive_card(plus11_card(0))
+	var game = make_game(
+		[p1, p2],
+		[],
+		null,
+		{
+			"piatto": 67,
+			"plateau_cards": [gold_card(67)],
+			"special_round_active": false,
+			"special_round_player_id": null,
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+	game.current_player_index = 1
+	game.set_current_player(p2)
+	var action = {"action_type": "play_card", "card": p2.hand.cards[0], "blocked_type": "Gold"}
+	rules.apply_action(game, action)
+	var o1 = _assert_eq(game.metadata["piatto"], 78, "f7 chain 78", "+11 from 67 resolves as 78")
+	var o2 = _assert_eq(str(game.metadata.get("special_round_player_id", "")), "p2",
+		"f7 chain activator", "P2 becomes the GS activator")
+	var o3 = _assert_eq(str(game.metadata.get("blocked_type", "")), "Gold",
+		"f7 chain blocked", "chain-activated GS must persist the chosen blocked_type")
+	if o1 and o2 and o3:
+		_test("f7 +11 chain persists blocked_type")
+		return "  F7 chain persists bt:   [PASS]\n"
+	return "  F7 chain persists bt:   [FAIL]\n"
+
+
+func _test_f7_89_replaces_gs_clears_blocked():
+	"""Playing 89 during a GS replaces it with GdV and clears the stale blocked_type."""
+	var rules = Rules.new()
+	var p1 = PlayerData.new("p1", "P1")
+	var p2 = PlayerData.new("p2", "P2")
+	p2.receive_card(card89(0))
+	var game = make_game(
+		[p1, p2],
+		[],
+		null,
+		{
+			"piatto": 12,
+			"plateau_cards": [gold_card(12)],
+			"special_round_active": true,
+			"special_round_player_id": "p1",
+			"special_round_type": "safe",
+			"blocked_type": "Incremento",
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+	game.current_player_index = 1
+	game.set_current_player(p2)
+	var action = {"action_type": "play_card", "card": p2.hand.cards[0]}
+	rules.apply_action(game, action)
+	var o1 = _assert_eq(str(game.metadata.get("special_round_type", "")), "advantage",
+		"f7 89 type", "89 activates GdV")
+	var o2 = _assert_eq(str(game.metadata.get("special_round_player_id", "")), "p2",
+		"f7 89 activator", "P2 becomes the GdV player")
+	var o3 = _assert_eq(str(game.metadata.get("blocked_type", "")), "",
+		"f7 89 blocked clear", "stale blocked_type must not leak into the GdV")
+	if o1 and o2 and o3:
+		_test("f7 89 replaces gs clears blocked")
+		return "  F7 89 clears blocked:   [PASS]\n"
+	return "  F7 89 clears blocked:   [FAIL]\n"
+
+
+func _test_f7_gs_end_clears_blocked():
+	"""When the GS ends (activator's next turn completes), blocked_type is cleared."""
+	var rules = Rules.new()
+	var p1 = PlayerData.new("p1", "P1")
+	var p2 = PlayerData.new("p2", "P2")
+	var game = make_game(
+		[p1, p2],
+		[],
+		null,
+		{
+			"piatto": 12,
+			"plateau_cards": [gold_card(12)],
+			"special_round_active": true,
+			"special_round_player_id": "p1",
+			"special_round_type": "safe",
+			"blocked_type": "Gold",
+			"_activator_has_played_next": true,
+			"turn_phase": "action",
+			"target_score": 100,
+		}
+	)
+	rules.advance_turn(game)
+	var o1 = _assert_true(!game.metadata.get("special_round_active", false),
+		"f7 gs end", "GS must end after the activator's next turn")
+	var o2 = _assert_eq(str(game.metadata.get("blocked_type", "")), "",
+		"f7 gs end blocked clear", "blocked_type must be cleared when the GS ends")
+	if o1 and o2:
+		_test("f7 gs end clears blocked")
+		return "  F7 GS end clears bt:    [PASS]\n"
+	return "  F7 GS end clears bt:    [FAIL]\n"
+
+
+func _test_f7_new_gs_replacement_updates_blocked():
+	"""A new GS replaces the previous one, including its blocked_type."""
+	var rules = Rules.new()
+	var p1 = PlayerData.new("p1", "P1")
+	p1.receive_card(gold_card(12))
+	var p2 = PlayerData.new("p2", "P2")
+	p2.receive_card(gold_card(34))
+	var game = make_game(
+		[p1, p2],
+		[],
+		null,
+		{
+			"piatto": 0,
+			"plateau_cards": [],
+			"special_round_active": false,
+			"special_round_player_id": null,
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+	rules.apply_action(game, {"action_type": "play_card", "card": p1.hand.cards[0], "blocked_type": "Imbroglio"})
+	var o1 = _assert_eq(str(game.metadata.get("blocked_type", "")), "Imbroglio",
+		"f7 repl first", "first GS blocked_type")
+	game.current_player_index = 1
+	game.set_current_player(p2)
+	game.metadata["turn_phase"] = "start"
+	rules.apply_action(game, {"action_type": "play_card", "card": p2.hand.cards[0], "blocked_type": "Gold"})
+	var o2 = _assert_eq(str(game.metadata.get("special_round_player_id", "")), "p2",
+		"f7 repl activator", "P2 becomes the new GS activator")
+	var o3 = _assert_eq(str(game.metadata.get("blocked_type", "")), "Gold",
+		"f7 repl blocked", "the replacement GS must carry its own blocked_type")
+	if o1 and o2 and o3:
+		_test("f7 gs replacement updates blocked")
+		return "  F7 GS replacement bt:   [PASS]\n"
+	return "  F7 GS replacement bt:   [FAIL]\n"
+
+
+# --- F7 helper: Safe Round context (GS active for p1) with p2 to act ---
+func _f7_gs_context(p2_cards, plateau_cards, piatto, blocked_type):
+	var p1 = PlayerData.new("p1", "P1")
+	var p2 = PlayerData.new("p2", "P2")
+	for c in p2_cards:
+		p2.receive_card(c)
+	var game = make_game(
+		[p1, p2],
+		[],
+		null,
+		{
+			"piatto": piatto,
+			"plateau_cards": plateau_cards,
+			"special_round_active": true,
+			"special_round_player_id": "p1",
+			"special_round_type": "safe",
+			"blocked_type": blocked_type,
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+	game.current_player_index = 1
+	game.set_current_player(p2)
+	return {"p1": p1, "p2": p2, "game": game}
+
+
+func _test_f7_plus11_no_preceding_gold_keeps_gs():
+	"""+11 with a non-Gold previous card just adds 11; the GS is unchanged."""
+	var rules = Rules.new()
+	var ctx = _f7_gs_context([plus11_card(0)], [increment_card(2, 0)], 50, "Imbroglio")
+	var p2 = ctx["p2"]; var game = ctx["game"]
+	rules.apply_action(game, {"action_type": "play_card", "card": p2.hand.cards[0]})
+	var o1 = _assert_eq(game.metadata["piatto"], 61, "f7 plus11 nochain", "+11 adds 11 without a Gold chain")
+	var o2 = _assert_true(bool(game.metadata.get("special_round_active", false)),
+		"f7 plus11 nochain gs", "GS must stay active")
+	var o3 = _assert_eq(str(game.metadata.get("special_round_player_id", "")), "p1",
+		"f7 plus11 nochain pid", "GS activator must be unchanged")
+	var o4 = _assert_eq(str(game.metadata.get("blocked_type", "")), "Imbroglio",
+		"f7 plus11 nochain bt", "GS blocked_type must be unchanged")
+	var o5 = _assert_true(game.winner == null, "f7 plus11 nochain winner", "no winner at 61")
+	if o1 and o2 and o3 and o4 and o5:
+		_test("f7 +11 without preceding gold keeps GS")
+		return "  F7 +11 keeps GS:        [PASS]\n"
+	return "  F7 +11 keeps GS:        [FAIL]\n"
+
+
+func _test_f7_plus11_after_gold_replaces_gs():
+	"""+11 immediately after a Gold chains (67→78) and replaces the GS for P2."""
+	var rules = Rules.new()
+	var ctx = _f7_gs_context([plus11_card(0)], [gold_card(67)], 67, "Imbroglio")
+	var p2 = ctx["p2"]; var game = ctx["game"]
+	rules.apply_action(game, {"action_type": "play_card", "card": p2.hand.cards[0], "blocked_type": "Incremento"})
+	var o1 = _assert_eq(game.metadata["piatto"], 78, "f7 plus11 chain", "+11 from 67 resolves as 78")
+	var o2 = _assert_eq(str(game.metadata.get("special_round_player_id", "")), "p2",
+		"f7 plus11 chain pid", "the +11 player becomes the new GS activator")
+	var o3 = _assert_eq(str(game.metadata.get("special_round_type", "")), "safe",
+		"f7 plus11 chain type", "chain to 78 activates a Safe Round")
+	var o4 = _assert_eq(str(game.metadata.get("blocked_type", "")), "Incremento",
+		"f7 plus11 chain bt", "replaced GS must carry the new blocked_type")
+	if o1 and o2 and o3 and o4:
+		_test("f7 +11 after gold replaces GS")
+		return "  F7 +11 replaces GS:     [PASS]\n"
+	return "  F7 +11 replaces GS:     [FAIL]\n"
+
+
+func _test_f7_replacement_survives_advance():
+	"""A GS replacing another GS stays active through the replacement's turns."""
+	var rules = Rules.new()
+	var p1 = PlayerData.new("p1", "P1")
+	p1.receive_card(gold_card(12))
+	var p2 = PlayerData.new("p2", "P2")
+	p2.receive_card(gold_card(34))
+	var game = make_game(
+		[p1, p2],
+		[],
+		null,
+		{
+			"piatto": 0,
+			"plateau_cards": [],
+			"special_round_active": false,
+			"special_round_player_id": null,
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+	rules.apply_action(game, {"action_type": "play_card", "card": p1.hand.cards[0], "blocked_type": "Imbroglio"})
+	rules.advance_turn(game)  # flag F→T after P1's activation turn
+	var o1 = _assert_true(bool(game.metadata.get("special_round_active", false)),
+		"f7 repl advance 1", "GS active after activation turn")
+
+	game.current_player_index = 1
+	game.set_current_player(p2)
+	rules.apply_action(game, {"action_type": "play_card", "card": p2.hand.cards[0], "blocked_type": "Gold"})
+	rules.advance_turn(game)  # must NOT end here (flag was reset on replacement)
+	var o2 = _assert_true(bool(game.metadata.get("special_round_active", false)),
+		"f7 repl advance 2", "replaced GS must survive the first advance after replacement")
+	var o3 = _assert_eq(str(game.metadata.get("special_round_player_id", "")), "p2",
+		"f7 repl advance 3", "P2 is the GS activator")
+
+	rules.advance_turn(game)  # P1's restricted turn ends
+	var o4 = _assert_true(bool(game.metadata.get("special_round_active", false)),
+		"f7 repl advance 4", "GS still active during P1's turn")
+	rules.advance_turn(game)  # P2's NEXT turn completes → GS ends
+	var o5 = _assert_true(!game.metadata.get("special_round_active", false),
+		"f7 repl advance 5", "GS must end after the activator's next turn")
+	if o1 and o2 and o3 and o4 and o5:
+		_test("f7 replacement survives advance")
+		return "  F7 replacement lifecycle: [PASS]\n"
+	return "  F7 replacement lifecycle: [FAIL]\n"
+
+
+func _test_f7_gdv_after_gs_no_stale_block():
+	"""After 89 replaces a GS, GdV playability is not affected by the stale block."""
+	var rules = Rules.new()
+	var p1 = PlayerData.new("p1", "P1")
+	p1.receive_card(increment_card(3, 0))
+	p1.receive_card(gold_card(23))
+	var p2 = PlayerData.new("p2", "P2")
+	p2.receive_card(card89(0))
+	var game = make_game(
+		[p1, p2],
+		[],
+		null,
+		{
+			"piatto": 12,
+			"plateau_cards": [gold_card(12)],
+			"special_round_active": true,
+			"special_round_player_id": "p1",
+			"special_round_type": "safe",
+			"blocked_type": "Incremento",
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+	game.current_player_index = 1
+	game.set_current_player(p2)
+	rules.apply_action(game, {"action_type": "play_card", "card": p2.hand.cards[0]})
+	rules.advance_turn(game)  # now P1's turn during GdV
+
+	var actions = rules.get_available_actions(game)
+	var play_cids = _f7_play_cids(actions)
+	var has_inc = false
+	var has_gold = false
+	for c in play_cids:
+		if c != null and c.card_id == "+3_0":
+			has_inc = true
+		if c != null and c.card_id == "gold_23":
+			has_gold = true
+	var o1 = _assert_true(has_inc, "f7 gdv stale block", "increments must be playable in GdV despite stale GS block")
+	var o2 = _assert_true(!has_gold, "f7 gdv stale gold", "GdV allows only Orange cards and +11")
+	if o1 and o2:
+		_test("f7 gdv after gs no stale block")
+		return "  F7 GdV no stale block:  [PASS]\n"
+	return "  F7 GdV no stale block:  [FAIL]\n"
+
+
+func _test_f7_activator_over_100_bounces():
+	"""GS activator: 96+5=101 → bounce to 99, no victory."""
+	var rules = Rules.new()
+	var p1 = PlayerData.new("p1", "P1")
+	p1.receive_card(increment_card(5, 0))
+	var game = make_game(
+		[p1],
+		[],
+		null,
+		{
+			"piatto": 96,
+			"plateau_cards": [],
+			"special_round_active": true,
+			"special_round_player_id": "p1",
+			"special_round_type": "safe",
+			"blocked_type": "Imbroglio",
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+	rules.apply_action(game, {"action_type": "play_card", "card": p1.hand.cards[0]})
+	var o1 = _assert_eq(game.metadata["piatto"], 99, "f7 activator bounce", "101 must bounce to 99")
+	var o2 = _assert_true(game.winner == null, "f7 activator bounce winner", "GS activator must bounce like everyone else")
+	if o1 and o2:
+		_test("f7 gs activator over 100 bounces")
+		return "  F7 GS activator bounces: [PASS]\n"
+	return "  F7 GS activator bounces: [FAIL]\n"
+
+
+func _test_f7_activator_exact_100_wins():
+	"""GS activator: 97+3=100 → normal victory."""
+	var rules = Rules.new()
+	var p1 = PlayerData.new("p1", "P1")
+	p1.receive_card(increment_card(3, 0))
+	var game = make_game(
+		[p1],
+		[],
+		null,
+		{
+			"piatto": 97,
+			"plateau_cards": [],
+			"special_round_active": true,
+			"special_round_player_id": "p1",
+			"special_round_type": "safe",
+			"blocked_type": "Imbroglio",
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+	rules.apply_action(game, {"action_type": "play_card", "card": p1.hand.cards[0]})
+	var o1 = _assert_eq(game.metadata["piatto"], 100, "f7 activator win", "100 must be kept")
+	var o2 = _assert_true(game.winner != null and game.winner.player_id == "p1",
+		"f7 activator win winner", "GS activator wins at exactly 100")
+	if o1 and o2:
+		_test("f7 gs activator exact 100 wins")
+		return "  F7 GS activator 100 win: [PASS]\n"
+	return "  F7 GS activator 100 win: [FAIL]\n"
+
+
+func _test_f7_change_when_no_playable_in_gs():
+	"""GS with blocked type == the player's only card type: RESET_HAND + Cambio."""
+	var rules = Rules.new()
+	var ctx = _f7_gs_context([imbroglio_card(0)], [gold_card(12)], 50, "Imbroglio")
+	var game = ctx["game"]
+	var actions = rules.get_available_actions(game)
+	var has_reset = false
+	var has_play = false
+	var change_count = 0
+	for a in actions:
+		if a["action_type"] == "reset_hand":
+			has_reset = true
+		elif a["action_type"] == "play_card":
+			has_play = true
+		elif a["action_type"] == "change_card":
+			change_count += 1
+	var o1 = _assert_true(has_reset, "f7 no playable reset", "RESET_HAND must be offered")
+	var o2 = _assert_true(!has_play, "f7 no playable play", "no PLAY_CARD when every card is blocked")
+	var o3 = _assert_eq(change_count, 1, "f7 no playable cambio", "Cambio Carta must stay available")
+	if o1 and o2 and o3:
+		_test("f7 cambio when no playable in GS")
+		return "  F7 Cambio in GS:        [PASS]\n"
+	return "  F7 Cambio in GS:        [FAIL]\n"
+
+
+func _test_f7_imbroglio_playable_in_gs_when_not_blocked():
+	"""GS blocking Gold: Imbroglio is still playable (Orange filter is GdV-only)."""
+	var rules = Rules.new()
+	var ctx = _f7_gs_context([imbroglio_card(0), gold_card(34)], [gold_card(12)], 50, "Gold")
+	var game = ctx["game"]
+	var actions = rules.get_available_actions(game)
+	var play_cids = _f7_play_cids(actions)
+	var has_imb = false
+	var has_gold = false
+	for c in play_cids:
+		if c != null and c.card_id == "imbroglio_0":
+			has_imb = true
+		if c != null and c.card_id == "gold_34":
+			has_gold = true
+	var o1 = _assert_true(has_imb, "f7 gs imbroglio", "Imbroglio must be playable when not blocked")
+	var o2 = _assert_true(!has_gold, "f7 gs gold blocked", "blocked Gold must be filtered")
+	if o1 and o2:
+		_test("f7 imbroglio playable in GS when not blocked")
+		return "  F7 GS Imbroglio play:   [PASS]\n"
+	return "  F7 GS Imbroglio play:   [FAIL]\n"
+
+
+func _test_f7_gdv_still_excludes_imbroglio():
+	"""GdV: only Orange cards and +11, Imbroglio excluded as before."""
+	var p1 = PlayerData.new("p1", "P1")
+	var p2 = PlayerData.new("p2", "P2")
+	p2.receive_card(imbroglio_card(0))
+	p2.receive_card(increment_card(3, 0))
+	var game = make_game(
+		[p1, p2],
+		[],
+		null,
+		{
+			"piatto": 89,
+			"plateau_cards": [],
+			"special_round_active": true,
+			"special_round_player_id": "p1",
+			"special_round_type": "advantage",
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+	game.current_player_index = 1
+	game.set_current_player(p2)
+	var rules = Rules.new()
+	var actions = rules.get_available_actions(game)
+	var play_cids = _f7_play_cids(actions)
+	var has_inc = false
+	var has_imb = false
+	for c in play_cids:
+		if c != null and c.card_id == "+3_0":
+			has_inc = true
+		if c != null and c.card_id == "imbroglio_0":
+			has_imb = true
+	var o1 = _assert_true(has_inc, "f7 gdv inc", "increments must be playable in GdV")
+	var o2 = _assert_true(!has_imb, "f7 gdv imb", "Imbroglio must stay excluded in GdV")
+	if o1 and o2:
+		_test("f7 gdv still excludes imbroglio")
+		return "  F7 GdV excludes Imbr.:  [PASS]\n"
+	return "  F7 GdV excludes Imbr.:  [FAIL]\n"

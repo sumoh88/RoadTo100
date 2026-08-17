@@ -13,6 +13,11 @@ var games_completed = 0
 var target_games = 5
 var max_turns_per_game = 200
 
+# F7: +11 Gold chain (mirrors RoadTo100Rules.GOLD_CHAIN) — decides whether a
+# +11 play activates a Safe Round (23-78) vs the Advantage Round (89).
+const GOLD_CHAIN = {12: 23, 23: 34, 34: 45, 45: 56, 56: 67, 67: 78, 78: 89}
+const SAFE_ROUND_CHOICES = ["Incremento", "Gold", "Imbroglio"]
+
 var _gc = null
 var _mp = null
 var _bp = null
@@ -109,6 +114,12 @@ func _run_single_game(game_num):
 		var state = _gc.get_state()
 		# Avoid acting during WAITING_FOR_CHOICE or ANIMATING states
 		if state == 3 or state == 5 or state == 4:
+			if state == 3:
+				# GC auto-opened the gold reveal popup — answer Yes directly.
+				for a in snap.get("available_actions", []):
+					if a.get("action_type", "") == "reveal_gold":
+						_gc.perform_action({"action_type": "reveal_gold", "card_id": a.get("card_id", "")})
+						break
 			yield(get_tree(), "idle_frame")
 			continue
 
@@ -150,6 +161,10 @@ func _run_single_game(game_num):
 				var params = choices[0].get("parameters", {})
 				for k in params.keys():
 					action_dict[k] = params[k]
+			# F7: a play_card that activates a Safe Round carries its blocked_type
+			# on the same single action.
+			if at == "play_card" and _play_activates_safe_round(snap, cid):
+				action_dict["blocked_type"] = SAFE_ROUND_CHOICES[randi() % SAFE_ROUND_CHOICES.size()]
 			_gc.perform_action(action_dict)
 
 		turn += 1
@@ -165,6 +180,33 @@ func _run_single_game(game_num):
 		_assert(false, "Game " + str(game_num) + ": NO WINNER after " + str(turn) + " turns")
 
 	_cleanup()
+
+
+func _play_activates_safe_round(snapshot, card_id):
+	"""F7: true when playing this card activates a Safe Round — a normal Gold,
+	or a +11 played immediately after a normal Gold whose next chain value is
+	23-78 (a chain to 89 activates the Advantage Round instead)."""
+	var card = null
+	for p in snapshot.get("players", []):
+		for c in p.get("hand", []):
+			if c.get("card_id", "") == card_id:
+				card = c
+				break
+		if card != null:
+			break
+	if card == null:
+		return false
+	var ct = str(card.get("card_type", ""))
+	if ct == "gold":
+		return true
+	if ct == "special" and str(card.get("name", "")) == "+11":
+		var plateau_cards = snapshot.get("plateau_cards", [])
+		if plateau_cards.size() > 0:
+			var last = plateau_cards[plateau_cards.size() - 1]
+			if str(last.get("card_type", "")) == "gold":
+				var chain_val = GOLD_CHAIN.get(int(last.get("value", 0)), null)
+				return chain_val != null and chain_val != 89
+	return false
 
 
 func _run_all():

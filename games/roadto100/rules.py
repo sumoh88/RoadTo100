@@ -149,6 +149,7 @@ class RoadTo100RuleSet(RuleSet):
         game.metadata["special_round_active"] = False
         game.metadata["special_round_player_id"] = None
         game.metadata["special_round_type"] = "advantage"
+        game.metadata["blocked_type"] = ""
         game.metadata["target_score"] = TARGET_SCORE
         game.metadata["turn_phase"] = "start"
 
@@ -193,17 +194,29 @@ class RoadTo100RuleSet(RuleSet):
                     RoadTo100Action(action_type=REVEAL_GOLD_ACTION, parameters={"card": matching_gold})
                 )
 
-        # During Special Round: non-activator players with no playable cards get RESET_HAND
-        if special_round_active and not is_special_round_active:
-            has_playable = any(
-                self._is_increment_card(c) or self._is_jolly_card(c) or self._is_plus11_card(c)
-                for c in current_player.hand.cards
-            )
-            if not has_playable and current_player.hand.cards:
+        # Special Round playability:
+        # - Safe Round: non-activators cannot play the blocked card type.
+        # - Advantage Round (GdV): only Orange cards and +11 can be played.
+        sr_type = str(game.metadata.get("special_round_type", "advantage"))
+        blocked_type = ""
+        if special_round_active and not is_special_round_active and sr_type == "safe":
+            blocked_type = str(game.metadata.get("blocked_type", ""))
+
+        def card_playable(card: Card) -> bool:
+            if blocked_type and self._is_blocked_type(card, blocked_type):
+                return False
+            if special_round_active and sr_type == "advantage":
+                if not (self._is_increment_card(card) or self._is_jolly_card(card) or self._is_plus11_card(card)):
+                    return False
+            return True
+
+        # During Special Round: non-activator players with no playable cards
+        # get RESET_HAND; Cambio Carta remains available in all cases.
+        if special_round_active and not is_special_round_active and current_player.hand.cards:
+            if not any(card_playable(c) for c in current_player.hand.cards):
                 actions.append(RoadTo100Action(action_type=RESET_HAND_ACTION))
-                return actions
-            if not current_player.hand.cards:
-                actions.append(RoadTo100Action(action_type=RESET_HAND_ACTION))
+                for card in current_player.hand.cards:
+                    actions.append(RoadTo100Action(action_type=CHANGE_CARD_ACTION, parameters={"card": card}))
                 return actions
 
         # Safety net: if the player has no cards at all, offer RESET_HAND
@@ -213,16 +226,8 @@ class RoadTo100RuleSet(RuleSet):
 
         # Card play actions
         for card in current_player.hand.cards:
-            # During Safe Round: non-activator players have blocked card types
-            if special_round_active and not is_special_round_active:
-                blocked_type = game.metadata.get("blocked_type", "")
-                if blocked_type and self._is_blocked_type(card, blocked_type):
-                    continue
-
-            # During Advantage Round: only Orange cards and +11 can be played
-            if special_round_active:
-                if not (self._is_increment_card(card) or self._is_jolly_card(card) or self._is_plus11_card(card)):
-                    continue
+            if special_round_active and not card_playable(card):
+                continue
 
             if self._is_jolly_card(card):
                 for chosen_value in range(1, 11):
@@ -298,14 +303,16 @@ class RoadTo100RuleSet(RuleSet):
         if action.action_type == CHANGE_CARD_ACTION:
             return isinstance(card, Card) and current_player.has_card(card)
 
+        sr_type = str(game.metadata.get("special_round_type", "advantage"))
+
         # Card play actions during Safe Round: non-activators have blocked card types
-        if special_round_active and not is_special_round_player:
-            blocked_type = game.metadata.get("blocked_type", "")
+        if special_round_active and not is_special_round_player and sr_type == "safe":
+            blocked_type = str(game.metadata.get("blocked_type", ""))
             if blocked_type and self._is_blocked_type(card, blocked_type):
                 return False
 
-        # Card play actions during Advantage Round: only Orange and +11 allowed
-        if special_round_active:
+        # Card play actions during Advantage Round (GdV only): only Orange and +11 allowed
+        if special_round_active and sr_type == "advantage":
             if not (self._is_increment_card(card) or self._is_jolly_card(card) or self._is_plus11_card(card)):
                 return False
 
@@ -386,12 +393,18 @@ class RoadTo100RuleSet(RuleSet):
             increment = int(action.parameters.get("selected_value", 0))
         elif self._is_special_89_card(card):
             increment = 89
+            # F7: 89 activates GdV, replacing any active Safe Round; the stale
+            # blocked_type must not leak into the GdV.
             game.metadata["special_round_active"] = True
             game.metadata["special_round_player_id"] = current_player.player_id
             game.metadata["special_round_type"] = "advantage"
+            game.metadata["_activator_has_played_next"] = False
+            game.metadata["blocked_type"] = ""
         elif self._is_plus11_card(card):
-            # Check Gold chain: if last played card is a Gold (12..78),
-            # the +11 assumes the next Gold value. Applies regardless of SR status.
+            # Check Gold chain: only when the card played immediately before is a
+            # normal Gold (12..78), the +11 assumes the next Gold value and
+            # activates the matching Special Round. Otherwise it just adds 11
+            # and leaves any active Special Round untouched.
             plateau_cards = game.metadata.get("plateau_cards", [])
             gold_chain_value: Optional[int] = None
             if plateau_cards:
@@ -401,15 +414,17 @@ class RoadTo100RuleSet(RuleSet):
 
             if gold_chain_value is not None:
                 increment = gold_chain_value
+                game.metadata["special_round_active"] = True
+                game.metadata["special_round_player_id"] = current_player.player_id
+                game.metadata["_activator_has_played_next"] = False
                 if increment == 89:
-                    game.metadata["special_round_active"] = True
-                    game.metadata["special_round_player_id"] = current_player.player_id
                     game.metadata["special_round_type"] = "advantage"
-                elif gold_chain_value in (23, 34, 45, 56, 67, 78):
-                    # +11 from Gold chain assumes Safe Round value
-                    game.metadata["special_round_active"] = True
-                    game.metadata["special_round_player_id"] = current_player.player_id
+                    game.metadata["blocked_type"] = ""
+                else:
+                    # +11 from Gold chain resolves as a normal Gold: Safe Round,
+                    # with the blocked_type chosen in this same play_card action.
                     game.metadata["special_round_type"] = "safe"
+                    game.metadata["blocked_type"] = str(action.parameters.get("blocked_type", "") or "")
                 game.metadata["_plus11_gold_chain"] = True
             else:
                 increment = 11
@@ -417,10 +432,14 @@ class RoadTo100RuleSet(RuleSet):
             increment = int(card.value or 0)
             game.metadata["plateau_value"] = increment
             game.metadata["gold_cards"] = game.metadata.get("gold_cards", []) + [card]
-            # F2: Normal Gold (12-78) activates Safe Round
+            # F2: Normal Gold (12-78) activates Safe Round.
+            # F7: the blocked_type choice is part of this same play_card action
+            # and stays unchanged until the Safe Round ends or is replaced.
             game.metadata["special_round_active"] = True
             game.metadata["special_round_player_id"] = current_player.player_id
             game.metadata["special_round_type"] = "safe"
+            game.metadata["_activator_has_played_next"] = False
+            game.metadata["blocked_type"] = str(action.parameters.get("blocked_type", "") or "")
         else:
             increment = int(card.value or 0)
 
@@ -440,15 +459,17 @@ class RoadTo100RuleSet(RuleSet):
         sr_pid = game.metadata.get("special_round_player_id")
         is_adv_player = sr_pid is not None and current_player.player_id == sr_pid
         is_plus11 = self._is_plus11_card(card)
+        sr_type = str(game.metadata.get("special_round_type", "advantage"))
+        # F7: only a Giro di Vantaggio grants no-bounce / >=100 victory to the
+        # activator. A Safe Round activator plays under the universal rules.
+        is_gdv_player = is_adv_player and sr_active and sr_type == "advantage"
 
         # --- Plateau value computation (bounce / GdV cap) ---
         if raw_total is not None:
-            # Advantage player and +11 never bounce.
-            if is_adv_player or is_plus11:
+            # GdV advantage player and +11 never bounce.
+            if is_gdv_player or is_plus11:
                 pass  # plateau stays as computed
             elif sr_active:
-                # SR non-activator, non-+11 logic.
-                sr_type = game.metadata.get("special_round_type", "advantage")
                 if sr_type == "advantage":
                     # GdV: non-activator gets the cap (100→99, no win).
                     if raw_total == TARGET_SCORE:
@@ -456,7 +477,7 @@ class RoadTo100RuleSet(RuleSet):
                     elif raw_total > TARGET_SCORE:
                         plateau = (2 * TARGET_SCORE) - raw_total  # bounce: 200 - raw_total
                 else:
-                    # Safe Round: non-activator plays normally.
+                    # Safe Round: everyone (activator included) bounces normally.
                     if raw_total > TARGET_SCORE:
                         plateau = (2 * TARGET_SCORE) - raw_total  # bounce: 200 - raw_total
             else:
@@ -466,14 +487,13 @@ class RoadTo100RuleSet(RuleSet):
 
         game.metadata.setdefault("plateau_cards", []).append(card)
 
-        # Victory check: +11 wins if Piatto >= 100 (ignores GdV restriction).
-        # Advantage player wins at Piatto >= 100. Safe Round: normal victory.
+        # Victory check: +11 wins at Piatto >= 100 (ignores bounce and GdV restriction).
+        # GdV advantage player wins at >= 100. Safe Round: normal victory at 100.
         if is_plus11 and plateau >= TARGET_SCORE:
             game.winner = current_player
-        elif is_adv_player and plateau >= TARGET_SCORE:
+        elif is_gdv_player and plateau >= TARGET_SCORE:
             game.winner = current_player
-        elif sr_active and game.metadata.get("special_round_type") == "safe":
-            # Safe Round: non-activator wins normally at 100 or >100.
+        elif sr_active and sr_type == "safe":
             if plateau == TARGET_SCORE or plateau > TARGET_SCORE:
                 plateau = TARGET_SCORE
                 game.winner = current_player
@@ -515,6 +535,8 @@ class RoadTo100RuleSet(RuleSet):
                     game.metadata["special_round_active"] = False
                     game.metadata["special_round_player_id"] = None
                     game.metadata["_activator_has_played_next"] = False
+                    # F7: blocked_type lives exactly as long as the Safe Round.
+                    game.metadata["blocked_type"] = ""
                 else:
                     game.metadata["_activator_has_played_next"] = True
 

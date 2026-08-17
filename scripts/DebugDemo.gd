@@ -12,6 +12,11 @@ var turn_count = 0
 var max_demo_turns = 1000
 var step_delay_ms = 1000
 
+# F7: +11 Gold chain (mirrors RoadTo100Rules.GOLD_CHAIN) — decides whether a
+# +11 play activates a Safe Round (23-78) vs the Advantage Round (89).
+const GOLD_CHAIN = {12: 23, 23: 34, 34: 45, 45: 56, 56: 67, 67: 78, 78: 89}
+const SAFE_ROUND_CHOICES = ["Incremento", "Gold", "Imbroglio"]
+
 # Stats
 var stats = {"play_card":0,"change_card":0,"reveal_gold":0,"reset_hand":0,"advantage_turns":0}
 
@@ -128,6 +133,11 @@ func _on_timer_timeout():
 			for k in params.keys():
 				action_dict[k] = params[k]
 
+		# F7: a play_card that activates a Safe Round carries its blocked_type
+		# on the same single action.
+		if at == "play_card" and _play_activates_safe_round(snapshot, cid):
+			action_dict["blocked_type"] = SAFE_ROUND_CHOICES[randi() % SAFE_ROUND_CHOICES.size()]
+
 		_gc.perform_action(action_dict)
 
 	elif at == "reset_hand":
@@ -148,6 +158,33 @@ func _choose_action(acts):
 		if not cs.empty():
 			return cs[randi() % cs.size()]
 	return acts[0]
+
+
+func _play_activates_safe_round(snapshot, card_id):
+	"""F7: true when playing this card activates a Safe Round — a normal Gold,
+	or a +11 played immediately after a normal Gold whose next chain value is
+	23-78 (a chain to 89 activates the Advantage Round instead)."""
+	var card = null
+	for p in snapshot.get("players", []):
+		for c in p.get("hand", []):
+			if c.get("card_id", "") == card_id:
+				card = c
+				break
+		if card != null:
+			break
+	if card == null:
+		return false
+	var ct = str(card.get("card_type", ""))
+	if ct == "gold":
+		return true
+	if ct == "special" and str(card.get("name", "")) == "+11":
+		var plateau_cards = snapshot.get("plateau_cards", [])
+		if plateau_cards.size() > 0:
+			var last = plateau_cards[plateau_cards.size() - 1]
+			if str(last.get("card_type", "")) == "gold":
+				var chain_val = GOLD_CHAIN.get(int(last.get("value", 0)), null)
+				return chain_val != null and chain_val != 89
+	return false
 
 
 func _input(event):

@@ -74,6 +74,12 @@ func _ready():
 		var action_dict = {"action_type": chosen.get("action_type", "")}
 		if chosen.has("card_id"): action_dict["card_id"] = chosen.get("card_id", "")
 		if chosen.has("value"):   action_dict["value"] = chosen.get("value", 0)
+		# Jolly/Imbroglio require selected_value: take the first offered choice
+		var choices = chosen.get("choices", [])
+		if choices.size() > 0:
+			var params = choices[0].get("parameters", {})
+			for k in params.keys():
+				action_dict[k] = params[k]
 
 		_snapshot = null
 		_engine.send_action(action_dict)

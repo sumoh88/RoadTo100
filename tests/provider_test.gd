@@ -71,8 +71,6 @@ func _capture_snapshot(snapshot):
 	_last_snapshot = snapshot
 
 func _capture_result(result):
-	var sr = result.get("snapshot", {}).get("special_round_type", "NONE")
-	print("[DBG _capture_result] sr_type=" + str(sr))
 	_last_action_result = result
 
 func _capture_rejected(msg):
@@ -192,6 +190,7 @@ func _test_snapshot_format():
 	var s = _last_snapshot
 	var keys = ["players","current_player_index","piatto","deck_count","discard_top",
 		"plateau_cards","plateau_visual_stack","special_round_active","special_round_player_id",
+		"special_round_type","blocked_type",
 		"winner","turn_number","available_actions","phase","local_player_id"]
 	var all_ok = true
 	for k in keys:
@@ -836,4 +835,6 @@ func _test_safe_round_blocked_type_flow():
 	var sr_active = snap.get("special_round_active", false)
 	var sr_type = snap.get("special_round_type", "")
 	var sr_pid = snap.get("special_round_player_id", null)
-	return "  Safe Round blocked_type flow: " + ("[PASS]\n" if (sr_active and sr_type == "safe" and sr_pid == cp.player_id) else "[FAIL]\n")
+	# F7: blocked_type is part of the snapshot and reflects the action choice
+	var bt_in_snap = str(snap.get("blocked_type", ""))
+	return "  Safe Round blocked_type flow: " + ("[PASS]\n" if (sr_active and sr_type == "safe" and sr_pid == cp.player_id and bt_in_snap == "Incremento") else "[FAIL]\n")

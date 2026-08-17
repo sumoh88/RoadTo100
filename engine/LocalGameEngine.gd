@@ -104,13 +104,8 @@ func send_action(action_dict):
 	for e in turn_events:
 		events.append(e)
 
-	# Debug: check metadata before snapshot
-	print("[DBG send_action] before snapshot: sr_active=" + str(game_state.metadata.get("special_round_active", "NONE")) + " sr_type='" + str(game_state.metadata.get("special_round_type", "NONE")) + "'")
-
 	# Build final snapshot
-	print("[DBG send_action] about to call _build_snapshot")
 	var snapshot = _build_snapshot()
-	print("[DBG send_action] after _build_snapshot, snapshot has special_round_type=" + str(snapshot.get("special_round_type", "MISSING")))
 
 	emit_signal("action_completed", {
 		"snapshot": snapshot,
@@ -206,9 +201,6 @@ func _build_snapshot():
 	# Alternates between {"type":"plate","value":N} and {"type":"card","card":{...}}
 	var plateau_visual_stack = _build_plateau_visual_stack(game_state)
 
-	var sr_val = game_state.metadata.get("special_round_active", "NOT_FOUND")
-	var st_val = game_state.metadata.get("special_round_type", "NOT_FOUND")
-	print("[DBG _build_snapshot] sr=" + str(sr_val) + " st='" + str(st_val) + "'")
 	var snapshot = {
 		"players": players_data,
 		"current_player_index": game_state.current_player_index,
@@ -217,9 +209,10 @@ func _build_snapshot():
 		"discard_top": discard_top,
 		"plateau_cards": plateau,
 		"plateau_visual_stack": plateau_visual_stack,
-		"special_round_active": sr_val,
+		"special_round_active": game_state.metadata.get("special_round_active", false),
 		"special_round_player_id": game_state.metadata.get("special_round_player_id", null),
-		"special_round_type": st_val,
+		"special_round_type": str(game_state.metadata.get("special_round_type", "advantage")),
+		"blocked_type": str(game_state.metadata.get("blocked_type", "")),
 		"winner": game_state.winner.player_id if game_state.winner != null else null,
 		"turn_number": game_state.turn_number,
 		"available_actions": _build_available_actions(),
