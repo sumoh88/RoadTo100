@@ -54,7 +54,7 @@
 │   │   ├── config.py      # Static game parameters
 │   │   ├── cards.py       # Card definitions (per CARD_DATABASE.md)
 │   │   ├── actions.py     # Action models (play_card, change_card, reveal_gold, etc.)
-│   │   ├── rules.py       # RoadTo100RuleSet implementation (all rules incl. GdV bounce)
+│   │   ├── rules.py       # RoadTo100RuleSet implementation (all rules incl. GdV bounce + Safe Round)
 │   │   ├── setup.py       # Initial game state construction
 │   │   ├── helpers.py     # Shared utility functions
 │   │   └── README.md      # Architecture proposal document
@@ -89,13 +89,16 @@
 │   └── CardFace.tscn      # Reusable card scene
 ├── tests/                 # Godot GDScript test suites
 │   ├── domain_test.gd/.tscn        # Domain operations (55+ assert)
-│   ├── rules_test.gd/.tscn         # Rules validation (24 test, 68 assert)
-│   ├── provider_test.gd/.tscn      # Provider snapshot/event tests (104 assert)
+│   ├── rules_test.gd/.tscn         # Rules validation (59 test, 188 assert)
+│   ├── provider_test.gd/.tscn      # Provider snapshot/event tests (92 assert)
 │   ├── presenter_test.gd/.tscn     # Presenter/UI tests (84 assert)
-│   ├── board_test.gd/.tscn         # Board visual tests (42 assert)
-│   ├── game_controller_test.gd/.tscn  # GameController state/input tests (145 assert)
-│   └── card_animator_test.gd/.tscn    # CardAnimator FIFO tests (5 assert)
-├── test_roadto100_rules.py  # Python unit tests for RoadTo100 rules (23 tests)
+│   ├── board_test.gd/.tscn         # Board visual tests (44 assert)
+│   ├── game_controller_test.gd/.tscn  # GameController state/input tests (165 assert)
+│   ├── card_animator_test.gd/.tscn    # CardAnimator FIFO tests (5 assert)
+│   ├── card_animator_test2.gd/.tscn   # CardAnimator multi-player tests (20 assert)
+│   ├── demo_integration_test.gd/.tscn # GC + LocalGameEngine real games (5 assert)
+│   └── demo_verification_test.gd/.tscn # 4-player event verification (9 assert)
+├── test_roadto100_rules.py  # Python unit tests for RoadTo100 rules (74 tests)
 └── run_simulations.py       # Python batch simulation runner
 ```
 
@@ -186,13 +189,13 @@ from games.roadto100.rules import RoadTo100Rules  # (to be implemented)
 
 ### Testing
 
-**Python tests:** Standard library `unittest` — 23 tests in `test_roadto100_rules.py` covering Gold chain, GdV lifecycle, +11 during GdV, card 89 behavior, deck reconstitution, and bounce rule. Run with:
+**Python tests:** Standard library `unittest` — 74 tests in `test_roadto100_rules.py` covering Gold chain, GdV lifecycle, +11 during GdV, card 89 behavior, deck reconstitution, bounce rule, and Safe Round (Giro Sicuro) activation/persistence/lifecycle. Run with:
 
 ```bash
 python3 -m unittest test_roadto100_rules
 ```
 
-**Godot tests:** Headless GDScript suites in `tests/` — 7 suites (domain_test, rules_test, provider_test, presenter_test, board_test, game_controller_test, card_animator_test), ~490+ total assertions. Run with:
+**Godot tests:** Headless GDScript suites in `tests/` — 10 suites (domain_test, rules_test, provider_test, presenter_test, board_test, game_controller_test, card_animator_test, card_animator_test2, demo_integration_test, demo_verification_test), ~660+ total assertions. Run with:
 
 ```bash
 /home/sumaka/bin/Godot3 --path . tests/<suite>.tscn --no-window
@@ -218,7 +221,7 @@ python3 -m unittest test_roadto100_rules
 | CardAnimator (FIFO, multi-player, play+draw, 0.7s/0.6s) | ✅ Implemented and verified (Steps 5+8) |
 | DebugDemo (Auto demo, integrated with GC) | ✅ Functional |
 | Python Simulator | ✅ Complete and frozen |
-| **Special Round / Giro Sicuro** | 📋 **Planned (Passaggio F)** — Generalizes GdV into common `Special Round` + adds Safe Round. Not yet implemented. |
+| **Special Round / Giro Sicuro** | ✅ **F1–F7 completed and verified (Passaggio F)** — Safe Round integrated end-to-end (`blocked_type` persistence/snapshot, pre-action popup with single `play_card`, GS/GdV lifecycle, UI `GIRO SICURO`/`GIRO DI VANTAGGIO`). Next: F8 (final step of Passaggio F) |
 | Multiplayer | ❌ Not started |
 | AI (bot.py) | ❌ Not started |
 

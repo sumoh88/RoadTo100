@@ -1,6 +1,6 @@
 # RoadTo100 — Stato Progetto
 
-> Aggiornato al: 11 agosto 2026
+> Aggiornato al: 18 agosto 2026
 > Scopo: documento di avvio per future sessioni di sviluppo.
 
 ---
@@ -12,7 +12,7 @@ Il progetto è composto da due codebase separati:
 | Componente | Stato |
 |---|---|
 | Simulatore Python | **Completato e congelato** |
-| Client Godot — Passaggio F, Step 1–6 | **F1–F6 completati e verificati** |
+| Client Godot — Passaggio F, Step 1–7 | **F1–F7 completati e verificati** (prossimo: F8, ultimo step) |
 
 ---
 
@@ -168,18 +168,18 @@ Tutte le azioni transitano esclusivamente per `GameController.perform_action(act
 | Suite | File | Assert | Esito |
 |---|---|---|---|
 | Domain | `tests/domain_test.gd` | 55+ | ✅ All PASS |
-| Rules | `tests/rules_test.gd` | 78 | ✅ 0 FAIL (39 test, include F4 Safe Round blocked type) |
-| Provider | `tests/provider_test.gd` | 104 | ✅ 0 FAIL |
+| Rules | `tests/rules_test.gd` | 188 | ✅ 0 FAIL (59 test, include F7 GS/GdV end-to-end: 14 nuovi) |
+| Provider | `tests/provider_test.gd` | 92 | ✅ 0 FAIL (include snapshot `blocked_type` F7) |
 | Presenter | `tests/presenter_test.gd` | 84 | ✅ 0 FAIL |
-| Board | `tests/board_test.gd` | 42 | ✅ 0 FAIL |
-| GameController | `tests/game_controller_test.gd` | 145 | ✅ 0 FAIL, nessun memory leak |
+| Board | `tests/board_test.gd` | 44 | ✅ 0 FAIL |
+| GameController | `tests/game_controller_test.gd` | 165 | ✅ 0 FAIL, nessun memory leak (include 6 test F7 popup GS pre-azione) |
 | CardAnimator | `tests/card_animator_test.gd` | 5 | ✅ 0 FAIL |
 | CardAnimator Multi-Player | `tests/card_animator_test2.gd` | 20 | ✅ 0 FAIL |
-| Demo Integrazione | `tests/demo_integration_test.gd` | 5 | ✅ 5/5 partite complete |
+| Demo Integrazione | `tests/demo_integration_test.gd` | 5 | ✅ 5/5 partite complete × 3 run consecutive, nessun hang |
 | Demo Verifica Eventi | `tests/demo_verification_test.gd` | 9 | ✅ 0 FAIL — 4 giocatori verificati |
 | Demo Automatica | — | — | ✅ Funzionante via GC |
 
-**Test Python:** `test_roadto100_rules.py` — 38 test, 0 FAIL (10 nuovi: 5 Safe Round activation + 10 Safe Round blocked type).
+**Test Python:** `test_roadto100_rules.py` — 74 test, 0 FAIL (incl. F7: 14 nuovi su persistenza `blocked_type`, +11 durante GS, replacement lifecycle, rimbalzo/vittoria GS/GdV, playability).
 
 ---
 
@@ -296,7 +296,7 @@ Completato il Passaggio E (Step 8) con animazioni multi-player funzionanti per t
 
 ### Passaggio F — Special Round (Giro Sicuro)
 
-**Stato attuale:** Step F1–F6 completati e verificati; prossimo step F7.
+**Stato attuale:** Step F1–F7 completati e verificati; prossimo step F8 (ultimo del Passaggio F).
 
 #### F1 — Rinomina metadata (completato)
 - `advantage_turn` → `special_round_active`
@@ -363,7 +363,27 @@ Completato il Passaggio E (Step 8) con animazioni multi-player funzionanti per t
 - Godot board_test: 44 assert, 0 FAIL
 - Tutte le altre suite verdi
 
-**Prossimo step: F7** — Da definire.
+#### F7 — Integrazione end-to-end Giro Sicuro / Giro di Vantaggio (completato)
+Correzione dei bug G1–G7 e dei bug rilevati in-game: integrazione completa GS/GdV tra regole, provider, controller e UI.
+
+- **`blocked_type` persistito:** scelto una sola volta all'attivazione del GS (stessa azione `play_card`) e invariato fino a fine/sostituzione del Giro; incluso nello snapshot (`_build_snapshot()`) e pulito quando il GS termina o è sostituito da 89.
+- **Popup GS pre-azione:** la scelta della tipologia bloccata avviene PRIMA dell'invio della carta attivante (Gold normale, o +11 con chain 23–78); una sola `play_card` porta `card_id` + `blocked_type`. Rimosso il vecchio popup post-azione F3.
+- **Lifecycle GS/GdV:** reset di `_activator_has_played_next` ad ogni attivazione/sostituzione; 89 sostituisce un GS attivo e pulisce il `blocked_type` residuo; +11 durante GS non interrompe né sostituisce il GS, salvo Gold chain valida (carta precedente nel Piatto normale).
+- **Distinzione GS/GdV per rimbalzo e vittoria:** solo il GdV concede no-bounce e vittoria a >= 100 all'attivatore; l'attivatore del GS gioca con le regole universali (bounce > 100, vittoria a 100 esatti).
+- **Cambio Carta** resta disponibile durante GS quando non esistono carte giocabili (RESET_HAND + Cambio).
+- **UI:** indicatore superiore corretto `GIRO SICURO`/`GIRO DI VANTAGGIO` per `special_round_type`; `Turno di Player X` non viene più sostituito dal Giro Speciale.
+- **DebugDemo / demo_integration_test / demo_verification_test** aggiornati al nuovo flusso (`blocked_type` sulle carte che attivano GS; fix flake pre-esistente su `selected_value` Jolly/Imbroglio). Rimossi i print `[DBG]` residui in `LocalGameEngine.gd` e `provider_test.gd`.
+- File: `games/roadto100/rules.py`, `engine/RoadTo100Rules.gd`, `engine/LocalGameEngine.gd`, `scripts/GameController.gd`, `scripts/TurnPresenter.gd`, `scripts/DebugDemo.gd`, `test_roadto100_rules.py`, `tests/rules_test.gd`, `tests/game_controller_test.gd`, `tests/provider_test.gd`, `tests/demo_integration_test.gd`, `tests/demo_verification_test.gd`.
+
+**Stato test dopo F7:**
+- Python: 74/74 OK (14 nuovi F7)
+- Godot rules_test: 188 assert, 0 FAIL (59 test, incl. 14 F7)
+- Godot game_controller_test: 165 assert, 0 FAIL (6 nuovi F7 sul flusso popup pre-azione)
+- Godot provider_test: 92 assert, 0 FAIL (`blocked_type` nel formato snapshot + flusso GS)
+- demo_integration_test: 5/5 partite complete × 3 run consecutive, nessun hang
+- Tutte le altre suite verdi (domain, presenter 84, board 44, card_animator 5+20, demo_verification)
+
+**Prossimo step: F8** — ultimo step del Passaggio F (da definire).
 
 ---
 
@@ -389,13 +409,14 @@ Completato il Passaggio E (Step 8) con animazioni multi-player funzionanti per t
   - Bug fix: plateau cap e victory condition per Safe Round non-activators (distinguere type="advantage" da type="safe").
   - Bug fix: logica +11 secondo GAME_RULES.md — eliminato trigger generico `+11 = vittoria`; la +11 ora verifica sempre la gold chain, ignora Rimbalzo, e durante GdV ignora la restrizione del solo-Vantaggio. La vittoria deriva dal Piatto risultante (>= 100).
   - Fix: non-deterministicità provider_test (`_playable_card_id` skip choices, `sr_pid` dynamic).
-- [ ] **F7–F8:** (non ancora definiti)
+- [x] **F7:** Integrazione end-to-end GS/GdV: persistenza + snapshot `blocked_type`, popup pre-azione con una sola `play_card`, lifecycle `_activator_has_played_next`, distinzione GS/GdV per rimbalzo/vittoria, Cambio Carta durante GS senza carte giocabili, UI `GIRO SICURO`/`GIRO DI VANTAGGIO` + turno sempre visibile, rimozione `[DBG]`. ✅ Completato e verificato (14 test Python, 14 rules Godot, 6 GC, provider snapshot; demo_integration 5/5 ×3 run).
+- [ ] **F8:** (da definire) — ultimo step del Passaggio F.
 
-**Prossimo step da implementare:** F7 (da definire)
+**Prossimo step da implementare:** F8 (ultimo step del Passaggio F, da definire)
 
 **File coinvolti:** `games/roadto100/rules.py`, `engine/RoadTo100Rules.gd`, `engine/LocalGameEngine.gd`, `scripts/GameController.gd`, `scripts/TurnPresenter.gd`, `test_roadto100_rules.py`, `tests/rules_test.gd`.
 
-**Pronto per:** Definire e implementare F7
+**Pronto per:** Definire e implementare F8
 
 ---
 

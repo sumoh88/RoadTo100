@@ -81,7 +81,7 @@
 | C — Provider | ✅ Completato | GameStateProvider, LocalGameEngine, snapshot, eventi |
 | D — Presenter/UI | ✅ **Completato e verificato** | Bug risolti (incluse schermata vittoria e carta 89). Test verificati con 10+ Demo. |
 | E — Input/Animazioni | ✅ **Completato (Step 1–8)** | GameController, card selection, bottoni, popup Jolly/Imbroglio/Gold Reveal, CardAnimator multi-player (giocata 0.7s + pesca 0.6s per tutti e 4 i giocatori), DebugDemo integrato, perform_action(). Step 8: correzione animazioni non visibili e multi-player, 20+9 test di verifica. |
-| F — Special Round (Giro Sicuro) | 🔨 **F1–F6 completati** | Step F1–F6 implementati e verificati. Prossimo step: F7 (da definire). |
+| F — Special Round (Giro Sicuro) | 🔨 **F1–F7 completati** | Step F1–F7 implementati e verificati. Prossimo step: F8 (ultimo del Passaggio F, da definire). |
 
 ---
 
@@ -137,15 +137,16 @@ Queste decisioni NON devono essere rimesse in discussione:
 
 | File | Motivo | Stato |
 |---|---|---|
-| `games/roadto100/rules.py` | Rules reference implementation + F2 Safe Round activation + metadata rename | ✅ Modificato F1–F2 |
+| `games/roadto100/rules.py` | Rules reference implementation + Special Round (Safe Round / GdV): attivazione, `blocked_type`, chain +11, rimbalzo/vittoria GS/GdV | ✅ Modificato F1–F7 |
 
-### Test aggiunti (F1–F4)
+### Test aggiunti (F1–F7)
 
 | File | Cosa aggiunge | Stato |
 |---|---|---|
-| `test_roadto100_rules.py` | 5 test Safe Round activation (`TestSafeRoundActivation`) + 10 test Safe Round blocked type (`TestSafeRoundBlockedType`) | ✅ 38 test totali, 0 FAIL |
-| `tests/rules_test.gd` | 5 test Godot specchiati F2 Safe Round + 10 test F4 Safe Round blocked type | ✅ 78 assert totali, 0 FAIL |
-| `tests/provider_test.gd` | 1 test F3 Safe Round blocked_type flow | ✅ 104 assert totali, 0 FAIL |
+| `test_roadto100_rules.py` | 5 test Safe Round activation + 10 test Safe Round blocked type + 14 test F7 (persistenza `blocked_type`, +11 durante GS, replacement lifecycle, rimbalzo/vittoria GS/GdV, playability) | ✅ 74 test totali, 0 FAIL |
+| `tests/rules_test.gd` | 5 test Godot F2 + 10 test F4 blocked type + 14 test F7 GS/GdV end-to-end | ✅ 188 assert totali, 0 FAIL (59 test) |
+| `tests/game_controller_test.gd` | 6 test F7: popup GS pre-azione, singola `play_card` con `blocked_type`, chain +11 | ✅ 165 assert totali, 0 FAIL |
+| `tests/provider_test.gd` | 1 test F3 Safe Round blocked_type flow (+ assert snapshot `blocked_type` F7) | ✅ 92 assert totali, 0 FAIL |
 
 ### Scene
 
@@ -167,14 +168,14 @@ Queste decisioni NON devono essere rimesse in discussione:
 | Suite | File | Cosa verifica | Stato |
 |---|---|---|---|
 | **Domain** | `tests/domain_test.gd` + `.tscn` | Deck 60 carte, card_id univoci, Deck/Hand/Player/GameState operazioni | ✅ 60 card, 0 FAIL |
-| **Rules** | `tests/rules_test.gd` + `.tscn` | 39 test: Gold chain, GdV lifecycle, 89/+11, deck reconstitution, reset hand, Safe Round activation (5 nuovi), Safe Round blocked type (10 nuovi) | ✅ 78 assert, 0 FAIL |
-| **Provider** | `tests/provider_test.gd` + `.tscn` | start_game 2/3/4p, snapshot, card_id, event order, plateau visual stack (4 sequenze), Safe Round blocked_type flow (1 nuovo) | ✅ 104 assert, 0 FAIL |
+| **Rules** | `tests/rules_test.gd` + `.tscn` | 59 test: Gold chain, GdV lifecycle, 89/+11, deck reconstitution, reset hand, Safe Round activation (5), blocked type (10), GS/GdV end-to-end F7 (14) | ✅ 188 assert, 0 FAIL |
+| **Provider** | `tests/provider_test.gd` + `.tscn` | start_game 2/3/4p, snapshot (incl. `blocked_type`), card_id, event order, plateau visual stack (4 sequenze), Safe Round blocked_type flow | ✅ 92 assert, 0 FAIL |
 | **Presenter** | `tests/presenter_test.gd` + `.tscn` | Texture resolution, fallback, CardFace, Board/Hand/Turn presenter, button signals, selection, no rules, no auto-start | ✅ 84 assert, 0 FAIL |
-| **Board** | `tests/board_test.gd` + `.tscn` | Plateau visual stack, gold/non-gold separation, opponent centering, rotation setup, chronological order | ✅ 42 assert, 0 FAIL |
-| **GameController** | `tests/game_controller_test.gd` + `.tscn` | Stati, card selection, bottoni, popup, animazioni, integrazione Demo, input GUI reale | ✅ 145 assert, 0 FAIL |
+| **Board** | `tests/board_test.gd` + `.tscn` | Plateau visual stack, gold/non-gold separation, opponent centering, rotation setup, chronological order | ✅ 44 assert, 0 FAIL |
+| **GameController** | `tests/game_controller_test.gd` + `.tscn` | Stati, card selection, bottoni, popup (incl. popup GS pre-azione F7), animazioni, integrazione Demo, input GUI reale | ✅ 165 assert, 0 FAIL |
 | **CardAnimator** | `tests/card_animator_test.gd` + `.tscn` | FIFO, segnali start/finish, headless fallback, busy guard | ✅ 5 assert, 0 FAIL |
 | **CardAnimator MP** | `tests/card_animator_test2.gd` + `.tscn` | find_card per player, opponent, clone, dest, hide_drawn, event routing | ✅ 20 assert, 0 FAIL |
-| **Demo Integrazione** | `tests/demo_integration_test.gd` + `.tscn` | GameController + LocalGameEngine reale, 4 giocatori, azioni automatiche | ✅ 5/5 partite complete |
+| **Demo Integrazione** | `tests/demo_integration_test.gd` + `.tscn` | GameController + LocalGameEngine reale, 4 giocatori, azioni automatiche (incl. `blocked_type` GS) | ✅ 5/5 partite complete × 3 run consecutive, nessun hang |
 | **Demo Verifica** | `tests/demo_verification_test.gd` + `.tscn` | Eventi per tutti e 4 i giocatori, struttura eventi | ✅ 9 assert, 0 FAIL |
 
 ---
@@ -332,9 +333,9 @@ Bug risolti:
 
 **Passaggio E completato (Step 1–8).** Tutte le animazioni sono ora visibili in-game. Il GameController gestisce correttamente l'intero flusso di gioco: selezione carte → bottoni → popup → animazioni → snapshot.
 
-### Passaggio F — Special Round (Giro Sicuro) — F1–F6 completati
+### Passaggio F — Special Round (Giro Sicuro) — F1–F7 completati
 
-I primi sei step del **Passaggio F** sono stati implementati e verificati:
+I primi sette step del **Passaggio F** sono stati implementati e verificati:
 
 | Step | Descrizione | Stato |
 |---|---|---|
@@ -344,8 +345,9 @@ I primi sei step del **Passaggio F** sono stati implementati e verificati:
 | F4 | Branch Safe Round in `get_available_actions` e `validate_action` (blocco tipo carta per i non-attivatori) | ✅ Completato (10 test Python + 10 Godot) |
 | F5 | Correzione formula rimbalzo (`200 − raw_total`), condizioni biforcate per SR/GdV | ✅ Completato |
 | F6 | Test Python/Godot + regressione. Fix: plateau cap e victory Safe Round, logica +11 secondo GAME_RULES.md, non-deterministicità provider_test | ✅ Completato (60 test Python, rules_test 131/0, provider_test 92/0 ×5 run) |
+| F7 | Integrazione end-to-end GS/GdV: persistenza + snapshot `blocked_type`, popup pre-azione con una sola `play_card`, lifecycle GS/GdV, UI `GIRO SICURO`/`GIRO DI VANTAGGIO` + turno sempre visibile, fix +11/Gold chain e sostituzione GS | ✅ Completato (74 test Python; rules_test 188/0, game_controller_test 165/0, provider_test 92/0; demo_integration 5/5 ×3 run) |
 
-**Prossimo step: F7** — Da definire.
+**Prossimo step: F8** — ultimo step del Passaggio F (da definire).
 
 Dettagli completi di F1–F8 in `PROJECT_STATE.md` sezione "Passaggio F".
 
