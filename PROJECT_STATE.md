@@ -1,6 +1,6 @@
 # RoadTo100 — Stato Progetto
 
-> Aggiornato al: 18 agosto 2026
+> Aggiornato al: 19 agosto 2026
 > Scopo: documento di avvio per future sessioni di sviluppo.
 
 ---
@@ -12,7 +12,8 @@ Il progetto è composto da due codebase separati:
 | Componente | Stato |
 |---|---|
 | Simulatore Python | **Completato e congelato** |
-| Client Godot — Passaggio F, Step 1–7 | **F1–F7 completati e verificati** (prossimo: F8, ultimo step) |
+| Client Godot — Passaggio A→F | **Completo e verificato** (A→F chiusi) |
+| Modalità manuale 1 umano + 3 CPU | **Implementata** (ManualGame.gd, pulsante "Inizia Partita") — fix selezione carte in corso |
 
 ---
 
@@ -122,9 +123,10 @@ Tutte le azioni transitano esclusivamente per `GameController.perform_action(act
 | CardAnimator | `scripts/CardAnimator.gd` | ✅ FIFO, multi-player, giocata+p esca, 0.7s/0.6s |
 | TextureResolver | `engine/TextureResolver.gd` | ✅ |
 | **GameController** | `scripts/GameController.gd` | ✅ Implementato (E1–E8) |
-| **Debug** | | |
-| DebugDemo | `scripts/DebugDemo.gd` | ✅ Integrato con GC (E6) |
-| DemoButton | In `Main.tscn` | ✅ F10/pulsante |
+| **Debug / Automazione** | | |
+| DebugDemo | `scripts/DebugDemo.gd` | ✅ Integrato con GC (E6), esclusione reciproca |
+| ManualGame | `scripts/ManualGame.gd` | ✅ 1 umano + 3 CPU, pausa turno umano, esclusione reciproca |
+| StartGameButton | In `Main.tscn` | ✅ "Inizia Partita" → ManualGame.start_game(4) |
 
 ### Architettura finale
 
@@ -168,25 +170,27 @@ Tutte le azioni transitano esclusivamente per `GameController.perform_action(act
 | Suite | File | Assert | Esito |
 |---|---|---|---|
 | Domain | `tests/domain_test.gd` | 55+ | ✅ All PASS |
-| Rules | `tests/rules_test.gd` | 188 | ✅ 0 FAIL (59 test, include F7 GS/GdV end-to-end: 14 nuovi) |
-| Provider | `tests/provider_test.gd` | 92 | ✅ 0 FAIL (include snapshot `blocked_type` F7) |
+| Rules | `tests/rules_test.gd` | 191 | ✅ 0 FAIL (60 test) |
+| Provider | `tests/provider_test.gd` | 97 | ✅ 0 FAIL |
 | Presenter | `tests/presenter_test.gd` | 84 | ✅ 0 FAIL |
 | Board | `tests/board_test.gd` | 44 | ✅ 0 FAIL |
-| GameController | `tests/game_controller_test.gd` | 165 | ✅ 0 FAIL, nessun memory leak (include 6 test F7 popup GS pre-azione) |
+| GameController | `tests/game_controller_test.gd` | 197 | ✅ 0 FAIL (incl. HandResetPopup scope, Jolly/Imbroglio choices) |
 | CardAnimator | `tests/card_animator_test.gd` | 5 | ✅ 0 FAIL |
 | CardAnimator Multi-Player | `tests/card_animator_test2.gd` | 20 | ✅ 0 FAIL |
-| Demo Integrazione | `tests/demo_integration_test.gd` | 5 | ✅ 5/5 partite complete × 3 run consecutive, nessun hang |
-| Demo Verifica Eventi | `tests/demo_verification_test.gd` | 9 | ✅ 0 FAIL — 4 giocatori verificati |
-| Demo Automatica | — | — | ✅ Funzionante via GC |
+| Demo Integrazione | `tests/demo_integration_test.gd` | 5 | ✅ 5/5 partite complete, nessun hang |
+| Demo Verifica Eventi | `tests/demo_verification_test.gd` | 9 | ✅ 0 FAIL |
+| Manual Game (1H+3C) | `tests/manual_game_test.gd` | 25 | ✅ 0 FAIL |
+| Manual Game Smoke | `tests/manual_game_smoke.tscn` | — | ✅ PASS |
 
-**Test Python:** `test_roadto100_rules.py` — 74 test, 0 FAIL (incl. F7: 14 nuovi su persistenza `blocked_type`, +11 durante GS, replacement lifecycle, rimbalzo/vittoria GS/GdV, playability).
+**Test Python:** `test_roadto100_rules.py` — 74 test, 0 FAIL.
 
 ---
 
 ## TODO rimasti
 
-- [ ] **AI** (`simulator/ai/bot.py`): scheletro vuoto — opzionale, fase futura
-- [ ] **Multiplayer**: non iniziato
+- [ ] **Fix selezione carte nel turno umano** (PROBLEMA APERTO): cliccando una carta della mano non accade nulla durante il turno umano; da verificare la catena `CardFace → HandPresenter → card_selected → GameController`.
+- [ ] **AI** (`simulator/ai/bot.py`): scheletro vuoto — opzionale, fase futura.
+- [ ] **Multiplayer**: non iniziato.
 
 ---
 
@@ -296,7 +300,7 @@ Completato il Passaggio E (Step 8) con animazioni multi-player funzionanti per t
 
 ### Passaggio F — Special Round (Giro Sicuro)
 
-**Stato attuale:** Step F1–F7 completati e verificati; prossimo step F8 (ultimo del Passaggio F).
+**Stato attuale:** ✅ Passaggio F chiuso — Step F1–F8 tutti completati e verificati (F8 il 19 agosto 2026). Prossimo lavoro: flusso 1 umano vs 3 CPU.
 
 #### F1 — Rinomina metadata (completato)
 - `advantage_turn` → `special_round_active`
@@ -410,20 +414,105 @@ Correzione dei bug G1–G7 e dei bug rilevati in-game: integrazione completa GS/
   - Bug fix: logica +11 secondo GAME_RULES.md — eliminato trigger generico `+11 = vittoria`; la +11 ora verifica sempre la gold chain, ignora Rimbalzo, e durante GdV ignora la restrizione del solo-Vantaggio. La vittoria deriva dal Piatto risultante (>= 100).
   - Fix: non-deterministicità provider_test (`_playable_card_id` skip choices, `sr_pid` dynamic).
 - [x] **F7:** Integrazione end-to-end GS/GdV: persistenza + snapshot `blocked_type`, popup pre-azione con una sola `play_card`, lifecycle `_activator_has_played_next`, distinzione GS/GdV per rimbalzo/vittoria, Cambio Carta durante GS senza carte giocabili, UI `GIRO SICURO`/`GIRO DI VANTAGGIO` + turno sempre visibile, rimozione `[DBG]`. ✅ Completato e verificato (14 test Python, 14 rules Godot, 6 GC, provider snapshot; demo_integration 5/5 ×3 run).
-- [ ] **F8:** (da definire) — ultimo step del Passaggio F.
+- [x] **F8:** Regressione finale, correzione bug funzionali residui e chiusura del Passaggio F. ✅ Completato e verificato (19 agosto 2026).
 
-**Prossimo step da implementare:** F8 (ultimo step del Passaggio F, da definire)
+**Prossimo step da implementare:** Flusso 1 umano vs 3 CPU (primo lavoro post-F)
 
-**File coinvolti:** `games/roadto100/rules.py`, `engine/RoadTo100Rules.gd`, `engine/LocalGameEngine.gd`, `scripts/GameController.gd`, `scripts/TurnPresenter.gd`, `test_roadto100_rules.py`, `tests/rules_test.gd`.
-
-**Pronto per:** Definire e implementare F8
+**File coinvolti in F8:** `engine/LocalGameEngine.gd`, `scripts/GameController.gd`, `tests/rules_test.gd`, `tests/provider_test.gd`, `tests/game_controller_test.gd`, `tests/demo_verification_test.gd`.
 
 ---
 
+### F8 — Regressione finale e chiusura (19 agosto 2026, completato)
+
+Ultimo step del Passaggio F: verifica completa dei bug funzionali segnalati e correzioni mirate.
+
+**Bug #4 — Vittoria a Piatto 107 con +10 fuori da Giri Speciali:** analizzato e confermato **legittimo** quando il +10 è l'advantage player durante il GdV (il Vantaggio ignora la Regola del Rimbalzo e vince a >= 100; il valore raw interno 107 è corretto per la risoluzione). Il difetto reale era la UI che mostrava 107 → risolto con il bug #5. Test documentativo: `_test_f8_gdv_advantage_97_plus_10_wins_raw` (rules_test).
+
+**Bug #5 — Piatto mai > 100 in UI:** `LocalGameEngine.gd` cappa il display del Piatto a 100 sia nello snapshot (`display_piatto`) che nello stack visivo (`_build_plateau_visual_stack`). Il metadata interno conserva il valore raw per la risoluzione delle regole. Test: `_test_f8_gdv_win_snapshot_piatto_capped` (provider_test, GdV 97+10=107 → snapshot 100, stack clean).
+
+**Bug #3 — Popup Jolly/Imbroglio:** il GameController non usava più range hardcoded, ma legge i `choices` da `available_actions` dello snapshot (valori già filtrati dalle regole: Jolly 1-10, Imbroglio -15..+15 escluso 0 e coerente con il Piatto corrente). Nuovo helper `_play_values_for_selected_card()`. Test F8.1/F8.2/F8.3 in game_controller_test (imbroglio filtrato dal Piatto, valore non consentito bloccato, Jolly dallo snapshot).
+
+**Bug #1/#2 — Gestione popup/WAITING_FOR_CHOICE e blocked_type una sola volta:** verificati con i test esistenti F7 (6 GC + flusso provider) — nessuna regressione: il popup appare per ogni scelta richiesta e blocca correttamente; la scelta `blocked_type` avviene una sola volta all'attivazione del GS.
+
+**Bug pre-esistenti corretti durante F8:**
+- `mini()` → `min()` in LocalGameEngine.gd (sintassi Godot 4 invalida su 3.4, causava parse error e timeout silent).
+- `not in` → `not (...) in` in game_controller_test.gd (GDScript 3 non supporta l'operatore infix, causava hang della suite).
+- Bug semicolon one-line in `demo_verification_test.gd`: `else: failed += 1; print(...)` stampava "FAIL" anche sui test verdi — convertito alla forma multi-line.
+
+**Stato test finale F8 (regressione completa, 19 agosto 2026):**
+- Python: 74/74 OK
+- rules_test: 60 test / 191 assert / 0 FAIL
+- provider_test: 97/0
+- game_controller_test: 175/0
+- presenter_test: 84/0
+- board_test: 44/0
+- domain_test: All PASS
+- card_animator_test: 5/0
+- card_animator_test2: 20/0
+- demo_integration_test: 5/5 partite / 0 FAIL
+- demo_verification_test: 9/0
+
+**Passaggio F chiuso.** Il client Godot implementa ora l'intero gameplay (A→F). Prossimo lavoro consigliato: flusso 1 umano vs 3 CPU.
+
+---
+
+## ULTIMA SESSIONE (21 agosto 2026) — Fix popup UI post-F8
+
+Correzioni mirate dei bug di comportamento popup rilevati in-game, senza modifiche alle regole.
+
+### Fix applicati
+
+- **Jolly/Imbroglio popup:** mostra sempre tutte le opzioni teoriche; solo i valori presenti nelle `choices` dell'engine sono abilitati; se `choices` è vuoto tutte le opzioni restano disabilitate (nessun'invenzione di validità lato UI).
+- **Carte bloccate GS:** HandPresenter scurisce e disabilita il click sulle carte della tipologia bloccata durante Giro Sicuro.
+- **GoldRevealPopup:** lifecycle corretto — aperto solo quando l'engine offre `reveal_gold`, chiuso da Sì/No o `perform_action` diretto.
+- **HandResetPopup:** limitato ESCLUSIVAMENTE al Giro di Vantaggio, solo per il giocatore locale non-in-Vantaggio senza Incrementi giocabili. Durante GS non esiste cambio completo mano (resta disponibile Cambio Carta).
+- **reset_hand non termina il turno:** `LocalGameEngine.send_action()` salta `advance_turn()` per `reset_hand`; il giocatore continua con le nuove carte.
+- **Segnalino SR badge:** indicatore su `special_round_player_id` finché `special_round_active` (BoardPresenter).
+- **Animazione carta vincente:** GAME_OVER impostato solo dopo il completamento dell'animazione (non prima).
+- **Interferenze popup eliminate:** nessun popup sopprime o apre erroneamente un altro per effetto di uno stato `WAITING_FOR_CHOICE` generico.
+- **demo_integration_test:** gestisce `reset_hand` nello stato WAITING_FOR_CHOICE; 5/5 partite senza hang.
+
+### File modificati (solo UI/engine, non regole)
+
+- `scripts/GameController.gd` — `_open_value_choice()` all/valid split, `_full_value_range()`, `_check_reset_hand()` con check GdV+local+non-advantage
+- `scripts/HandPresenter.gd` — darkening + click-blocking per GS blocked cards
+- `scripts/BoardPresenter.gd` — SR badges
+- `engine/LocalGameEngine.gd` — `advance_turn()` saltato per reset_hand
+- `tests/game_controller_test.gd` — aggiornati Fix4 tests + 5 nuovi HR scope tests (197 totali)
+- `tests/provider_test.gd` — aggiornato test reset_hand order (no turn_changed)
+- `tests/demo_integration_test.gd` — gestione reset_hand in state 3
+
+### Modalità manuale 1 umano + 3 CPU (implementata)
+
+Nuovo nodo `scripts/ManualGame.gd` che avvia una partita 1 umano + 3 CPU reusing DebugDemo/GameController/engine senza duplicare regole:
+
+- **Pulsante "Inizia Partita"** in `Main.tscn` → `ManualGame.start_game(4)`.
+- **CPU automatiche:** scelgono azioni da `available_actions` (stesso pattern di DebugDemo).
+- **Automazione si ferma al turno umano:** `_is_local_turn()` verifica; se è il turno del giocatore locale, ManualGame non invia azioni e lascia la UI interattiva.
+- **Ripresa dopo l'azione umana:** il timer continua a girare; quando il turno passa alle CPU, riparte l'automazione.
+- **Esclusione reciproca:** `ManualGame.start_game()` e `DebugDemo.start_demo()` chiamano `_stop_sibling_automation()`, fermando l'altro nodo. Solo una automazione può guidare il gioco alla volta.
+
+### Bug fix modalità manuale (21 agosto 2026)
+
+- **Bug 1 — Primo turno umano auto-eseguito:** causa: ManualGame e DebugDemo entrambi attivi guidavano lo stesso GameController; DebugDemo non rispettava il turno umano. Fix: `_stop_sibling_automation()` in entrambi i nodi → esclusione reciproca.
+- **Bug 2 — Input umano bloccato dal secondo turno:** causa: `OverlayLayer` (Control full-screen, z-order sopra GameArea) con `mouse_filter=PASS` (1) intercettava tutti i click via `mouse_pick`. Fix: `mouse_filter=IGNORE` (2) in `Main.tscn`. I popup (PopupPanel/Window) sono immuni perché gestiscono il proprio input via focus finestra.
+- **Pulsanti Gioca/Cambia** ora ricevono correttamente i click durante il turno umano.
+
+### Problema aperto — Prossimo step
+
+Durante il turno umano **le carte della mano non risultano selezionabili**: cliccando una carta non accade nulla; `Gioca`/`Cambia` rispondono correttamente chiedendo di selezionare una carta. Da verificare la catena `CardFace → HandPresenter → card_selected → GameController` (mouse_filter delle carte, overlap con altri nodi, stato GC).
+
+### Nota non bloccante
+
+Warning preesistente nel CardAnimator: `Only non-negative delay values allowed in Tweens` (`PLAY_ANIM_DURATION 0.35 − FADE_DURATION 0.75 = -0.40`). Non correlato ai bug sopra, non blocca il gioco (le animazioni completano comunque). Da correggere separatamente.
+
+### Stato test finale (21 agosto 2026)
+
+Tutte le suite verdi: GC 197, Provider 97, Presenter 84, Board 44, Rules 191, manual_game_test **25/0**, manual_game_smoke **PASS**, demo_integration 5/5.
+
 ### Prossimo passo consigliato (alternative post-F)
 
-**Migliorie UI/UX** — Texture carte definitive, effetti sonori, schermata di vittoria, animazioni più ricche. Dopo Passaggio F l'infrastruttura di gameplay del client Godot sarà completa (Passaggio A→F), manca la rifinitura visiva per un'esperienza giocabile.
-
-Alternative:
-- **AI per simulatore Python** (`simulator/ai/bot.py`): scheletro vuoto, strategie di gioco.
-- **Multiplayer** (`RemoteGameAdapter`): architettura definita, implementazione futura.
+1. **Fix selezione carte nel turno umano** — PROBLEMA APERTO sopra; bloccante per l'esperienza di gioco.
+2. **Migliorie UI/UX** — Texture carte definitive, effetti sonori, schermata di vittoria, animazioni più ricche.
+3. **AI per simulatore Python** (`simulator/ai/bot.py`): scheletro vuoto, strategie di gioco.
+4. **Multiplayer** (`RemoteGameAdapter`): architettura definita, implementazione futura.

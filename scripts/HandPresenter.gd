@@ -51,6 +51,14 @@ func apply_snapshot(s):
 	var cw = 201; var sp = 15; var n = hd.size()
 	var sx = max(0, (tw - (n * cw + max(0, n-1) * sp)) / 2)
 	var yp = max(0, (_cards_layer.rect_size.y - 282) / 2)
+
+	# Determine if Safe Round has a blocked card type
+	var sr_active = s.get("special_round_active", false)
+	var sr_type = str(s.get("special_round_type", "advantage"))
+	var blocked_type = ""
+	if sr_active and sr_type == "safe":
+		blocked_type = str(s.get("blocked_type", "")).to_lower()
+
 	for i in range(n):
 		var c = CARD_FACE.instance()
 		c.name = "HC" + str(i)
@@ -58,13 +66,35 @@ func apply_snapshot(s):
 		var pos = Vector2(sx + i * (cw + sp), yp)
 		c.rect_position = pos
 		_card_original_positions[c.card_id] = pos
+
+		# Darken blocked cards during Safe Round (still selectable so the
+		# player can use Cambio Carta on them; Play is guarded in GameController).
+		if _card_blocked_by_sr(hd[i], blocked_type):
+			c.modulate = Color(1, 1, 1, 0.45)
+		# Always connect clicked so every card stays selectable.
 		c.connect("clicked", self, "_on_card_face_clicked")
+
 		_cards_layer.add_child(c)
 		_card_faces.append(c)
 	# Preserve selection if the card still exists in the new hand
 	if prev_selected != "" and _card_original_positions.has(prev_selected):
 		_selected_card_id = prev_selected
 		_update_highlight()
+
+
+func _card_blocked_by_sr(card_data, blocked_type):
+	"""Check if a card is of the blocked type during Safe Round (visual only)."""
+	if blocked_type == "":
+		return false
+	var ct = str(card_data.get("card_type", "")).to_lower()
+	var name = str(card_data.get("name", ""))
+	if blocked_type == "incremento":
+		return ct == "increment" or ct == "jolly" or name == "+11"
+	elif blocked_type == "gold":
+		return ct == "gold" or name == "89"
+	elif blocked_type == "imbroglio":
+		return ct == "imbroglio"
+	return false
 
 
 func _clear():

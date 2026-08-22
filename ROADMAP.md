@@ -81,7 +81,7 @@
 | C — Provider | ✅ Completato | GameStateProvider, LocalGameEngine, snapshot, eventi |
 | D — Presenter/UI | ✅ **Completato e verificato** | Bug risolti (incluse schermata vittoria e carta 89). Test verificati con 10+ Demo. |
 | E — Input/Animazioni | ✅ **Completato (Step 1–8)** | GameController, card selection, bottoni, popup Jolly/Imbroglio/Gold Reveal, CardAnimator multi-player (giocata 0.7s + pesca 0.6s per tutti e 4 i giocatori), DebugDemo integrato, perform_action(). Step 8: correzione animazioni non visibili e multi-player, 20+9 test di verifica. |
-| F — Special Round (Giro Sicuro) | 🔨 **F1–F7 completati** | Step F1–F7 implementati e verificati. Prossimo step: F8 (ultimo del Passaggio F, da definire). |
+| F — Special Round (Giro Sicuro) | ✅ **Completato (F1–F8)** | Passaggio F chiuso. F8: cap Piatto a 100, popup Jolly/Imbroglio da available_actions. Fix post-F8: HandResetPopup GdV-only, reset_hand senza advance_turn, GS blocked cards UI, SR badge, victory anim pre-GAME_OVER. |
 
 ---
 
@@ -168,15 +168,17 @@ Queste decisioni NON devono essere rimesse in discussione:
 | Suite | File | Cosa verifica | Stato |
 |---|---|---|---|
 | **Domain** | `tests/domain_test.gd` + `.tscn` | Deck 60 carte, card_id univoci, Deck/Hand/Player/GameState operazioni | ✅ 60 card, 0 FAIL |
-| **Rules** | `tests/rules_test.gd` + `.tscn` | 59 test: Gold chain, GdV lifecycle, 89/+11, deck reconstitution, reset hand, Safe Round activation (5), blocked type (10), GS/GdV end-to-end F7 (14) | ✅ 188 assert, 0 FAIL |
-| **Provider** | `tests/provider_test.gd` + `.tscn` | start_game 2/3/4p, snapshot (incl. `blocked_type`), card_id, event order, plateau visual stack (4 sequenze), Safe Round blocked_type flow | ✅ 92 assert, 0 FAIL |
+| **Rules** | `tests/rules_test.gd` + `.tscn` | 60 test: Gold chain, GdV lifecycle, 89/+11, deck reconstitution, reset hand, Safe Round activation (5), blocked type (10), GS/GdV end-to-end F7 (14), F8 vittoria GdV 97+10=107 | ✅ 191 assert, 0 FAIL |
+| **Provider** | `tests/provider_test.gd` + `.tscn` | start_game 2/3/4p, snapshot (incl. `blocked_type`), card_id, event order, plateau visual stack (4 sequenze), Safe Round blocked_type flow, F8 cap Piatto a 100 in snapshot/stack visivo | ✅ 97 assert, 0 FAIL |
 | **Presenter** | `tests/presenter_test.gd` + `.tscn` | Texture resolution, fallback, CardFace, Board/Hand/Turn presenter, button signals, selection, no rules, no auto-start | ✅ 84 assert, 0 FAIL |
 | **Board** | `tests/board_test.gd` + `.tscn` | Plateau visual stack, gold/non-gold separation, opponent centering, rotation setup, chronological order | ✅ 44 assert, 0 FAIL |
-| **GameController** | `tests/game_controller_test.gd` + `.tscn` | Stati, card selection, bottoni, popup (incl. popup GS pre-azione F7), animazioni, integrazione Demo, input GUI reale | ✅ 165 assert, 0 FAIL |
+| **GameController** | `tests/game_controller_test.gd` + `.tscn` | Stati, card selection, bottoni, popup (incl. GS pre-azione, HandResetPopup GdV-only), animazioni, input GUI reale, Jolly/Imbroglio choices | ✅ 197 assert, 0 FAIL |
 | **CardAnimator** | `tests/card_animator_test.gd` + `.tscn` | FIFO, segnali start/finish, headless fallback, busy guard | ✅ 5 assert, 0 FAIL |
 | **CardAnimator MP** | `tests/card_animator_test2.gd` + `.tscn` | find_card per player, opponent, clone, dest, hide_drawn, event routing | ✅ 20 assert, 0 FAIL |
 | **Demo Integrazione** | `tests/demo_integration_test.gd` + `.tscn` | GameController + LocalGameEngine reale, 4 giocatori, azioni automatiche (incl. `blocked_type` GS) | ✅ 5/5 partite complete × 3 run consecutive, nessun hang |
 | **Demo Verifica** | `tests/demo_verification_test.gd` + `.tscn` | Eventi per tutti e 4 i giocatori, struttura eventi | ✅ 9 assert, 0 FAIL |
+| **Manual Game (1H+3C)** | `tests/manual_game_test.gd` + `.tscn` | ManualGame: CPU auto, pausa turno umano, esclusione reciproca, overlay non blocca input | ✅ 25 assert, 0 FAIL |
+| **Manual Game Smoke** | `tests/manual_game_smoke.tscn` | Verifica wiring reale: pulsante → ManualGame → CPU avanza | ✅ PASS |
 
 ---
 
@@ -333,9 +335,9 @@ Bug risolti:
 
 **Passaggio E completato (Step 1–8).** Tutte le animazioni sono ora visibili in-game. Il GameController gestisce correttamente l'intero flusso di gioco: selezione carte → bottoni → popup → animazioni → snapshot.
 
-### Passaggio F — Special Round (Giro Sicuro) — F1–F7 completati
+### Passaggio F — Special Round (Giro Sicuro) — ✅ COMPLETATO (F1–F8)
 
-I primi sette step del **Passaggio F** sono stati implementati e verificati:
+Tutti gli otto step del **Passaggio F** sono stati implementati e verificati:
 
 | Step | Descrizione | Stato |
 |---|---|---|
@@ -346,20 +348,22 @@ I primi sette step del **Passaggio F** sono stati implementati e verificati:
 | F5 | Correzione formula rimbalzo (`200 − raw_total`), condizioni biforcate per SR/GdV | ✅ Completato |
 | F6 | Test Python/Godot + regressione. Fix: plateau cap e victory Safe Round, logica +11 secondo GAME_RULES.md, non-deterministicità provider_test | ✅ Completato (60 test Python, rules_test 131/0, provider_test 92/0 ×5 run) |
 | F7 | Integrazione end-to-end GS/GdV: persistenza + snapshot `blocked_type`, popup pre-azione con una sola `play_card`, lifecycle GS/GdV, UI `GIRO SICURO`/`GIRO DI VANTAGGIO` + turno sempre visibile, fix +11/Gold chain e sostituzione GS | ✅ Completato (74 test Python; rules_test 188/0, game_controller_test 165/0, provider_test 92/0; demo_integration 5/5 ×3 run) |
+| F8 | Regressione finale e chiusura: cap Piatto a 100 in snapshot/stack visivo (GdV 97+10=107), popup Jolly/Imbroglio con scelte da `available_actions`, verifica popup/WAITING_FOR_CHOICE e blocked_type, test F8 mirati | ✅ Completato (19 agosto 2026; Python 74/74, rules_test 191/0, provider_test 97/0, game_controller_test 175/0, tutte le suite verdi) |
 
-**Prossimo step: F8** — ultimo step del Passaggio F (da definire).
+**Passaggio F chiuso.** L'infrastruttura di gameplay del client Godot è completa (Passaggio A→F).
 
 Dettagli completi di F1–F8 in `PROJECT_STATE.md` sezione "Passaggio F".
 
 ### Attività successive al Passaggio F
 
-Dopo il completamento del Passaggio F, le attività consigliate sono:
+1. **Fix selezione carte nel turno umano** (PROBLEMA APERTO) — Durante il turno umano le carte della mano non risultano selezionabili; cliccando una carta non accade nulla. Da verificare la catena `CardFace → HandPresenter → card_selected → GameController`.
+2. **Migliorie UI/UX** — Texture carte definitive, effetti sonori, schermata di vittoria, animazioni più ricche.
+3. **AI per simulatore** — `simulator/ai/bot.py` (scheletro vuoto). Richiede implementazione di strategie di gioco per test di bilanciamento.
+4. **Multiplayer** — `RemoteGameAdapter` + networking. Architettura definita, implementazione futura.
 
-1. **Migliorie UI/UX** — Texture carte definitive, effetti sonori, schermata di vittoria, animazioni più ricche (transizioni Gold, rivelazione carta pescata). Dopo Passaggio F l'infrastruttura di gameplay del client Godot sarà completa (Passaggio A→F), manca la rifinitura visiva.
+### Modalità manuale 1 umano + 3 CPU — ✅ Implementata (21 agosto 2026)
 
-2. **AI per simulatore** — `simulator/ai/bot.py` (scheletro vuoto). Richiede implementazione di strategie di gioco per test di bilanciamento.
-
-3. **Multiplayer** — `RemoteGameAdapter` + networking. Architettura definita, implementazione futura.
+Implementata con `scripts/ManualGame.gd`: pulsante "Inizia Partita" in `Main.tscn`, CPU automatiche (stesso pattern di DebugDemo), automazione si ferma al turno umano e riparte dopo. ManualGame e DebugDemo si escludono a vicenda. Bug fix: `OverlayLayer.mouse_filter=IGNORE` (non blocca più l'input); esclusione reciproca (solo un'automazione alla volta). Test: manual_game_test 25/0, manual_game_smoke PASS.
 
 ---
 
@@ -373,4 +377,4 @@ Tutte le suite di test sono verdi. Eseguire i test dopo ogni modifica:
 /home/sumaka/bin/Godot3 --path /media/sumaka/Giochi/GodotProjects/roadTo100 tests/<suite>.tscn --no-window
 ```
 
-Suite disponibili: `game_controller_test`, `presenter_test`, `board_test`, `provider_test`, `rules_test`, `domain_test`, `card_animator_test`, `card_animator_test2`, `demo_integration_test`, `demo_verification_test`.
+Suite disponibili: `game_controller_test`, `presenter_test`, `board_test`, `provider_test`, `rules_test`, `domain_test`, `card_animator_test`, `card_animator_test2`, `demo_integration_test`, `demo_verification_test`, `manual_game_test`, `manual_game_smoke`.

@@ -15,11 +15,14 @@ var _permanent_layer = null
 var _permanent_back = null
 var _plateau_value_card = null  # static Plate.png from scene — hidden, replaced by dynamic plates
 var _opp_seats = []  # [{layer, rotation_deg}, ...]
+var _sr_badges = {}  # player_id -> Label (special round indicator)
+var _ga = null       # GameArea reference for creating local player badge
 
 func _ready():
 	_resolver = load("res://engine/TextureResolver.gd").new()
 	var m = _up("Main"); if m == null: return
 	var ga = _ch(m, "GameArea"); if ga == null: return
+	_ga = ga
 
 	# Board area
 	var brd = _ch(ga, "BoardArea")
@@ -63,6 +66,9 @@ func _ready():
 			else:
 				_opp_seats.append(null)
 
+	# Create SR badges (special round indicators) for each seat + local player
+	_sr_badges = _create_sr_badges(ga, ol)
+
 func _up(name):
 	var p = get_parent()
 	while p != null and p.name != name: p = p.get_parent()
@@ -79,6 +85,52 @@ func _rec(p, name):
 		var f = _rec(c, name); if f != null: return f
 	return null
 
+
+# ---------------------------------------------------------------------------
+# SR badges (special round indicators) — Fix 5
+# ---------------------------------------------------------------------------
+
+func _create_sr_badges(ga, ol):
+	"""Create small Label badges on each seat and the local player area."""
+	var badges = {}
+	if ol == null:
+		return badges
+	# Opponent seats: player_2 (Top), player_3 (Left), player_4 (Right)
+	var seat_map = ["player_2", "player_3", "player_4"]
+	var seat_names = ["TopSeat", "LeftSeat", "RightSeat"]
+	for i in range(3):
+		var s = _ch(ol, seat_names[i])
+		if s != null:
+			var badge = Label.new()
+			badge.name = "SRBadge"
+			badge.text = "★"
+			badge.visible = false
+			badge.mouse_filter = 2
+			s.add_child(badge)
+			badges[seat_map[i]] = badge
+	# Local player (player_1): badge near the hand area
+	var lpa = _ch(ga, "LocalPlayerArea")
+	if lpa != null:
+		var badge = Label.new()
+		badge.name = "SRBadge"
+		badge.text = "★"
+		badge.visible = false
+		badge.mouse_filter = 2
+		lpa.add_child(badge)
+		badges["player_1"] = badge
+	return badges
+
+
+func _update_sr_badges(snapshot):
+	"""Show the SR badge only on the player who activated the special round."""
+	var sr_active = snapshot.get("special_round_active", false)
+	var sr_player = snapshot.get("special_round_player_id", null)
+	for pid in _sr_badges.keys():
+		var badge = _sr_badges[pid]
+		if badge == null: continue
+		badge.visible = sr_active and (pid == sr_player)
+
+
 func apply_snapshot(s):
 	if s == null: return
 	if _value_label != null: _value_label.text = str(s.get("piatto", 0))
@@ -91,6 +143,7 @@ func apply_snapshot(s):
 	var vstack = s.get("plateau_visual_stack", [])
 	_update_plateau(vstack)
 	_update_opponents(s.get("players", []))
+	_update_sr_badges(s)
 
 func _update_plateau(stack):
 	"""Rebuild the plateau visual stack from the provider's visual stack data.
@@ -147,9 +200,9 @@ func _update_plateau(stack):
 			lbl.anchor_right = 1.0
 			lbl.anchor_bottom = 1.0
 			# Match the style from Main.tscn's PlateauValueCard ValueLabel
-			lbl.margin_left = -10.0
-			lbl.margin_top = 50.0
-			lbl.add_color_override("font_color", Color(0, 0, 0, 1))
+			lbl.margin_left = -7.0
+			lbl.margin_top = 60.0
+#			lbl.add_color_override("font_color", Color(1, 1, 1, 1))
 			# Try to load the Dyuthi font at size 105
 			var font_data = load("res://fonts/Dyuthi.ttf")
 			if font_data != null:

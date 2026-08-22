@@ -41,9 +41,9 @@ const CARD_W = 80
 const CARD_H = 112
 
 # Animation timing
-const PLAY_ANIM_DURATION = 0.7
-const DRAW_ANIM_DURATION = 0.6
-const FADE_DURATION = 0.15
+const PLAY_ANIM_DURATION = 0.35
+const DRAW_ANIM_DURATION = 0.3
+const FADE_DURATION = 0.75
 
 
 func _ready():

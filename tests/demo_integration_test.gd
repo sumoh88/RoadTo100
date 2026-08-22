@@ -115,10 +115,10 @@ func _run_single_game(game_num):
 		# Avoid acting during WAITING_FOR_CHOICE or ANIMATING states
 		if state == 3 or state == 5 or state == 4:
 			if state == 3:
-				# GC auto-opened the gold reveal popup — answer Yes directly.
+				# GC auto-opened a blocking popup — answer it directly.
 				for a in snap.get("available_actions", []):
-					if a.get("action_type", "") == "reveal_gold":
-						_gc.perform_action({"action_type": "reveal_gold", "card_id": a.get("card_id", "")})
+					if a.get("action_type", "") == "reset_hand":
+						_gc.perform_action({"action_type": "reset_hand"})
 						break
 			yield(get_tree(), "idle_frame")
 			continue
@@ -135,7 +135,7 @@ func _run_single_game(game_num):
 
 		# Pick an action: prefer play_card, then change_card, then reset_hand
 		var chosen = null
-		for pref in ["play_card", "change_card", "reset_hand", "reveal_gold"]:
+		for pref in ["play_card", "change_card", "reset_hand"]:
 			var cs = []
 			for a in acts:
 				if a.get("action_type", "") == pref:
@@ -150,9 +150,7 @@ func _run_single_game(game_num):
 		var at = chosen.get("action_type", "")
 		var cid = chosen.get("card_id", "")
 
-		if at == "reveal_gold":
-			_gc.perform_action({"action_type": "reveal_gold", "card_id": cid})
-		elif at == "reset_hand":
+		if at == "reset_hand":
 			_gc.perform_action({"action_type": "reset_hand"})
 		elif at == "play_card" or at == "change_card":
 			var action_dict = {"action_type": at, "card_id": cid}

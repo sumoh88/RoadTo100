@@ -12,7 +12,6 @@ class_name LocalGameEngine
 
 const PLAY_CARD_ACTION = "play_card"
 const CHANGE_CARD_ACTION = "change_card"
-const REVEAL_GOLD_ACTION = "reveal_gold"
 const RESET_HAND_ACTION = "reset_hand"
 
 var _GameState = load("res://engine/GameState.gd")
@@ -96,13 +95,14 @@ func send_action(action_dict):
 	# Generate action-phase events
 	var events = _generate_events(before, rules_action, card)
 
-	# Advance turn
-	rules.advance_turn(game_state)
+	# Advance turn (skip for reset_hand — player continues their turn with new cards)
+	if at != RESET_HAND_ACTION:
+		rules.advance_turn(game_state)
 
-	# Generate turn-phase events (turn_changed, advantage_ended)
-	var turn_events = _generate_turn_events(before, rules_action, card)
-	for e in turn_events:
-		events.append(e)
+		# Generate turn-phase events (turn_changed, advantage_ended)
+		var turn_events = _generate_turn_events(before, rules_action, card)
+		for e in turn_events:
+			events.append(e)
 
 	# Build final snapshot
 	var snapshot = _build_snapshot()
@@ -201,10 +201,15 @@ func _build_snapshot():
 	# Alternates between {"type":"plate","value":N} and {"type":"card","card":{...}}
 	var plateau_visual_stack = _build_plateau_visual_stack(game_state)
 
+	# F8: the UI must never display a Piatto value above 100. The internal
+	# metadata keeps the raw resolution value (e.g. a GdV victory at 107);
+	# only the serialized snapshot is capped.
+	var display_piatto = min(int(game_state.metadata.get("piatto", 0)), 100)
+
 	var snapshot = {
 		"players": players_data,
 		"current_player_index": game_state.current_player_index,
-		"piatto": game_state.metadata.get("piatto", 0),
+		"piatto": display_piatto,
 		"deck_count": game_state.deck.size(),
 		"discard_top": discard_top,
 		"plateau_cards": plateau,
@@ -234,7 +239,9 @@ func _build_plateau_visual_stack(game_state):
 	update the top carta Piatto's value.
 	"""
 	var raw_cards = game_state.metadata.get("plateau_cards", [])
-	var current_piatto = game_state.metadata.get("piatto", 0)
+	# F8: never display a plate value above 100 (also guards against the
+	# running approximation overshooting, e.g. Jolly counted as +5).
+	var current_piatto = min(int(game_state.metadata.get("piatto", 0)), 100)
 
 	# Step 1: Classify each card and compute running piatto
 	var segments = []  # [{card, piatto_after, is_gold}]
@@ -279,12 +286,13 @@ func _build_plateau_visual_stack(game_state):
 		else:
 			# Non-Gold after at least one Gold: update or add carta Piatto
 			if gold_count > 0:
+				var v = min(int(seg["piatto_after"]), 100)  # F8: display cap
 				if visual.size() > 1 and visual[visual.size() - 1]["type"] == "plate":
 					# Update existing top plate with current running value
-					visual[visual.size() - 1]["value"] = seg["piatto_after"]
+					visual[visual.size() - 1]["value"] = v
 				else:
 					# Add new carta Piatto above the last Gold
-					visual.append({"type": "plate", "value": seg["piatto_after"]})
+					visual.append({"type": "plate", "value": v})
 
 	# Step 3: Finalize top of the stack based on the LAST CARD PLAYED.
 	# If the last card was a Gold/89, the card face IS the top — no trailing plate.
@@ -406,17 +414,6 @@ func _generate_events(before, rules_action, card):
 	# -----------------------------------------------------------------------
 	if at == RESET_HAND_ACTION:
 		events.append({"type": "hand_reset", "player_id": cp_id})
-		var after_ids = _get_hand_card_ids(cp)
-		for cid in after_ids:
-			if not cid in before.get("current_hand_ids", []):
-				events.append({"type": "card_drawn", "player_id": cp_id, "card_id": cid})
-		return events
-
-	# -----------------------------------------------------------------------
-	# REVEAL_GOLD: gold_revealed, then card_drawn
-	# -----------------------------------------------------------------------
-	if at == REVEAL_GOLD_ACTION:
-		events.append({"type": "gold_revealed", "player_id": cp_id, "card_id": card_id})
 		var after_ids = _get_hand_card_ids(cp)
 		for cid in after_ids:
 			if not cid in before.get("current_hand_ids", []):

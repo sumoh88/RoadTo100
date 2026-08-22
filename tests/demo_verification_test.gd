@@ -14,8 +14,13 @@ var _all_events = []
 
 
 func _assert(cond, msg):
-	if cond: passed += 1
-	else: failed += 1; print("  FAIL: ", msg)
+	# F8: multi-line form — the one-line `else: x; y` form made the print
+	# unconditional (semicolon ends the else body), printing "FAIL" even on pass.
+	if cond:
+		passed += 1
+	else:
+		failed += 1
+		print("  FAIL: ", msg)
 
 
 func _on_game_started(s):        _snapshot = s
@@ -59,7 +64,7 @@ func _ready():
 			yield(get_tree(), "idle_frame")
 			continue
 
-		# Pick a play_card action (not change_card / reveal_gold / reset_hand)
+		# Pick a play_card action (not change_card / reset_hand)
 		# so that every turn generates card_played + card_drawn events.
 		var chosen = null
 		for a in acts:

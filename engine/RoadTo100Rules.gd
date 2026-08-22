@@ -6,7 +6,6 @@ extends Reference
 
 const PLAY_CARD_ACTION = "play_card"
 const CHANGE_CARD_ACTION = "change_card"
-const REVEAL_GOLD_ACTION = "reveal_gold"
 const RESET_HAND_ACTION = "reset_hand"
 
 const GOLD_CHAIN = {12: 23, 23: 34, 34: 45, 45: 56, 56: 67, 67: 78, 78: 89}
@@ -123,13 +122,6 @@ func _draw_or_reshuffle(game):
 		return null
 	return drawn[0]
 
-func _matching_gold_card(player, plateau_value):
-	"""Return a matching Gold card from the player's hand, if present."""
-	for card in player.hand.cards:
-		if _is_gold_card(card) and card.value == plateau_value:
-			return card
-	return null
-
 # ---------------------------------------------------------------------------
 # RuleSet interface
 # ---------------------------------------------------------------------------
@@ -180,13 +172,6 @@ func get_available_actions(game):
 	var is_advantage_player = false
 	if advantage_turn and advantage_player_id != null and current_player.player_id == advantage_player_id:
 		is_advantage_player = true
-
-	# Gold reveal at start of turn
-	if game.metadata.get("turn_phase") == "start":
-		var plateau_value = int(game.metadata.get("piatto", 0))
-		var matching_gold = _matching_gold_card(current_player, plateau_value)
-		if matching_gold != null:
-			actions.append({"action_type": REVEAL_GOLD_ACTION, "card": matching_gold})
 
 	# Special Round playability (F7):
 	# - Safe Round: non-activators cannot play the blocked card type.
@@ -279,13 +264,6 @@ func validate_action(game, action_dict):
 			return true
 		return advantage_turn and not is_advantage_player
 
-	if action_dict["action_type"] == REVEAL_GOLD_ACTION:
-		var plateau_value = int(game.metadata.get("piatto", 0))
-		return (card != null and typeof(card) == TYPE_OBJECT
-				and current_player.has_card(card)
-				and _is_gold_card(card)
-				and card.value == plateau_value)
-
 	if action_dict["action_type"] == CHANGE_CARD_ACTION:
 		return card != null and typeof(card) == TYPE_OBJECT and current_player.has_card(card)
 
@@ -344,16 +322,6 @@ func apply_action(game, action_dict):
 		game.deck.shuffle()
 		for c in _draw_cards(game, 3):
 			current_player.receive_card(c)
-		game.metadata["turn_phase"] = "action"
-		return
-
-	if action_dict["action_type"] == REVEAL_GOLD_ACTION:
-		current_player.play_card(card)
-		game.deck.add_card(card)
-		game.deck.shuffle()
-		var drawn_card = _draw_or_reshuffle(game)
-		if drawn_card != null:
-			current_player.receive_card(drawn_card)
 		game.metadata["turn_phase"] = "action"
 		return
 

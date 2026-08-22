@@ -7,7 +7,7 @@ import sys
 from typing import Optional
 
 from games.roadto100.setup import build_initial_game
-from games.roadto100.actions import RoadTo100ActionController, PLAY_CARD_ACTION, CHANGE_CARD_ACTION, REVEAL_GOLD_ACTION
+from games.roadto100.actions import RoadTo100ActionController, PLAY_CARD_ACTION, CHANGE_CARD_ACTION
 from games.roadto100.rules import RoadTo100RuleSet
 
 
@@ -16,7 +16,7 @@ def run(num_games: int, player_count: int) -> None:
     controller = RoadTo100ActionController()
 
     inc = jolly = gold = c89 = p11_norm = p11_chain = imbroglio = 0
-    change = reveal = 0
+    change = 0
     total_cards = 0
 
     for _ in range(num_games):
@@ -33,9 +33,6 @@ def run(num_games: int, player_count: int) -> None:
 
             if action.action_type == CHANGE_CARD_ACTION:
                 change += 1
-                total_cards += 1
-            elif action.action_type == REVEAL_GOLD_ACTION:
-                reveal += 1
                 total_cards += 1
             elif action.action_type == PLAY_CARD_ACTION:
                 card = action.parameters.get("card")
@@ -76,7 +73,6 @@ def run(num_games: int, player_count: int) -> None:
         ("+11 catena Gold", p11_chain),
         ("Imbroglio", imbroglio),
         ("Cambio Carta", change),
-        ("Gold Reveal", reveal),
     ]
     label_w = max(len(r[0]) for r in rows)
     print(f"{'Azione'.ljust(label_w)}  {'Totale':>8}  {'Media/partita':>14}  {'% su carte giocate':>18}")

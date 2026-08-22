@@ -174,10 +174,6 @@ Esiste una sola copia di ciascuna delle seguenti Carte Gold:
 
 78
 
-Regola speciale:
-
-All'inizio del proprio turno, prima di scegliere un'azione, il giocatore può rivelare una Carta Gold dalla propria mano che abbia lo stesso valore del Piatto. Se lo fa, la rimette nel Mazzo, rimescola il Mazzo e pesca una nuova carta. Successivamente svolge normalmente il proprio turno.
-
 Le Carte Gold vengono posizionate nel Piatto.
 
 ### Giro Sicuro

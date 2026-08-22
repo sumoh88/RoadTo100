@@ -540,6 +540,29 @@ func _make_hand_snapshot(hand_cards):
 	var snap = _make_snapshot(2, null)
 	snap["players"][0]["hand"] = hand_cards
 	snap["players"][0]["hand_count"] = hand_cards.size()
+	# F8: mirror the provider — available_actions reflects what the rules
+	# layer would offer for this hand (Jolly/Imbroglio with filtered choices).
+	var acts = []
+	var pv = int(snap.get("piatto", 0))
+	for c in hand_cards:
+		var ct = str(c.get("card_type", ""))
+		if ct == "jolly":
+			var act = {"action_type": "play_card", "card_id": c["card_id"], "choices": []}
+			for v in range(1, 11):
+				act["choices"].append({"label": str(v), "parameters": {"selected_value": v}})
+			acts.append(act)
+		elif ct == "imbroglio":
+			var act = {"action_type": "play_card", "card_id": c["card_id"], "choices": []}
+			for v in range(-15, 16):
+				if v == 0:
+					continue
+				if 0 <= pv + v and pv + v <= 99:
+					act["choices"].append({"label": str(v), "parameters": {"selected_value": v}})
+			acts.append(act)
+		else:
+			acts.append({"action_type": "play_card", "card_id": c["card_id"]})
+		acts.append({"action_type": "change_card", "card_id": c["card_id"]})
+	snap["available_actions"] = acts
 	return snap
 
 # 4.1 Jolly card + play_pressed -> WAITING_FOR_CHOICE
@@ -629,74 +652,6 @@ func _test_value_choice_cancel():
 	var o2 = _assert(!mp.send_action_called, "action NOT sent after cancel")
 	_cleanup(d)
 	return "  Value choice cancel:       " + ("[PASS]\n" if (o1 and o2) else "[FAIL]\n")
-
-
-# 4.5 Gold Reveal available -> WAITING_FOR_CHOICE
-func _test_gold_reveal_opens_popup():
-	var d = _setup_gc_with_hand()
-	var gc = d["gc"]; var mp = d["mp"]; var hp = d["hp"]; var tp = d["tp"]
-
-	var snap = _make_hand_snapshot([
-		{"card_id":"g23","name":"23","value":23,"color":"dorato","card_type":"gold"},
-	])
-	snap["available_actions"] = [
-		{"action_type": "reveal_gold", "card_id": "g23"},
-		{"action_type": "play_card", "card_id": "g23"},
-	]
-	mp.emit_signal("game_started", snap)
-
-	# GC should detect reveal_gold and go to WAITING_FOR_CHOICE
-	var o1 = _assert_eq(gc.get_state(), 3, "WAITING_FOR_CHOICE (3) due to gold reveal")
-	_cleanup(d)
-	return "  Gold reveal opens popup:   " + ("[PASS]\n" if o1 else "[FAIL]\n")
-
-
-# 4.6 Gold Reveal Yes -> sends action, no selection needed
-func _test_gold_reveal_yes():
-	var d = _setup_gc_with_hand()
-	var gc = d["gc"]; var mp = d["mp"]; var hp = d["hp"]; var tp = d["tp"]
-
-	var snap = _make_hand_snapshot([
-		{"card_id":"g23","name":"23","value":23,"color":"dorato","card_type":"gold"},
-	])
-	snap["available_actions"] = [
-		{"action_type": "reveal_gold", "card_id": "g23"},
-		{"action_type": "play_card", "card_id": "g23"},
-	]
-	mp.emit_signal("game_started", snap)
-	_assert_eq(gc.get_state(), 3, "WAITING_FOR_CHOICE")
-
-	mp.auto_emit_action_completed = false
-	gc._on_gold_reveal_yes()
-
-	var o1 = _assert_eq(gc.get_state(), 4, "ACTION_PENDING (4)")
-	var o2 = _assert(mp.send_action_called, "send_action called")
-	var o3 = _assert_eq(mp.last_send_action_dict.get("action_type"), "reveal_gold", "action_type reveal_gold")
-	var o4 = _assert_eq(mp.last_send_action_dict.get("card_id"), "g23", "card_id g23")
-	_cleanup(d)
-	return "  Gold reveal Yes sends:     " + ("[PASS]\n" if (o1 and o2 and o3 and o4) else "[FAIL]\n")
-
-
-# 4.7 Gold Reveal No -> back to READY_FOR_INPUT
-func _test_gold_reveal_no():
-	var d = _setup_gc_with_hand()
-	var gc = d["gc"]; var mp = d["mp"]; var hp = d["hp"]; var tp = d["tp"]
-
-	var snap = _make_hand_snapshot([
-		{"card_id":"g23","name":"23","value":23,"color":"dorato","card_type":"gold"},
-	])
-	snap["available_actions"] = [
-		{"action_type": "reveal_gold", "card_id": "g23"},
-	]
-	mp.emit_signal("game_started", snap)
-	_assert_eq(gc.get_state(), 3, "WAITING_FOR_CHOICE")
-
-	gc._on_gold_reveal_no()
-
-	var o1 = _assert_eq(gc.get_state(), 1, "READY_FOR_INPUT (1) after No")
-	var o2 = _assert(!mp.send_action_called, "action NOT sent after No")
-	_cleanup(d)
-	return "  Gold reveal No dismiss:    " + ("[PASS]\n" if (o1 and o2) else "[FAIL]\n")
 
 
 # 4.8 Invalid Jolly value 0 — stays WAITING_FOR_CHOICE
@@ -805,76 +760,6 @@ func _test_imbroglio_value_16_invalid():
 	return "  Inv Imbroglio value 16:    " + ("[PASS]\n" if (o1 and o2) else "[FAIL]\n")
 
 
-# 4.13 Gold reveal not reopened if already in WAITING_FOR_CHOICE
-func _test_gold_reveal_not_reopen():
-	var d = _setup_gc_with_hand()
-	var gc = d["gc"]; var mp = d["mp"]; var hp = d["hp"]; var tp = d["tp"]
-
-	var snap = _make_hand_snapshot([
-		{"card_id":"g23","name":"23","value":23,"color":"dorato","card_type":"gold"},
-	])
-	snap["available_actions"] = [
-		{"action_type": "reveal_gold", "card_id": "g23"},
-		{"action_type": "play_card", "card_id": "g23"},
-	]
-	mp.emit_signal("game_started", snap)
-	_assert_eq(gc.get_state(), 3, "WAITING_FOR_CHOICE")
-
-	# Second game_started with same snapshot — should NOT reopen or change pending
-	mp.snapshot_to_emit = snap
-	mp.emit_signal("game_started", snap)
-
-	var o1 = _assert_eq(gc.get_state(), 3, "still WAITING_FOR_CHOICE")
-	_cleanup(d)
-	return "  Gold no reopen:            " + ("[PASS]\n" if o1 else "[FAIL]\n")
-
-
-# 4.14 Gold reveal not opened in GAME_OVER
-func _test_gold_reveal_not_in_gameover():
-	var d = _setup_gc_with_hand()
-	var gc = d["gc"]; var mp = d["mp"]; var hp = d["hp"]; var tp = d["tp"]
-
-	var snap = _make_hand_snapshot([
-		{"card_id":"g23","name":"23","value":23,"color":"dorato","card_type":"gold"},
-	])
-	snap["available_actions"] = [
-		{"action_type": "reveal_gold", "card_id": "g23"},
-	]
-	snap["winner"] = "player_1"
-	snap["phase"] = "game_over"
-	mp.emit_signal("game_started", snap)
-
-	var o1 = _assert_eq(gc.get_state(), 7, "GAME_OVER (7) — gold reveal blocked")
-	_cleanup(d)
-	return "  Gold not in gameover:      " + ("[PASS]\n" if o1 else "[FAIL]\n")
-
-
-# 4.15 Gold reveal uses real card_id from available_actions
-func _test_gold_reveal_real_card_id():
-	var d = _setup_gc_with_hand()
-	var gc = d["gc"]; var mp = d["mp"]; var hp = d["hp"]; var tp = d["tp"]
-
-	var snap = _make_hand_snapshot([
-		{"card_id":"g78","name":"78","value":78,"color":"dorato","card_type":"gold"},
-	])
-	snap["available_actions"] = [
-		{"action_type": "reveal_gold", "card_id": "g78"},
-	]
-	mp.emit_signal("game_started", snap)
-	_assert_eq(gc.get_state(), 3, "WAITING_FOR_CHOICE")
-
-	mp.auto_emit_action_completed = false
-	gc._on_gold_reveal_yes()
-	var o1 = _assert_eq(mp.last_send_action_dict.get("card_id"), "g78", "card_id from available_actions")
-	_cleanup(d)
-	return "  Gold uses real card_id:    " + ("[PASS]\n" if o1 else "[FAIL]\n")
-
-
-# ===========================================================================
-# Step F7 — Safe Round pre-action choice (single play_card with blocked_type)
-# ===========================================================================
-
-# F7.1 Playing a normal Gold opens the blocked_type popup BEFORE any action
 func _test_f7_gold_opens_popup():
 	var d = _setup_gc_with_hand()
 	var gc = d["gc"]; var mp = d["mp"]; var hp = d["hp"]; var tp = d["tp"]
@@ -1003,6 +888,95 @@ func _test_f7_choice_cancel():
 	var o3 = _assert_eq(gc.get_selected_card_id(), "g12", "selection preserved after cancel")
 	_cleanup(d)
 	return "  F7 GS choice cancel:     " + ("[PASS]\n" if (o1 and o2 and o3) else "[FAIL]\n")
+
+
+# ===========================================================================
+# Step F8 tests — final regression (Special Round closeout)
+# ===========================================================================
+
+# F8.1 Imbroglio popup offers only the rule-filtered values from the snapshot
+func _test_f8_imbroglio_filtered_choices():
+	var d = _setup_gc_with_hand()
+	var gc = d["gc"]; var mp = d["mp"]; var hp = d["hp"]; var tp = d["tp"]
+
+	var snap = _make_snapshot(2, null)
+	snap["piatto"] = 95
+	snap["players"][0]["hand"] = [
+		{"card_id":"imb0","name":"Imbroglio","value":null,"color":"verde","card_type":"imbroglio"},
+	]
+	snap["players"][0]["hand_count"] = 1
+	var choices = []
+	for v in range(-15, 16):
+		if v == 0: continue
+		if 0 <= 95 + v and 95 + v <= 99:
+			choices.append({"label": str(v), "parameters": {"selected_value": v}})
+	snap["available_actions"] = [
+		{"action_type":"play_card","card_id":"imb0","choices":choices},
+	]
+	mp.emit_signal("game_started", snap)
+	hp.emit_signal("card_selected", "imb0")
+	tp.emit_signal("play_pressed")
+
+	var o1 = _assert_eq(gc.get_state(), 3, "WAITING_FOR_CHOICE (3)")
+	var pending = gc._pending_valid_values
+	var o2 = _assert_eq(pending.size(), 19, "19 filtered values at Piatto 95")
+	var o3 = _assert(not (15 in pending), "+15 not offered at Piatto 95 (95+15>99)")
+	var o4 = _assert(-15 in pending and 4 in pending and 1 in pending, "negatives + 1..4 offered")
+	_cleanup(d)
+	return "  F8 imbroglio filtered:   " + ("[PASS]\n" if (o1 and o2 and o3 and o4) else "[FAIL]\n")
+
+
+# F8.2 A value not in the offered choices cannot be sent — stays WAITING_FOR_CHOICE
+func _test_f8_imbroglio_disallowed_value_blocked():
+	var d = _setup_gc_with_hand()
+	var gc = d["gc"]; var mp = d["mp"]; var hp = d["hp"]; var tp = d["tp"]
+
+	var snap = _make_snapshot(2, null)
+	snap["piatto"] = 95
+	snap["players"][0]["hand"] = [
+		{"card_id":"imb0","name":"Imbroglio","value":null,"color":"verde","card_type":"imbroglio"},
+	]
+	snap["players"][0]["hand_count"] = 1
+	var choices = []
+	for v in range(-15, 16):
+		if v == 0: continue
+		if 0 <= 95 + v and 95 + v <= 99:
+			choices.append({"label": str(v), "parameters": {"selected_value": v}})
+	snap["available_actions"] = [
+		{"action_type":"play_card","card_id":"imb0","choices":choices},
+	]
+	mp.emit_signal("game_started", snap)
+	hp.emit_signal("card_selected", "imb0")
+	tp.emit_signal("play_pressed")
+	_assert_eq(gc.get_state(), 3, "WAITING_FOR_CHOICE before")
+
+	mp.auto_emit_action_completed = false
+	gc._on_value_chosen(15)  # not offered: 95+15 > 99 — must be blocked
+
+	var o1 = _assert_eq(gc.get_state(), 3, "still WAITING_FOR_CHOICE (3)")
+	var o2 = _assert(!mp.send_action_called, "no action sent for disallowed value")
+	_cleanup(d)
+	return "  F8 disallowed blocked:   " + ("[PASS]\n" if (o1 and o2) else "[FAIL]\n")
+
+
+# F8.3 Jolly popup uses the snapshot's choices (1..10 from the rules layer)
+func _test_f8_jolly_choices_from_snapshot():
+	var d = _setup_gc_with_hand()
+	var gc = d["gc"]; var mp = d["mp"]; var hp = d["hp"]; var tp = d["tp"]
+
+	var snap = _make_hand_snapshot([
+		{"card_id":"jolly_0","name":"Jolly","value":null,"color":"arancione","card_type":"jolly"},
+	])
+	mp.emit_signal("game_started", snap)
+	hp.emit_signal("card_selected", "jolly_0")
+	tp.emit_signal("play_pressed")
+
+	var o1 = _assert_eq(gc.get_state(), 3, "WAITING_FOR_CHOICE (3)")
+	var pending = gc._pending_valid_values
+	var o2 = _assert_eq(pending.size(), 10, "10 jolly values from snapshot")
+	var o3 = _assert(1 in pending and 10 in pending, "range 1..10 present")
+	_cleanup(d)
+	return "  F8 jolly from snapshot:  " + ("[PASS]\n" if (o1 and o2 and o3) else "[FAIL]\n")
 
 
 # ===========================================================================
@@ -1167,6 +1141,433 @@ func _test_real_click_to_action():
 	return "  Real click-to-action:      " + ("[PASS]\n" if (was_ready and o1 and o2 and o3 and o4 and o5 and o6) else "[FAIL]\n")
 
 
+# ===========================================================================
+# Step 9 — Fix verification tests
+# ===========================================================================
+
+# Fix 1: Jolly with no choices in snapshot still opens popup (fallback)
+func _test_fix1_jolly_fallback_when_no_choices():
+	var d = _setup_gc_with_hand()
+	var gc = d["gc"]; var mp = d["mp"]; var hp = d["hp"]; var tp = d["tp"]
+
+	# Jolly card in hand, but NO choices in available_actions (edge case)
+	var snap = _make_snapshot(2, null)
+	snap["players"][0]["hand"] = [
+		{"card_id":"jolly_0","name":"Jolly","value":null,"color":"arancione","card_type":"jolly"},
+	]
+	snap["players"][0]["hand_count"] = 1
+	# No choices provided — should trigger fallback
+	snap["available_actions"] = [
+		{"action_type": "play_card", "card_id": "jolly_0"},  # no "choices" key
+	]
+	mp.emit_signal("game_started", snap)
+	hp.emit_signal("card_selected", "jolly_0")
+	tp.emit_signal("play_pressed")
+
+	var o1 = _assert_eq(gc.get_state(), 3, "WAITING_FOR_CHOICE (3) — fallback popup opened")
+	var o2 = _assert(!mp.send_action_called, "action NOT sent yet")
+	_cleanup(d)
+	return "  Fix1 jolly fallback:     " + ("[PASS]\n" if (o1 and o2) else "[FAIL]\n")
+
+
+func _test_fix4_reset_hand_opens_popup():
+	var d = _setup_gc_with_hand()
+	var gc = d["gc"]; var mp = d["mp"]; var hp = d["hp"]; var tp = d["tp"]
+
+	# GdV scenario: non-advantage player has no playable Orange cards
+	var snap = _make_snapshot(2, null)
+	snap["special_round_active"] = true
+	snap["special_round_type"] = "advantage"
+	snap["special_round_player_id"] = "player_2"
+	snap["players"][0]["hand"] = [
+		{"card_id":"g12","name":"12","value":12,"color":"dorato","card_type":"gold"},
+	]
+	snap["players"][0]["hand_count"] = 1
+	snap["available_actions"] = [
+		{"action_type": "reset_hand"},
+		{"action_type": "change_card", "card_id": "g12"},
+	]
+	mp.emit_signal("game_started", snap)
+
+	var o1 = _assert_eq(gc.get_state(), 3, "WAITING_FOR_CHOICE (3) — reset hand popup opened")
+	_cleanup(d)
+	return "  Fix4 reset popup open:   " + ("[PASS]\n" if o1 else "[FAIL]\n")
+
+
+# Fix 4b: Reset hand Yes sends reset_hand action
+func _test_fix4_reset_hand_yes_sends_action():
+	var d = _setup_gc_with_hand()
+	var gc = d["gc"]; var mp = d["mp"]; var hp = d["hp"]; var tp = d["tp"]
+
+	var snap = _make_snapshot(2, null)
+	snap["special_round_active"] = true
+	snap["special_round_type"] = "advantage"
+	snap["special_round_player_id"] = "player_2"
+	snap["players"][0]["hand"] = [
+		{"card_id":"g12","name":"12","value":12,"color":"dorato","card_type":"gold"},
+	]
+	snap["players"][0]["hand_count"] = 1
+	snap["available_actions"] = [
+		{"action_type": "reset_hand"},
+		{"action_type": "change_card", "card_id": "g12"},
+	]
+	mp.emit_signal("game_started", snap)
+	_assert_eq(gc.get_state(), 3, "WAITING_FOR_CHOICE")
+
+	mp.auto_emit_action_completed = false
+	gc._on_hand_reset_yes()
+
+	var o1 = _assert_eq(gc.get_state(), 4, "ACTION_PENDING (4)")
+	var o2 = _assert(mp.send_action_called, "send_action called")
+	var o3 = _assert_eq(mp.last_send_action_dict.get("action_type"), "reset_hand", "action_type = reset_hand")
+	_cleanup(d)
+	return "  Fix4 reset Yes sends:    " + ("[PASS]\n" if (o1 and o2 and o3) else "[FAIL]\n")
+
+
+# Fix 4c: Reset hand No returns to READY_FOR_INPUT, change_card still available
+func _test_fix4_reset_hand_no_returns_ready():
+	var d = _setup_gc_with_hand()
+	var gc = d["gc"]; var mp = d["mp"]; var hp = d["hp"]; var tp = d["tp"]
+
+	var snap = _make_snapshot(2, null)
+	snap["special_round_active"] = true
+	snap["special_round_type"] = "advantage"
+	snap["special_round_player_id"] = "player_2"
+	snap["players"][0]["hand"] = [
+		{"card_id":"g12","name":"12","value":12,"color":"dorato","card_type":"gold"},
+	]
+	snap["players"][0]["hand_count"] = 1
+	snap["available_actions"] = [
+		{"action_type": "reset_hand"},
+		{"action_type": "change_card", "card_id": "g12"},
+	]
+	mp.emit_signal("game_started", snap)
+	_assert_eq(gc.get_state(), 3, "WAITING_FOR_CHOICE")
+
+	gc._on_hand_reset_no()
+
+	var o1 = _assert_eq(gc.get_state(), 1, "READY_FOR_INPUT (1) after No")
+	var o2 = _assert(!mp.send_action_called, "action NOT sent after No")
+	_cleanup(d)
+	return "  Fix4 reset No dismiss:   " + ("[PASS]\n" if (o1 and o2) else "[FAIL]\n")
+
+
+# Fix 6: Victory animation is not skipped — GAME_OVER set after animation
+func _test_fix6_victory_animation_not_skipped():
+	var d = _setup_gc_with_anim()
+	var gc = d["gc"]; var mp = d["mp"]; var hp = d["hp"]; var ma = d["ma"]
+
+	mp.emit_signal("game_started", _make_snapshot(2, null))
+
+	# Simulate action_completed with winner and events (should animate)
+	var snap_with_winner = _make_snapshot(2, "player_1")
+	snap_with_winner["players"][0]["hand"] = [
+		{"card_id":"p11","name":"+11","value":11,"color":"rosso","card_type":"special"},
+	]
+	var events = [
+		{"type": "card_played", "player_id": "player_1", "card_id": "p11", "destination": "scarti"},
+		{"type": "game_won", "player_id": "player_1"},
+	]
+	mp.result_to_emit = {"snapshot": snap_with_winner, "events": events}
+	mp.auto_emit_action_completed = true
+	mp.send_action({"action_type": "play_card", "card_id": "p11"})
+
+	# Should be ANIMATING, not immediately GAME_OVER
+	var o1 = _assert_eq(gc.get_state(), 5, "ANIMATING (5) — victory card animates")
+
+	# Simulate animation finished → should become GAME_OVER
+	ma.finish_animation()
+	var o2 = _assert_eq(gc.get_state(), 7, "GAME_OVER (7) after animation")
+	_cleanup_anim(d)
+	return "  Fix6 victory anim:       " + ("[PASS]\n" if (o1 and o2) else "[FAIL]\n")
+
+
+# --- HandResetPopup scope tests ---
+
+# No HandResetPopup during Safe Round (GS), even without playable cards
+func _test_handr_reset_no_popup_during_gs():
+	var d = _setup_gc_with_hand()
+	var gc = d["gc"]; var mp = d["mp"]
+
+	var snap = _make_snapshot(2, null)
+	snap["special_round_active"] = true
+	snap["special_round_type"] = "safe"  # Safe Round, not GdV
+	snap["special_round_player_id"] = "player_2"
+	snap["blocked_type"] = "Incremento"
+	snap["players"][0]["hand"] = [
+		{"card_id":"g12","name":"12","value":12,"color":"dorato","card_type":"gold"},
+	]
+	snap["players"][0]["hand_count"] = 1
+	snap["available_actions"] = [
+		{"action_type": "reset_hand"},
+		{"action_type": "change_card", "card_id": "g12"},
+	]
+	mp.emit_signal("game_started", snap)
+
+	# Should NOT be WAITING_FOR_CHOICE (3), should be READY_FOR_INPUT (1)
+	var o1 = _assert_eq(gc.get_state(), 1, "READY_FOR_INPUT (1) — no popup during GS")
+	_cleanup(d)
+	return "  HR no popup in GS:       " + ("[PASS]\n" if o1 else "[FAIL]\n")
+
+
+# During GS without playable cards, Cambio Carta remains available (no popup blocks it)
+func _test_handr_reset_gs_change_card_available():
+	var d = _setup_gc_with_hand()
+	var gc = d["gc"]; var mp = d["mp"]; var hp = d["hp"]; var tp = d["tp"]
+
+	var snap = _make_snapshot(2, null)
+	snap["special_round_active"] = true
+	snap["special_round_type"] = "safe"
+	snap["special_round_player_id"] = "player_2"
+	snap["blocked_type"] = "Incremento"
+	snap["players"][0]["hand"] = [
+		{"card_id":"g12","name":"12","value":12,"color":"dorato","card_type":"gold"},
+	]
+	snap["players"][0]["hand_count"] = 1
+	snap["available_actions"] = [
+		{"action_type": "reset_hand"},
+		{"action_type": "change_card", "card_id": "g12"},
+	]
+	mp.emit_signal("game_started", snap)
+
+	# State should be READY_FOR_INPUT — player can freely use Cambio Carta
+	var o1 = _assert_eq(gc.get_state(), 1, "READY_FOR_INPUT (1)")
+	# Select a card and press change — should work without popup interference
+	hp.emit_signal("card_selected", "g12")
+	tp.emit_signal("change_pressed")
+	var o2 = _assert(mp.send_action_called, "change_card sent without popup interference")
+	var o3 = _assert_eq(mp.last_send_action_dict.get("action_type"), "change_card", "action_type = change_card")
+	_cleanup(d)
+	return "  HR GS change available:  " + ("[PASS]\n" if (o1 and o2 and o3) else "[FAIL]\n")
+
+
+# No HandResetPopup when it's not the local player's turn
+func _test_handr_reset_no_popup_not_local_turn():
+	var d = _setup_gc_with_hand()
+	var gc = d["gc"]; var mp = d["mp"]
+
+	var snap = _make_snapshot(2, null)
+	snap["special_round_active"] = true
+	snap["special_round_type"] = "advantage"
+	snap["special_round_player_id"] = "player_1"
+	snap["current_player_index"] = 1  # player_2's turn, not local (player_1)
+	snap["players"][1]["hand"] = [
+		{"card_id":"g12","name":"12","value":12,"color":"dorato","card_type":"gold"},
+	]
+	snap["players"][1]["hand_count"] = 1
+	snap["available_actions"] = [
+		{"action_type": "reset_hand"},
+		{"action_type": "change_card", "card_id": "g12"},
+	]
+	mp.emit_signal("game_started", snap)
+
+	# Should NOT open popup since it's not the local player's turn
+	var o1 = _assert_eq(gc.get_state(), 1, "READY_FOR_INPUT (1) — no popup on other's turn")
+	_cleanup(d)
+	return "  HR no popup non-local:   " + ("[PASS]\n" if o1 else "[FAIL]\n")
+
+
+# No HandResetPopup for the advantage player themselves
+func _test_handr_reset_no_popup_for_advantage_player():
+	var d = _setup_gc_with_hand()
+	var gc = d["gc"]; var mp = d["mp"]
+
+	var snap = _make_snapshot(2, null)
+	snap["special_round_active"] = true
+	snap["special_round_type"] = "advantage"
+	snap["special_round_player_id"] = "player_1"  # local player IS advantage player
+	snap["current_player_index"] = 0  # player_1's turn
+	snap["players"][0]["hand"] = [
+		{"card_id":"g12","name":"12","value":12,"color":"dorato","card_type":"gold"},
+	]
+	snap["players"][0]["hand_count"] = 1
+	snap["available_actions"] = [
+		{"action_type": "reset_hand"},
+		{"action_type": "change_card", "card_id": "g12"},
+	]
+	mp.emit_signal("game_started", snap)
+
+	var o1 = _assert_eq(gc.get_state(), 1, "READY_FOR_INPUT (1) — no popup for advantage player")
+	_cleanup(d)
+	return "  HR no popup adv player:  " + ("[PASS]\n" if o1 else "[FAIL]\n")
+
+
+# Jolly/Imbroglio popup works correctly even when HandReset conditions are present
+func _test_handr_reset_no_interference_jolly():
+	var d = _setup_gc_with_hand()
+	var gc = d["gc"]; var mp = d["mp"]; var hp = d["hp"]; var tp = d["tp"]
+
+	# GdV active but player has a Jolly (playable) — no reset scenario
+	var snap = _make_snapshot(2, null)
+	snap["special_round_active"] = true
+	snap["special_round_type"] = "advantage"
+	snap["special_round_player_id"] = "player_2"
+	snap["players"][0]["hand"] = [
+		{"card_id":"jolly_0","name":"Jolly","value":null,"color":"arancione","card_type":"jolly"},
+	]
+	snap["players"][0]["hand_count"] = 1
+	snap["available_actions"] = [
+		{"action_type": "play_card", "card_id": "jolly_0", "choices": [{"parameters": {"selected_value": 5}}]},
+		{"action_type": "change_card", "card_id": "jolly_0"},
+	]
+	mp.emit_signal("game_started", snap)
+
+	# Select Jolly and press play — should open value popup, not HandResetPopup
+	hp.emit_signal("card_selected", "jolly_0")
+	tp.emit_signal("play_pressed")
+
+	var o1 = _assert_eq(gc.get_state(), 3, "WAITING_FOR_CHOICE (3) — Jolly popup opened")
+	# Verify it's the value choice popup (has valid values set)
+	var o2 = _assert(gc._pending_valid_values.size() > 0, "valid values populated for Jolly")
+	_cleanup(d)
+	return "  HR no jolly interferenc: " + ("[PASS]\n" if (o1 and o2) else "[FAIL]\n")
+
+
+# ===========================================================================
+# Popup modality tests — the InputBlocker overlay must keep any choice popup
+# in front, absorb outside clicks, and only close on a valid choice.
+# ===========================================================================
+
+# Build real popup/blocker nodes wired onto a GC so the visual modality logic
+# (not just the state machine) is exercised.
+func _setup_gc_with_popup_nodes():
+	var d = _setup_gc_with_hand()
+	var gc = d["gc"]
+
+	var vp = PopupPanel.new(); vp.name = "VPC"; add_child(vp)
+	var hr = PopupPanel.new(); hr.name = "HRC"; add_child(hr)
+	var ib = ColorRect.new(); ib.name = "IBC"
+	ib.anchor_right = 1.0; ib.anchor_bottom = 1.0
+	ib.mouse_filter = 0; ib.visible = false; add_child(ib)
+
+	gc._value_choice_popup = vp
+	gc._hand_reset_popup = hr
+	gc._choice_input_blocker = ib
+
+	d["vp"] = vp; d["hr"] = hr; d["ib"] = ib
+	return d
+
+
+func _test_popup_blocker_reflects_open_state():
+	var d = _setup_gc_with_popup_nodes()
+	var gc = d["gc"]; var vp = d["vp"]; var hr = d["hr"]; var ib = d["ib"]
+
+	vp.visible = false; hr.visible = false
+	gc._update_choice_blocker()
+	var o1 = _assert(ib.visible == false, "blocker hidden when no popup open")
+
+	vp.visible = true
+	gc._update_choice_blocker()
+	var o2 = _assert(ib.visible == true, "blocker shown while value popup open")
+
+	vp.visible = false; hr.visible = true
+	gc._update_choice_blocker()
+	var o3 = _assert(ib.visible == true, "blocker shown while hand-reset popup open")
+
+	hr.visible = false
+	gc._update_choice_blocker()
+	var o4 = _assert(ib.visible == false, "blocker hidden when all popups closed")
+
+	ib.queue_free(); vp.queue_free(); hr.queue_free()
+	_cleanup(d)
+	return "  Popup blocker open state: " + ("[PASS]\n" if (o1 and o2 and o3 and o4) else "[FAIL]\n")
+
+
+# A valid choice must hide the popup, hide the blocker, and complete the action.
+func _test_popup_valid_choice_closes_and_completes():
+	var d = _setup_gc_with_popup_nodes()
+	var gc = d["gc"]; var mp = d["mp"]; var hp = d["hp"]; var tp = d["tp"]
+	var vp = d["vp"]; var ib = d["ib"]
+
+	var snap = _make_hand_snapshot([
+		{"card_id":"jolly_0","name":"Jolly","value":null,"color":"arancione","card_type":"jolly"},
+	])
+	mp.emit_signal("game_started", snap)
+	hp.emit_signal("card_selected", "jolly_0")
+	tp.emit_signal("play_pressed")  # opens the value-choice popup
+
+	var o1 = _assert_eq(gc.get_state(), 3, "WAITING_FOR_CHOICE before choice")
+	var o2 = _assert(vp.visible == true, "value popup is visible when open")
+	var o3 = _assert(ib.visible == true, "input blocker up while popup open")
+
+	mp.auto_emit_action_completed = false
+	gc._on_value_chosen(7)  # valid choice
+
+	var o4 = _assert(vp.visible == false, "valid choice hides the popup")
+	var o5 = _assert(ib.visible == false, "valid choice removes the input blocker")
+	var o6 = _assert_eq(gc.get_state(), 4, "ACTION_PENDING (4) after valid choice")
+	var o7 = _assert(mp.send_action_called, "send_action called on valid choice")
+	var o8 = _assert_eq(mp.last_send_action_dict.get("selected_value"), 7, "selected_value=7 forwarded")
+
+	ib.queue_free(); vp.queue_free()
+	if d.has("hr"): d["hr"].queue_free()
+	_cleanup(d)
+	return "  Popup valid choice closes: " + ("[PASS]\n" if (o1 and o2 and o3 and o4 and o5 and o6 and o7 and o8) else "[FAIL]\n")
+
+
+# Clicking OUTSIDE an open popup must not close it, advance the game, or drop
+# the GC out of WAITING_FOR_CHOICE (the blocker absorbs the click).
+func _test_popup_outside_click_does_not_close():
+	var d = _setup_gc_with_popup_nodes()
+	var gc = d["gc"]; var mp = d["mp"]; var hp = d["hp"]; var tp = d["tp"]
+	var vp = d["vp"]; var ib = d["ib"]
+
+	var snap = _make_hand_snapshot([
+		{"card_id":"jolly_0","name":"Jolly","value":null,"color":"arancione","card_type":"jolly"},
+	])
+	mp.emit_signal("game_started", snap)
+	hp.emit_signal("card_selected", "jolly_0")
+	tp.emit_signal("play_pressed")  # opens the value-choice popup
+	_assert_eq(gc.get_state(), 3, "WAITING_FOR_CHOICE before outside click")
+
+	# Simulate a mouse click far outside the popup (top-left corner) by
+	# injecting raw input events. The visible InputBlocker (mouse_filter=STOP)
+	# must absorb it — nothing may close the popup or advance the game.
+	var down = InputEventMouseButton.new()
+	down.button_index = BUTTON_LEFT
+	down.position = Vector2(5, 5)
+	down.pressed = true
+	Input.parse_input_event(down)
+	var up = InputEventMouseButton.new()
+	up.button_index = BUTTON_LEFT
+	up.position = Vector2(5, 5)
+	up.pressed = false
+	Input.parse_input_event(up)
+
+	var o1 = _assert(vp.visible == true, "popup still open after outside click")
+	var o2 = _assert(ib.visible == true, "blocker still up after outside click")
+	var o3 = _assert_eq(gc.get_state(), 3, "state unchanged (3) after outside click")
+	var o4 = _assert(!mp.send_action_called, "no action sent from an outside click")
+
+	ib.queue_free(); vp.queue_free()
+	if d.has("hr"): d["hr"].queue_free()
+	_cleanup(d)
+	return "  Popup outside click inert: " + ("[PASS]\n" if (o1 and o2 and o3 and o4) else "[FAIL]\n")
+
+
+# Structural check on Main.tscn: the InputBlocker must cover the full screen
+# with mouse_filter=STOP so it physically blocks clicks behind an open popup.
+func _test_scene_input_blocker_config():
+	var scene = load("res://Main.tscn")
+	if scene == null:
+		return "  Scene input blocker:      [FAIL]\n"
+	var inst = scene.instance()
+	var ol = inst.get_node_or_null("OverlayLayer")
+	var ib = ol.get_node_or_null("InputBlocker") if ol != null else null
+
+	var o1 = _assert(ib != null, "InputBlocker node exists in Main.tscn")
+	var o2 = false
+	var o3 = false
+	if ib != null:
+		# MOUSE_FILTER_STOP == 0
+		o2 = _assert(ib.mouse_filter == 0, "InputBlocker mouse_filter is STOP (0)")
+		o3 = _assert(
+			abs(ib.anchor_right - 1.0) < 0.001 and abs(ib.anchor_bottom - 1.0) < 0.001,
+			"InputBlocker spans the full overlay")
+	inst.free()
+	return "  Scene input blocker:      " + ("[PASS]\n" if (o1 and o2 and o3) else "[FAIL]\n")
+
+
 func _run_all():
 	var out = ""
 	out += "========================================\n"
@@ -1203,17 +1604,11 @@ func _run_all():
 	out += _test_imbroglio_opens_popup()
 	out += _test_value_choice_sends_action()
 	out += _test_value_choice_cancel()
-	out += _test_gold_reveal_opens_popup()
-	out += _test_gold_reveal_yes()
-	out += _test_gold_reveal_no()
 	out += _test_jolly_value_zero_invalid()
 	out += _test_jolly_value_eleven_invalid()
 	out += _test_imbroglio_value_zero_invalid()
 	out += _test_imbroglio_value_minus16_invalid()
 	out += _test_imbroglio_value_16_invalid()
-	out += _test_gold_reveal_not_reopen()
-	out += _test_gold_reveal_not_in_gameover()
-	out += _test_gold_reveal_real_card_id()
 	out += "--- Step F7: Safe Round pre-action choice ---\n"
 	out += _test_f7_gold_opens_popup()
 	out += _test_f7_choice_sends_single_action()
@@ -1221,12 +1616,33 @@ func _run_all():
 	out += _test_f7_plus11_no_gold_plays_directly()
 	out += _test_f7_plus11_chain_89_no_popup()
 	out += _test_f7_choice_cancel()
+	out += "--- Step F8: final regression (Special Round closeout) ---\n"
+	out += _test_f8_imbroglio_filtered_choices()
+	out += _test_f8_imbroglio_disallowed_value_blocked()
+	out += _test_f8_jolly_choices_from_snapshot()
+	out += "--- Step 9: Fix verification tests ---\n"
+	out += _test_fix1_jolly_fallback_when_no_choices()
+	out += _test_fix4_reset_hand_opens_popup()
+	out += _test_fix4_reset_hand_yes_sends_action()
+	out += _test_fix4_reset_hand_no_returns_ready()
+	out += _test_fix6_victory_animation_not_skipped()
+	out += "--- HandResetPopup scope tests ---\n"
+	out += _test_handr_reset_no_popup_during_gs()
+	out += _test_handr_reset_gs_change_card_available()
+	out += _test_handr_reset_no_popup_not_local_turn()
+	out += _test_handr_reset_no_popup_for_advantage_player()
+	out += _test_handr_reset_no_interference_jolly()
 	out += "--- Step 5: card animator ---\n"
 	out += _test_animating_state()
 	out += _test_anim_finishes_ready()
 	out += _test_input_ignored_during_anim()
 	out += "--- Step 7: GUI input flow ---\n"
 	out += _test_real_click_to_action()
+	out += "--- Popup modality (InputBlocker) ---\n"
+	out += _test_popup_blocker_reflects_open_state()
+	out += _test_popup_valid_choice_closes_and_completes()
+	out += _test_popup_outside_click_does_not_close()
+	out += _test_scene_input_blocker_config()
 
 	out += "\n--- Summary ---\n"
 	out += "  Assertions passed: " + str(passed) + "\n"

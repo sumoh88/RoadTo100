@@ -16,7 +16,6 @@ class RoadTo100Action(Action):
 
 PLAY_CARD_ACTION = "play_card"
 CHANGE_CARD_ACTION = "change_card"
-REVEAL_GOLD_ACTION = "reveal_gold"
 RESET_HAND_ACTION = "reset_hand"
 
 

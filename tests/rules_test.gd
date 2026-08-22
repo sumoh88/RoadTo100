@@ -269,6 +269,8 @@ func _run_all():
 	tests_run += 1
 	out += _test_f7_gdv_still_excludes_imbroglio()
 	tests_run += 1
+	out += _test_f8_gdv_advantage_97_plus_10_wins_raw()
+	tests_run += 1
 
 	out += "\n--- Summary ---\n"
 	out += "  Tests executed: " + str(tests_run) + "\n"
@@ -1939,3 +1941,40 @@ func _test_f7_gdv_still_excludes_imbroglio():
 		_test("f7 gdv still excludes imbroglio")
 		return "  F7 GdV excludes Imbr.:  [PASS]\n"
 	return "  F7 GdV excludes Imbr.:  [FAIL]\n"
+
+
+# ===========================================================================
+# F8 — reported case: GdV advantage player plays +10 from 97 → raw 107.
+#      Per GAME_RULES.md the advantage player ignores the bounce and wins at
+#      >= 100, so the raw internal value (107) is CORRECT rules behavior;
+#      the display cap (max 100) lives in the provider snapshot layer.
+# ===========================================================================
+
+func _test_f8_gdv_advantage_97_plus_10_wins_raw():
+	var rules = Rules.new()
+	var p1 = PlayerData.new("p1", "P1")
+	p1.receive_card(increment_card(10, 0))
+	var p2 = PlayerData.new("p2", "P2")
+	var game = make_game(
+		[p1, p2],
+		[increment_card(3, 0)],
+		null,
+		{
+			"piatto": 97,
+			"plateau_cards": [],
+			"special_round_active": true,
+			"special_round_player_id": "p1",
+			"special_round_type": "advantage",
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+	game.set_current_player(p1)
+	var action = {"action_type": "play_card", "card": p1.hand.cards[0]}
+	rules.apply_action(game, action)
+	var o1 = _assert_eq(game.metadata["piatto"], 107, "f8 gdv raw piatto", "raw internal value must be 107")
+	var o2 = _assert_true(game.winner == p1, "f8 gdv winner", "advantage player wins at >= 100 (no bounce)")
+	if o1 and o2:
+		_test("f8 gdv advantage 97+10 raw win")
+		return "  F8 GdV 97+10 raw:     [PASS]\n"
+	return "  F8 GdV 97+10 raw:     [FAIL]\n"

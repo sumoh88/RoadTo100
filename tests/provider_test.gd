@@ -118,7 +118,6 @@ func _run_all():
 	# --- New event order tests (5) ---
 	out += _test_plus11_in_gdv_order()
 	out += _test_89_triggers_advantage_order()
-	out += _test_gold_reveal_order()
 	out += _test_reset_hand_order()
 	out += _test_gdv_ends_order()
 
@@ -130,6 +129,9 @@ func _run_all():
 
 	# --- F3: Safe Round blocked_type flow ---
 	out += _test_safe_round_blocked_type_flow()
+
+	# --- F8: final regression (Special Round closeout) ---
+	out += _test_f8_gdv_win_snapshot_piatto_capped()
 
 	out += "\n--- Summary ---\n"
 	out += "  Assertions passed: " + str(passed) + "\n"
@@ -478,46 +480,6 @@ func _test_89_triggers_advantage_order():
 	return "  89 order:              " + ("[PASS]\n" if (o1 and o2 and o3 and o4 and o5 and o6) else "[FAIL] order: " + str(types) + "\n")
 
 
-# ===========================================================================
-# 12. Gold reveal: gold_revealed → card_drawn → turn_changed
-# ===========================================================================
-
-func _test_gold_reveal_order():
-	var e = _new_engine()
-	e.connect("game_started", self, "_capture_snapshot")
-	e.connect("action_completed", self, "_capture_result")
-	e.start_game(1)
-	var gs = e.game_state
-	var cp = gs.current_player()
-
-	# Give a gold card matching piatto value
-	cp.clear_hand()
-	var gold = _card("gold_test_12", "12", 12, "dorato",
-		{"card_type": "gold", "category": "gold", "destination": "piatto"})
-	cp.receive_card(gold)
-	gs.metadata["piatto"] = 12
-	gs.metadata["turn_phase"] = "start"
-	gs.deck.add_card(_card("deck1", "+1", 1, "arancione", {"card_type": "increment"}))
-
-	_last_action_result = null
-	e.send_action({"action_type": "reveal_gold", "card_id": "gold_test_12"})
-	if _last_action_result == null: return "  Gold reveal order:     [FAIL - no result]\n"
-
-	var types = []; for x in _last_action_result["events"]: types.append(x["type"])
-	var o1 = _assert(types[0] == "gold_revealed", "first gold_revealed: " + types[0])
-	var o2 = _assert("card_drawn" in types, "has card_drawn")
-	var o3 = _assert("turn_changed" in types, "has turn_changed")
-	var id = types.find("card_drawn")
-	var it = types.find("turn_changed")
-	var o4 = _assert(id < it, "drawn before turn: " + str(id) + " < " + str(it))
-
-	return "  Gold reveal order:     " + ("[PASS]\n" if (o1 and o2 and o3 and o4) else "[FAIL] order: " + str(types) + "\n")
-
-
-# ===========================================================================
-# 13. Reset hand: hand_reset → card_drawn ×3 → turn_changed
-# ===========================================================================
-
 func _test_reset_hand_order():
 	var e = _new_engine()
 	e.connect("game_started", self, "_capture_snapshot")
@@ -554,13 +516,13 @@ func _test_reset_hand_order():
 	for t in types:
 		if t == "card_drawn": drawn_count += 1
 	var o2 = _assert(drawn_count == 3, "3 card_drawn, got " + str(drawn_count))
-	var o3 = _assert("turn_changed" in types, "has turn_changed")
+	# After reset_hand the player continues their turn — NO turn_changed
+	var o3 = _assert(not ("turn_changed" in types), "no turn_changed after reset_hand")
 
-	# All card_drawn before turn_changed
+	# All card_drawn come after hand_reset
 	var first_drawn = types.find("card_drawn")
-	var last_drawn = types.find_last("card_drawn")
-	var turn_idx = types.find("turn_changed")
-	var o4 = _assert(last_drawn < turn_idx, "drawn before turn: " + str(last_drawn) + " < " + str(turn_idx))
+	var hr_idx = types.find("hand_reset")
+	var o4 = _assert(first_drawn > hr_idx, "drawn after reset: " + str(first_drawn) + " > " + str(hr_idx))
 
 	return "  Reset hand order:      " + ("[PASS]\n" if (o1 and o2 and o3 and o4) else "[FAIL] order: " + str(types) + "\n")
 
@@ -838,3 +800,58 @@ func _test_safe_round_blocked_type_flow():
 	# F7: blocked_type is part of the snapshot and reflects the action choice
 	var bt_in_snap = str(snap.get("blocked_type", ""))
 	return "  Safe Round blocked_type flow: " + ("[PASS]\n" if (sr_active and sr_type == "safe" and sr_pid == cp.player_id and bt_in_snap == "Incremento") else "[FAIL]\n")
+
+
+# ===========================================================================
+# F8: GdV advantage player wins at raw 107 (97+10) — the snapshot must
+#     display the Piatto capped at 100 while internal metadata keeps the
+#     raw resolution value.
+# ===========================================================================
+
+func _test_f8_gdv_win_snapshot_piatto_capped():
+	var e = _new_engine()
+	e.connect("game_started", self, "_capture_snapshot")
+	e.connect("action_completed", self, "_capture_result")
+	e.start_game(1)
+	var gs = e.game_state
+	var cp = gs.current_player()
+
+	# Player holds a +10; GdV active with this player as advantage player.
+	cp.clear_hand()
+	var inc10 = _card("inc10_f8", "+10", 10, "arancione",
+		{"card_type": "increment", "category": "normale", "destination": "scarti"})
+	cp.receive_card(inc10)
+	gs.metadata["special_round_active"] = true
+	gs.metadata["special_round_player_id"] = cp.player_id
+	gs.metadata["special_round_type"] = "advantage"
+	gs.metadata["turn_phase"] = "start"
+	gs.metadata["piatto"] = 97
+
+	var inc = _card("inc_draw_f8", "+1", 1, "arancione",
+		{"card_type": "increment", "category": "normale", "destination": "scarti"})
+	gs.deck.add_card(inc)
+
+	_last_action_result = null
+	e.send_action({"action_type": "play_card", "card_id": "inc10_f8"})
+	if _last_action_result == null:
+		return "  F8 GdV win cap:         [FAIL - no result]\n"
+
+	var snap = _last_action_result["snapshot"]
+	var o1 = _assert(snap.get("winner", null) == cp.player_id, "F8: winner set (GdV 97+10)")
+	var o2 = _assert(gs.metadata["piatto"] == 107, "F8: internal raw piatto 107, got " + str(gs.metadata["piatto"]))
+
+	# Snapshot display value capped at 100
+	var o3 = _assert(snap["piatto"] == 100, "F8: snapshot piatto capped at 100, got " + str(snap["piatto"]))
+
+	# No plate item in the visual stack may exceed 100; top plate shows 100
+	var over = false
+	var top_val = null
+	for item in snap.get("plateau_visual_stack", []):
+		if item["type"] == "plate":
+			if int(item["value"]) > 100:
+				over = true
+			top_val = item["value"]
+	var o4 = _assert(!over, "F8: no plate value > 100 in visual stack")
+	var o5 = _assert(top_val == 100, "F8: top plate shows 100, got " + str(top_val))
+
+	return "  F8 GdV win cap:         " + ("[PASS]\n" if (o1 and o2 and o3 and o4 and o5) else "[FAIL]\n")

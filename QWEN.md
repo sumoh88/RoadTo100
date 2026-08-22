@@ -84,20 +84,23 @@
 │   ├── CardFace.gd        # Reusable card visual component
 │   ├── CardAnimator.gd    # FIFO animation queue + tween
 │   ├── GameController.gd  # State machine (8 states), input orchestration
-│   └── DebugDemo.gd       # Automated demo (integrated with GameController)
+│   ├── DebugDemo.gd       # Automated demo (integrated with GameController)
+│   └── ManualGame.gd      # 1 human + 3 CPU playable mode (pauses for human turn)
 ├── scenes/                # Godot scene files
 │   └── CardFace.tscn      # Reusable card scene
 ├── tests/                 # Godot GDScript test suites
 │   ├── domain_test.gd/.tscn        # Domain operations (55+ assert)
-│   ├── rules_test.gd/.tscn         # Rules validation (59 test, 188 assert)
-│   ├── provider_test.gd/.tscn      # Provider snapshot/event tests (92 assert)
+│   ├── rules_test.gd/.tscn         # Rules validation (60 test, 191 assert)
+│   ├── provider_test.gd/.tscn      # Provider snapshot/event tests (97 assert)
 │   ├── presenter_test.gd/.tscn     # Presenter/UI tests (84 assert)
 │   ├── board_test.gd/.tscn         # Board visual tests (44 assert)
-│   ├── game_controller_test.gd/.tscn  # GameController state/input tests (165 assert)
+│   ├── game_controller_test.gd/.tscn  # GameController state/input tests (197 assert)
 │   ├── card_animator_test.gd/.tscn    # CardAnimator FIFO tests (5 assert)
 │   ├── card_animator_test2.gd/.tscn   # CardAnimator multi-player tests (20 assert)
 │   ├── demo_integration_test.gd/.tscn # GC + LocalGameEngine real games (5 assert)
-│   └── demo_verification_test.gd/.tscn # 4-player event verification (9 assert)
+│   ├── demo_verification_test.gd/.tscn # 4-player event verification (9 assert)
+│   ├── manual_game_test.gd/.tscn    # ManualGame 1H+3C tests (25 assert)
+│   └── manual_game_smoke.tscn       # Real-scene wiring + CPU auto-play smoke test
 ├── test_roadto100_rules.py  # Python unit tests for RoadTo100 rules (74 tests)
 └── run_simulations.py       # Python batch simulation runner
 ```
@@ -195,7 +198,7 @@ from games.roadto100.rules import RoadTo100Rules  # (to be implemented)
 python3 -m unittest test_roadto100_rules
 ```
 
-**Godot tests:** Headless GDScript suites in `tests/` — 10 suites (domain_test, rules_test, provider_test, presenter_test, board_test, game_controller_test, card_animator_test, card_animator_test2, demo_integration_test, demo_verification_test), ~660+ total assertions. Run with:
+**Godot tests:** Headless GDScript suites in `tests/` — 12 suites (domain_test, rules_test, provider_test, presenter_test, board_test, game_controller_test, card_animator_test, card_animator_test2, demo_integration_test, demo_verification_test, manual_game_test, manual_game_smoke), ~732+ total assertions. Run with:
 
 ```bash
 /home/sumaka/bin/Godot3 --path . tests/<suite>.tscn --no-window
@@ -221,11 +224,13 @@ python3 -m unittest test_roadto100_rules
 | CardAnimator (FIFO, multi-player, play+draw, 0.7s/0.6s) | ✅ Implemented and verified (Steps 5+8) |
 | DebugDemo (Auto demo, integrated with GC) | ✅ Functional |
 | Python Simulator | ✅ Complete and frozen |
-| **Special Round / Giro Sicuro** | ✅ **F1–F7 completed and verified (Passaggio F)** — Safe Round integrated end-to-end (`blocked_type` persistence/snapshot, pre-action popup with single `play_card`, GS/GdV lifecycle, UI `GIRO SICURO`/`GIRO DI VANTAGGIO`). Next: F8 (final step of Passaggio F) |
+| **Special Round / Giro Sicuro** | ✅ **F1–F8 completed — Passaggio F closed (2026-08-19)** |
+| **UI popup fixes (post-F8)** | ✅ Jolly/Imbroglio all-values with engine validation, GS blocked cards disabled, HandResetPopup GdV-only + turn continuation, SR badge, victory anim pre-GAME_OVER, popup interference resolved |
+| **Manual Game 1H+3C** | ✅ Implemented (ManualGame.gd + "Inizia Partita" button) — CPU auto-play, pause for human turn, mutual exclusion with DebugDemo; **open bug: hand cards not selectable during human turn** |
 | Multiplayer | ❌ Not started |
 | AI (bot.py) | ❌ Not started |
 
-See `PROJECT_STATE.md` and `ROADMAP.md` for the full roadmap and detailed status, including Passaggio F step breakdown.
+**Next work:** **Fix card selection in manual game** — during the human turn, clicking a hand card does nothing; `Gioca`/`Cambia` correctly prompt to select a card. Investigate the `CardFace → HandPresenter → card_selected → GameController` chain (mouse_filter on cards, node overlap, GC state).
 
 ---
 

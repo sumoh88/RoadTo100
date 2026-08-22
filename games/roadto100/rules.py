@@ -11,7 +11,7 @@ from simulator.domain.game import Game, GamePhase
 from simulator.domain.player import Player
 from simulator.domain.ruleset import RuleSet
 
-from .actions import CHANGE_CARD_ACTION, PLAY_CARD_ACTION, RESET_HAND_ACTION, REVEAL_GOLD_ACTION, RoadTo100Action
+from .actions import CHANGE_CARD_ACTION, PLAY_CARD_ACTION, RESET_HAND_ACTION, RoadTo100Action
 from .config import INITIAL_HAND_SIZE, TARGET_SCORE
 
 
@@ -131,13 +131,6 @@ class RoadTo100RuleSet(RuleSet):
         drawn = RoadTo100RuleSet._draw_cards(game, 1)
         return drawn[0] if drawn else None
 
-    def _matching_gold_card(self, player: Player, plateau_value: int) -> Optional[Card]:
-        """Return a matching Gold card from the player's hand, if present."""
-        for card in player.hand.cards:
-            if self._is_gold_card(card) and card.value == plateau_value:
-                return card
-        return None
-
     def initialize_game(self, game: Game) -> None:
         """Initialize the game state for a new match."""
         game.phase = GamePhase.PLAYING
@@ -184,15 +177,6 @@ class RoadTo100RuleSet(RuleSet):
             and special_round_player_id is not None
             and current_player.player_id == special_round_player_id
         )
-
-        # Gold reveal at start of turn (always allowed)
-        if game.metadata.get("turn_phase") == "start":
-            plateau_value = int(game.metadata.get("piatto", 0))
-            matching_gold = self._matching_gold_card(current_player, plateau_value)
-            if matching_gold is not None:
-                actions.append(
-                    RoadTo100Action(action_type=REVEAL_GOLD_ACTION, parameters={"card": matching_gold})
-                )
 
         # Special Round playability:
         # - Safe Round: non-activators cannot play the blocked card type.
@@ -296,10 +280,6 @@ class RoadTo100RuleSet(RuleSet):
             # During Special Round: valid for non-activator players
             return special_round_active and not is_special_round_player
 
-        if action.action_type == REVEAL_GOLD_ACTION:
-            plateau_value = int(game.metadata.get("piatto", 0))
-            return isinstance(card, Card) and current_player.has_card(card) and self._is_gold_card(card) and card.value == plateau_value
-
         if action.action_type == CHANGE_CARD_ACTION:
             return isinstance(card, Card) and current_player.has_card(card)
 
@@ -358,16 +338,6 @@ class RoadTo100RuleSet(RuleSet):
             game.deck.shuffle()
             for card in self._draw_cards(game, 3):
                 current_player.receive_card(card)
-            game.metadata["turn_phase"] = "action"
-            return
-
-        if action.action_type == REVEAL_GOLD_ACTION:
-            current_player.play_card(card)
-            game.deck.add_card(card)
-            game.deck.shuffle()
-            drawn_card = self._draw_or_reshuffle(game)
-            if drawn_card is not None:
-                current_player.receive_card(drawn_card)
             game.metadata["turn_phase"] = "action"
             return
 

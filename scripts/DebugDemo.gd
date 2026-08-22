@@ -18,7 +18,7 @@ const GOLD_CHAIN = {12: 23, 23: 34, 34: 45, 45: 56, 56: 67, 67: 78, 78: 89}
 const SAFE_ROUND_CHOICES = ["Incremento", "Gold", "Imbroglio"]
 
 # Stats
-var stats = {"play_card":0,"change_card":0,"reveal_gold":0,"reset_hand":0,"advantage_turns":0}
+var stats = {"play_card":0,"change_card":0,"reset_hand":0,"advantage_turns":0}
 
 
 func _ready():
@@ -55,13 +55,27 @@ func start_demo():
 		print("[Demo] CRITICAL: No GameController reference.")
 		return
 
+	# Stop any sibling automation (e.g. ManualGame) so only one drives the game.
+	_stop_sibling_automation()
+
 	print("\n========== DEMO AUTOMATICA ==========")
 	running = true
 	turn_count = 0
-	stats = {"play_card":0,"change_card":0,"reveal_gold":0,"reset_hand":0,"advantage_turns":0}
+	stats = {"play_card":0,"change_card":0,"reset_hand":0,"advantage_turns":0}
 
 	_gc.start_game(4)
 	_schedule_next_step()
+
+
+func _stop_sibling_automation():
+	var p = get_parent()
+	if p == null:
+		return
+	for c in p.get_children():
+		if c == self:
+			continue
+		if c.has_method("stop"):
+			c.stop()
 
 
 func stop_demo():
@@ -77,17 +91,8 @@ func _on_timer_timeout():
 
 	var state = _gc.get_state()
 
-	# Handle WAITING_FOR_CHOICE — gold reveal popup or value choice
+	# Handle WAITING_FOR_CHOICE — value choice (Jolly/Imbroglio/Safe Round)
 	if state == 3:
-		var snap = _gc.get_last_snapshot()
-		if snap != null:
-			for a in snap.get("available_actions", []):
-				if a.get("action_type", "") == "reveal_gold":
-					# Answer Yes to gold reveal
-					_gc.perform_action({"action_type": "reveal_gold", "card_id": a.get("card_id", "")})
-					_schedule_next_step()
-					return
-		# Value choice (Jolly/Imbroglio) or unknown — retry later
 		_schedule_next_step()
 		return
 
@@ -107,13 +112,6 @@ func _on_timer_timeout():
 	if acts.empty():
 		_schedule_next_step()
 		return
-
-	# Detect gold reveal in available_actions before GC opens popup
-	for a in acts:
-		if a.get("action_type", "") == "reveal_gold":
-			_gc.perform_action({"action_type": "reveal_gold", "card_id": a.get("card_id", "")})
-			_schedule_next_step()
-			return
 
 	var action = _choose_action(acts)
 	if action == null:
@@ -216,7 +214,6 @@ func _on_gc_action_applied(result):
 		var t = e["type"]
 		if t == "card_played": stats["play_card"] += 1
 		elif t == "card_changed": stats["change_card"] += 1
-		elif t == "gold_revealed": stats["reveal_gold"] += 1
 		elif t == "hand_reset": stats["reset_hand"] += 1
 		elif t == "advantage_started": stats["advantage_turns"] += 1
 
@@ -234,7 +231,7 @@ func _on_game_won(snapshot):
 	print("       Turns: " + str(snapshot["turn_number"]))
 	print("       Final piatto: " + str(snapshot["piatto"]))
 	print("       Stats: play=" + str(stats["play_card"]) + " change=" + str(stats["change_card"]) +
-		" gold=" + str(stats["reveal_gold"]) + " reset=" + str(stats["reset_hand"]) +
+		" reset=" + str(stats["reset_hand"]) +
 		" adv=" + str(stats["advantage_turns"]))
 	print("========================================\n")
 

@@ -1,0 +1,6 @@
+[gd_scene format=2]
+
+[ext_resource path="res://tests/manual_game_smoke.gd" type="Script" id=1]
+
+[node name="ManualGameSmoke" type="Node"]
+script = ExtResource( 1 )

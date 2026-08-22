@@ -44,10 +44,13 @@ var _value_choice_popup = null
 var _value_choice_label = null
 var _value_btn_grid = null
 var _value_cancel_btn = null
-var _gold_reveal_popup = null
-var _gold_card_label = null
-var _gold_yes_btn = null
-var _gold_no_btn = null
+var _hand_reset_popup = null
+var _hand_reset_yes_btn = null
+var _hand_reset_no_btn = null
+
+# Full-screen blocker shown while a choice popup is open so that clicking
+# outside the popup neither closes it nor reaches the underlying UI.
+var _choice_input_blocker = null
 
 # Internal state
 var _state = State.WAITING_FOR_STATE
@@ -115,6 +118,13 @@ func perform_action(action_dict):
 	if _provider == null:
 		print("[GC] ERROR: No provider set")
 		return
+	# Close the specific popup if this direct call resolves it (demo/CPU path)
+	var at = action_dict.get("action_type", "")
+	if at == "play_card" and _value_choice_popup != null and _value_choice_popup.visible:
+		_value_choice_popup.hide()
+	if at == "reset_hand" and _hand_reset_popup != null and _hand_reset_popup.visible:
+		_hand_reset_popup.hide()
+	_update_choice_blocker()
 	_state = State.ACTION_PENDING
 	_provider.send_action(action_dict)
 
@@ -168,6 +178,8 @@ func _find_popups():
 	if ol == null:
 		return
 
+	_choice_input_blocker = _child(ol, "InputBlocker")
+
 	_value_choice_popup = _child(ol, "ValueChoicePopup")
 	if _value_choice_popup != null:
 		var vb = _child(_value_choice_popup, "VBox")
@@ -178,19 +190,18 @@ func _find_popups():
 			if _value_cancel_btn != null:
 				_value_cancel_btn.connect("pressed", self, "_on_value_cancel")
 
-	_gold_reveal_popup = _child(ol, "GoldRevealPopup")
-	if _gold_reveal_popup != null:
-		var vb = _child(_gold_reveal_popup, "VBox")
+	_hand_reset_popup = _child(ol, "HandResetPopup")
+	if _hand_reset_popup != null:
+		var vb = _child(_hand_reset_popup, "VBox")
 		if vb != null:
-			_gold_card_label = _child(vb, "CardLabel")
 			var br = _child(vb, "BtnRow")
 			if br != null:
-				_gold_yes_btn = _child(br, "YesBtn")
-				_gold_no_btn = _child(br, "NoBtn")
-				if _gold_yes_btn != null:
-					_gold_yes_btn.connect("pressed", self, "_on_gold_reveal_yes")
-				if _gold_no_btn != null:
-					_gold_no_btn.connect("pressed", self, "_on_gold_reveal_no")
+				_hand_reset_yes_btn = _child(br, "YesBtn")
+				_hand_reset_no_btn = _child(br, "NoBtn")
+				if _hand_reset_yes_btn != null:
+					_hand_reset_yes_btn.connect("pressed", self, "_on_hand_reset_yes")
+				if _hand_reset_no_btn != null:
+					_hand_reset_no_btn.connect("pressed", self, "_on_hand_reset_no")
 
 
 func _child(p, name):
@@ -205,6 +216,20 @@ func _node_up(name):
 	while p != null and p.name != name:
 		p = p.get_parent()
 	return p
+
+
+func _update_choice_blocker():
+	"""Show the full-screen InputBlocker while any choice popup is open, so
+	clicks outside a popup are absorbed instead of closing it or reaching the
+	game UI underneath."""
+	if _choice_input_blocker == null:
+		return
+	var any_visible = false
+	for p in [_value_choice_popup, _hand_reset_popup]:
+		if p != null and p.visible:
+			any_visible = true
+			break
+	_choice_input_blocker.visible = any_visible
 
 
 # ---------------------------------------------------------------------------
@@ -244,15 +269,20 @@ func _clear_selection():
 
 func _on_play_pressed():
 	if _state == State.CARD_SELECTED and _selected_card_id != "":
+		# Safe Round: a blocked card is selectable (for Cambio Carta) but not playable.
+		if _is_selected_card_blocked_by_sr():
+			if _turn != null and _turn.has_method("show_tip"):
+				_turn.show_tip("Carta bloccata da Giro Sicuro: non giocabile")
+			return
 		var ct = _get_selected_card_type()
-		if ct == "jolly":
-			_open_value_choice("Jolly", range(1, 11))
-		elif ct == "imbroglio":
-			var vals = []
-			for v in range(-15, 16):
-				if v != 0:
-					vals.append(v)
-			_open_value_choice("Imbroglio", vals)
+		if ct == "jolly" or ct == "imbroglio":
+			# Show all theoretical values in the popup; only engine-validated
+			# choices are enabled. The full range is always displayed so the
+			# player can see which values are currently legal.
+			var valid_vals = _play_values_for_selected_card()
+			var all_vals = _full_value_range(ct)
+			_open_value_choice(ct, all_vals, valid_vals)
+			return
 		elif _play_activates_safe_round():
 			# F7: the Safe Round blocked_type is chosen BEFORE the activating
 			# play_card is sent; the choice rides on the same single action.
@@ -282,12 +312,47 @@ func _on_cancel_pressed():
 # Value choice popup (Jolly / Imbroglio)
 # ---------------------------------------------------------------------------
 
-func _open_value_choice(card_name, values):
+func _full_value_range(card_type):
+	"""Return all theoretical selectable values for a card type."""
+	var vals = []
+	if card_type == "jolly":
+		for v in range(1, 11): vals.append(v)
+	elif card_type == "imbroglio":
+		for v in range(-15, 0): vals.append(v)
+		for v in range(1, 16): vals.append(v)
+	return vals
+
+
+func _play_values_for_selected_card():
+	"""Collect the allowed selected_value choices for the selected card
+	from the snapshot's available_actions (provider/rule-filtered)."""
+	var vals = []
+	if _selected_card_id == "" or _last_snapshot == null:
+		return vals
+	for a in _last_snapshot.get("available_actions", []):
+		if str(a.get("action_type", "")) != "play_card":
+			continue
+		if str(a.get("card_id", "")) != _selected_card_id:
+			continue
+		for ch in a.get("choices", []):
+			var params = ch.get("parameters", {})
+			if params.has("selected_value"):
+				vals.append(params["selected_value"])
+	return vals
+
+
+func _open_value_choice(card_name, all_values, valid_values):
+	"""Open the value choice popup showing all theoretical values.
+	Only values in valid_values (from engine) are enabled.
+	If valid_values is empty, all buttons are disabled and a warning is logged."""
 	_state = State.WAITING_FOR_CHOICE
 	_pending_action_type = "play_card"
 	_pending_card_id = _selected_card_id
-	_pending_valid_values = values
+	_pending_valid_values = valid_values
 	_pending_blocked_type = false
+
+	if valid_values.size() == 0:
+		print("[GC] WARNING: No choices provided by engine for " + card_name + " — all options disabled")
 
 	if _value_choice_label != null:
 		_value_choice_label.text = "Scegli il valore per " + card_name
@@ -298,16 +363,21 @@ func _open_value_choice(card_name, values):
 			_value_btn_grid.remove_child(c)
 			c.queue_free()
 
-		# Add value buttons
-		for v in values:
+		# Add value buttons — enabled only if present in valid_values
+		for v in all_values:
 			var btn = Button.new()
 			btn.text = str(v)
 			btn.rect_min_size = Vector2(60, 40)
-			btn.connect("pressed", self, "_on_value_chosen", [v])
+			if not v in valid_values:
+				btn.disabled = true
+				btn.modulate = Color(1, 1, 1, 0.35)
+			else:
+				btn.connect("pressed", self, "_on_value_chosen", [v])
 			_value_btn_grid.add_child(btn)
 
 	if _value_choice_popup != null:
 		_value_choice_popup.popup()
+	_update_choice_blocker()
 
 
 func _on_value_chosen(value):
@@ -317,6 +387,7 @@ func _on_value_chosen(value):
 		return  # Invalid value — stay in WAITING_FOR_CHOICE, popup stays open
 	if _value_choice_popup != null:
 		_value_choice_popup.hide()
+	_update_choice_blocker()
 	var action = {"action_type": _pending_action_type, "card_id": _pending_card_id}
 	action["selected_value"] = value
 	_pending_action_type = ""
@@ -328,6 +399,7 @@ func _on_value_chosen(value):
 func _on_value_cancel():
 	if _value_choice_popup != null:
 		_value_choice_popup.hide()
+	_update_choice_blocker()
 	if _state != State.WAITING_FOR_CHOICE:
 		return
 	_pending_action_type = ""
@@ -338,64 +410,64 @@ func _on_value_cancel():
 
 
 # ---------------------------------------------------------------------------
-# Gold Reveal popup
+# Hand Reset popup (GdV: non-advantage player has no playable Orange cards)
 # ---------------------------------------------------------------------------
 
-func _check_gold_reveal(snapshot):
+func _check_reset_hand(snapshot):
+	"""Open HandResetPopup ONLY during GdV for the local non-advantage player
+	who has no playable Incremento cards."""
 	if snapshot == null:
 		return
-	# Don't reopen if already in a choice or in a blocked state
 	if _state == State.WAITING_FOR_CHOICE or _state == State.ACTION_PENDING or _state == State.GAME_OVER:
 		return
+	# Only during Giro di Vantaggio (never during Safe Round)
+	var sr_type = str(snapshot.get("special_round_type", ""))
+	if sr_type != "advantage":
+		return
+	# Only if it's the local player's turn
+	var cur_idx = snapshot.get("current_player_index", -1)
+	var players = snapshot.get("players", [])
+	if cur_idx < 0 or cur_idx >= players.size():
+		return
+	var cur_pid = players[cur_idx].get("id", "")
+	if cur_pid != snapshot.get("local_player_id", "player_1"):
+		return
+	# Only for non-advantage player
+	var adv_pid = snapshot.get("special_round_player_id", null)
+	if cur_pid == adv_pid:
+		return
+	# Check available_actions: reset_hand present, no play_card
 	var acts = snapshot.get("available_actions", [])
-	var gold_cid = ""
-	var gold_name = ""
+	var has_reset = false
+	var has_play = false
 	for a in acts:
-		if a.get("action_type", "") == "reveal_gold":
-			gold_cid = a.get("card_id", "")
-			break
-	if gold_cid == "":
-		return
-
-	# Find the gold card name in the hand
-	for p in snapshot.get("players", []):
-		if p.get("id", "") == snapshot.get("local_player_id", "player_1"):
-			for c in p.get("hand", []):
-				if c.get("card_id", "") == gold_cid:
-					gold_name = c.get("name", "Gold")
-					break
-			break
-
-	_pending_action_type = "reveal_gold"
-	_pending_card_id = gold_cid
-	_state = State.WAITING_FOR_CHOICE
-
-	if _gold_card_label != null:
-		_gold_card_label.text = gold_name
-	if _gold_reveal_popup != null:
-		_gold_reveal_popup.popup()
+		var at = str(a.get("action_type", ""))
+		if at == "reset_hand":
+			has_reset = true
+		elif at == "play_card":
+			has_play = true
+	if has_reset and not has_play:
+		_state = State.WAITING_FOR_CHOICE
+		if _hand_reset_popup != null:
+			_hand_reset_popup.popup()
+	_update_choice_blocker()
 
 
-func _on_gold_reveal_yes():
-	if _gold_reveal_popup != null:
-		_gold_reveal_popup.hide()
+func _on_hand_reset_yes():
+	if _hand_reset_popup != null:
+		_hand_reset_popup.hide()
+	_update_choice_blocker()
 	if _state != State.WAITING_FOR_CHOICE:
 		return
-	var action = {"action_type": _pending_action_type, "card_id": _pending_card_id}
-	_pending_action_type = ""
-	_pending_card_id = ""
-	_pending_valid_values = []
-	perform_action(action)
+	perform_action({"action_type": "reset_hand"})
 
 
-func _on_gold_reveal_no():
-	if _gold_reveal_popup != null:
-		_gold_reveal_popup.hide()
+func _on_hand_reset_no():
+	if _hand_reset_popup != null:
+		_hand_reset_popup.hide()
+	_update_choice_blocker()
 	if _state != State.WAITING_FOR_CHOICE:
 		return
-	_pending_action_type = ""
-	_pending_card_id = ""
-	_pending_valid_values = []
 	_state = State.READY_FOR_INPUT
 
 
@@ -411,18 +483,14 @@ func _on_game_started(snapshot):
 		_state = State.GAME_OVER
 	else:
 		_state = State.READY_FOR_INPUT
-	_check_gold_reveal(snapshot)
+	_check_reset_hand(snapshot)
+	_update_choice_blocker()
 
 
 func _on_action_completed(result):
 	_last_snapshot = result.get("snapshot", null)
 	_last_events = result.get("events", [])
 	emit_signal("action_applied", result)
-	if _last_snapshot != null and _last_snapshot.get("winner", null) != null:
-		_apply_snapshot(_last_snapshot)
-		_clear_selection()
-		_state = State.GAME_OVER
-		return
 
 	# Start animation BEFORE applying snapshot so CardAnimator can clone
 	# the card texture from the pre-action hand state (before the card is removed).
@@ -479,6 +547,34 @@ func _play_activates_safe_round():
 	return false
 
 
+func _is_selected_card_blocked_by_sr():
+	"""True when the selected card is of the type currently blocked by an
+	active Safe Round (Giro Sicuro). Such cards are selectable (for Cambio
+	Carta) but must be rejected by Play. Mirrors the SR blocking rules."""
+	if _selected_card_id == "" or _last_snapshot == null:
+		return false
+	if not _last_snapshot.get("special_round_active", false):
+		return false
+	var sr_type = str(_last_snapshot.get("special_round_type", ""))
+	if sr_type != "safe":
+		return false
+	var blocked_type = str(_last_snapshot.get("blocked_type", "")).to_lower()
+	if blocked_type == "":
+		return false
+	var card = _selected_card_dict()
+	if card == null:
+		return false
+	var ct = str(card.get("card_type", "")).to_lower()
+	var name = str(card.get("name", ""))
+	if blocked_type == "incremento":
+		return ct == "increment" or ct == "jolly" or name == "+11"
+	elif blocked_type == "gold":
+		return ct == "gold" or name == "89"
+	elif blocked_type == "imbroglio":
+		return ct == "imbroglio"
+	return false
+
+
 func _open_safe_round_choice():
 	"""Open ValueChoicePopup for Safe Round blocked_type selection."""
 	_state = State.WAITING_FOR_CHOICE
@@ -505,6 +601,7 @@ func _open_safe_round_choice():
 
 	if _value_choice_popup != null:
 		_value_choice_popup.popup()
+	_update_choice_blocker()
 
 
 func _on_safe_round_choice_chosen(choice):
@@ -517,6 +614,7 @@ func _on_safe_round_choice_chosen(choice):
 
 	if _value_choice_popup != null:
 		_value_choice_popup.hide()
+	_update_choice_blocker()
 
 	var action = {"action_type": "play_card", "card_id": _pending_card_id}
 	action["blocked_type"] = choice
@@ -534,12 +632,19 @@ func _on_animation_finished():
 
 
 func _finish_post_action():
+	# GAME_OVER is set here, after the winning card animation has completed.
+	if _last_snapshot != null and _last_snapshot.get("winner", null) != null:
+		_clear_selection()
+		_state = State.GAME_OVER
+		return
+
 	_validate_selection(_last_snapshot)
 	if _selected_card_id == "":
 		_state = State.READY_FOR_INPUT
 	else:
 		_state = State.CARD_SELECTED
-	_check_gold_reveal(_last_snapshot)
+	_check_reset_hand(_last_snapshot)
+	_update_choice_blocker()
 
 
 func _on_action_rejected(error_message):
