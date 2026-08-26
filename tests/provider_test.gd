@@ -455,6 +455,7 @@ func _test_89_triggers_advantage_order():
 		{"card_type": "special", "category": "speciale", "destination": "piatto"})
 	cp.receive_card(c89)
 	gs.metadata["piatto"] = 50
+	gs.metadata["allow89"] = true
 	gs.metadata["turn_phase"] = "start"
 	gs.deck.add_card(_card("deck1", "+1", 1, "arancione", {"card_type": "increment"}))
 

@@ -89,19 +89,21 @@
 ├── scenes/                # Godot scene files
 │   └── CardFace.tscn      # Reusable card scene
 ├── tests/                 # Godot GDScript test suites
-│   ├── domain_test.gd/.tscn        # Domain operations (55+ assert)
-│   ├── rules_test.gd/.tscn         # Rules validation (60 test, 191 assert)
+│   ├── domain_test.gd/.tscn        # Domain operations (55+ assert, deck 60/4/6)
+│   ├── rules_test.gd/.tscn         # Rules validation (62 test, 191 assert)
 │   ├── provider_test.gd/.tscn      # Provider snapshot/event tests (97 assert)
 │   ├── presenter_test.gd/.tscn     # Presenter/UI tests (84 assert)
 │   ├── board_test.gd/.tscn         # Board visual tests (44 assert)
-│   ├── game_controller_test.gd/.tscn  # GameController state/input tests (197 assert)
+│   ├── game_controller_test.gd/.tscn  # GameController state/input tests (211 assert)
+│   ├── card_selection_test.gd/.tscn  # Card selection fix verification (40+ assert)
 │   ├── card_animator_test.gd/.tscn    # CardAnimator FIFO tests (5 assert)
 │   ├── card_animator_test2.gd/.tscn   # CardAnimator multi-player tests (20 assert)
 │   ├── demo_integration_test.gd/.tscn # GC + LocalGameEngine real games (5 assert)
 │   ├── demo_verification_test.gd/.tscn # 4-player event verification (9 assert)
 │   ├── manual_game_test.gd/.tscn    # ManualGame 1H+3C tests (25 assert)
+│   ├── plus11_gold_transformation_test.gd/.tscn # +11 Gold chain creates new Gold (3 assert)
 │   └── manual_game_smoke.tscn       # Real-scene wiring + CPU auto-play smoke test
-├── test_roadto100_rules.py  # Python unit tests for RoadTo100 rules (74 tests)
+├── test_roadto100_rules.py  # Python unit tests for RoadTo100 rules (87 tests)
 └── run_simulations.py       # Python batch simulation runner
 ```
 
@@ -142,9 +144,11 @@ Be the player who brings the **Plate** (shared score) to **100 or more**.
 | Increment (+1 to +10) | Orange | 30 (3× each) | Add value to Plate |
 | Jolly (+1 to +10 variable) | Orange | 10 | Player chooses value to add |
 | Gold (12,23,34,45,56,67,78) | Gold | 7 | Set Plate to that value (stays on Plate) |
-| 89 | Purple | 3 | Set Plate to 89 + start Advantage Round |
-| +11 | Red | 5 | Add 11; wins instantly during Advantage Round |
-| Imbroglio (-15 to +15, ≠0) | Green | 5 | Player chooses value (keeps Plate 0-99) |
+| 89 | Purple | 3 | Set Plate to 89 + start Advantage Round (blocked until Plate ≥ 20) |
+| +11 | Red | 4 | Add 11; wins instantly during Advantage Round; Gold chain transforms to next Gold |
+| Imbroglio (-15 to +15, ≠0) | Green | 6 | Player chooses value (keeps Plate 0-99) |
+
+**Note:** Carta 89 is blocked until the Plate reaches 20 or more (`allow89` rule). The +11 Gold chain creates a new transformed Gold card on the Plate without consuming the original.
 
 ### Game Flow
 - Each player starts with 3 cards.
@@ -192,13 +196,13 @@ from games.roadto100.rules import RoadTo100Rules  # (to be implemented)
 
 ### Testing
 
-**Python tests:** Standard library `unittest` — 74 tests in `test_roadto100_rules.py` covering Gold chain, GdV lifecycle, +11 during GdV, card 89 behavior, deck reconstitution, bounce rule, and Safe Round (Giro Sicuro) activation/persistence/lifecycle. Run with:
+**Python tests:** Standard library `unittest` — 87 tests in `test_roadto100_rules.py` covering Gold chain, GdV lifecycle, +11 during GdV, card 89 behavior (allow89), deck reconstitution, bounce rule, Safe Round (Giro Sicuro) activation/persistence/lifecycle. Run with:
 
 ```bash
 python3 -m unittest test_roadto100_rules
 ```
 
-**Godot tests:** Headless GDScript suites in `tests/` — 12 suites (domain_test, rules_test, provider_test, presenter_test, board_test, game_controller_test, card_animator_test, card_animator_test2, demo_integration_test, demo_verification_test, manual_game_test, manual_game_smoke), ~732+ total assertions. Run with:
+**Godot tests:** Headless GDScript suites in `tests/` — 15+ suites (domain_test, rules_test, provider_test, presenter_test, board_test, game_controller_test, card_selection_test, card_animator_test, card_animator_test2, demo_integration_test, demo_verification_test, manual_game_test, plus11_gold_transformation_test), ~750+ total assertions. Run with:
 
 ```bash
 /home/sumaka/bin/Godot3 --path . tests/<suite>.tscn --no-window
@@ -225,12 +229,17 @@ python3 -m unittest test_roadto100_rules
 | DebugDemo (Auto demo, integrated with GC) | ✅ Functional |
 | Python Simulator | ✅ Complete and frozen |
 | **Special Round / Giro Sicuro** | ✅ **F1–F8 completed — Passaggio F closed (2026-08-19)** |
-| **UI popup fixes (post-F8)** | ✅ Jolly/Imbroglio all-values with engine validation, GS blocked cards disabled, HandResetPopup GdV-only + turn continuation, SR badge, victory anim pre-GAME_OVER, popup interference resolved |
-| **Manual Game 1H+3C** | ✅ Implemented (ManualGame.gd + "Inizia Partita" button) — CPU auto-play, pause for human turn, mutual exclusion with DebugDemo; **open bug: hand cards not selectable during human turn** |
+| **UI popup fixes (post-F8)** | ✅ Jolly/Imbroglio all-values, GS blocked cards, HandResetPopup GdV-only, SR badge, victory anim, popup modality |
+| **Card selection fix** | ✅ **Resolved** (HUDLayer.mouse_filter=IGNORE, test card_selection_test) |
+| **Manual Game 1H+3C** | ✅ **Working** — CPU auto-play, human turn pauses automation, card selection functional |
+| **allow89 rule** | ✅ Carta 89 blocked until Plate ≥ 20 (Rules + UI dimming) |
+| **Deck composition** | ✅ Updated: 6 Imbrogli / 4 +11 (total 60) |
+| **+11 Gold chain** | ✅ Creates new transformed Gold on Plate without consuming original |
+| **Single-player core gameplay** | ✅ **Complete and functional** |
 | Multiplayer | ❌ Not started |
-| AI (bot.py) | ❌ Not started |
+| AI (bot.py) | 🔲 Next — implement first AI assigned to player_2 |
 
-**Next work:** **Fix card selection in manual game** — during the human turn, clicking a hand card does nothing; `Gioca`/`Cambia` correctly prompt to select a card. Investigate the `CardFace → HandPresenter → card_selected → GameController` chain (mouse_filter on cards, node overlap, GC state).
+**Next work:** Implement first strategic AI for `player_2` (currently random CPU). See `simulator/ai/bot.py`.
 
 ---
 

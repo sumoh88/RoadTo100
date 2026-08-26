@@ -116,8 +116,8 @@ func _check_card_counts_by_type():
 		"increment": 30,
 		"jolly": 10,
 		"gold": 7,
-		"special": 8,   # 3 x card89 + 5 x +11
-		"imbroglio": 5,
+		"special": 7,   # 3 x card89 + 4 x +11
+		"imbroglio": 6,
 	}
 
 	var all_ok = true
@@ -181,10 +181,10 @@ func _check_card_counts_by_value():
 	# +11 cards
 	var p11_count = by_type_value.get("special:11", 0)
 	out += "   +11 cards: "
-	if p11_count == 5:
+	if p11_count == 4:
 		out += str(p11_count) + " [PASS]\n"
 	else:
-		out += str(p11_count) + " [FAIL - expected 5]\n"
+		out += str(p11_count) + " [FAIL - expected 4]\n"
 
 	return out
 

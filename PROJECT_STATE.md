@@ -1,6 +1,6 @@
 # RoadTo100 — Stato Progetto
 
-> Aggiornato al: 19 agosto 2026
+> Aggiornato al: 26 agosto 2026
 > Scopo: documento di avvio per future sessioni di sviluppo.
 
 ---
@@ -13,7 +13,11 @@ Il progetto è composto da due codebase separati:
 |---|---|
 | Simulatore Python | **Completato e congelato** |
 | Client Godot — Passaggio A→F | **Completo e verificato** (A→F chiusi) |
-| Modalità manuale 1 umano + 3 CPU | **Implementata** (ManualGame.gd, pulsante "Inizia Partita") — fix selezione carte in corso |
+| Modalità manuale 1 umano + 3 CPU | **Funzionante** (ManualGame.gd, pulsante "Inizia Partita", selezione carte corretta) |
+| Regola `allow89` | ✅ Implementata (carta 89 bloccata fino a Piatto ≥ 20) |
+| Mazzo aggiornato | ✅ 6 Imbrogli / 4 +11 (totale 60) |
+| +11 Gold chain | ✅ Rappresentazione corretta: crea nuova Gold nel Piatto senza consumare l'originale |
+| **Single-player core gameplay** | ✅ **Completato e funzionante** |
 
 ---
 
@@ -169,27 +173,30 @@ Tutte le azioni transitano esclusivamente per `GameController.perform_action(act
 
 | Suite | File | Assert | Esito |
 |---|---|---|---|
-| Domain | `tests/domain_test.gd` | 55+ | ✅ All PASS |
-| Rules | `tests/rules_test.gd` | 191 | ✅ 0 FAIL (60 test) |
+| Domain | `tests/domain_test.gd` | 55+ | ✅ All PASS (60 carte, 4 +11, 6 Imbroglio) |
+| Rules | `tests/rules_test.gd` | 191 | ✅ 0 FAIL (62 test) |
 | Provider | `tests/provider_test.gd` | 97 | ✅ 0 FAIL |
 | Presenter | `tests/presenter_test.gd` | 84 | ✅ 0 FAIL |
 | Board | `tests/board_test.gd` | 44 | ✅ 0 FAIL |
-| GameController | `tests/game_controller_test.gd` | 197 | ✅ 0 FAIL (incl. HandResetPopup scope, Jolly/Imbroglio choices) |
+| GameController | `tests/game_controller_test.gd` | 211 | ✅ 0 FAIL (incl. GdV blocking, popup re-open) |
+| Card Selection | `tests/card_selection_test.gd` | 40+ | ✅ 0 FAIL (fix HUDLayer.mouse_filter) |
 | CardAnimator | `tests/card_animator_test.gd` | 5 | ✅ 0 FAIL |
 | CardAnimator Multi-Player | `tests/card_animator_test2.gd` | 20 | ✅ 0 FAIL |
 | Demo Integrazione | `tests/demo_integration_test.gd` | 5 | ✅ 5/5 partite complete, nessun hang |
 | Demo Verifica Eventi | `tests/demo_verification_test.gd` | 9 | ✅ 0 FAIL |
 | Manual Game (1H+3C) | `tests/manual_game_test.gd` | 25 | ✅ 0 FAIL |
 | Manual Game Smoke | `tests/manual_game_smoke.tscn` | — | ✅ PASS |
+| +11 Gold Transformation | `tests/plus11_gold_transformation_test.gd` | 3 | ✅ 0 FAIL (Gold chain crea nuova Gold) |
+| +11/GS Bug Repro | `tests/manual_game_bug_11_test.gd` | 4 | ✅ 0 FAIL (bug confermato grafico, non logico) |
 
-**Test Python:** `test_roadto100_rules.py` — 74 test, 0 FAIL.
+**Test Python:** `test_roadto100_rules.py` — 87 test, 0 FAIL.
 
 ---
 
 ## TODO rimasti
 
-- [ ] **Fix selezione carte nel turno umano** (PROBLEMA APERTO): cliccando una carta della mano non accade nulla durante il turno umano; da verificare la catena `CardFace → HandPresenter → card_selected → GameController`.
-- [ ] **AI** (`simulator/ai/bot.py`): scheletro vuoto — opzionale, fase futura.
+- [x] ~~**Fix selezione carte nel turno umano**~~ — **RISOLTO** (HUDLayer.mouse_filter=IGNORE, test card_selection_test)
+- [ ] **AI avversaria** (`simulator/ai/bot.py`): implementare prima AI assegnata a `player_2` (CPU non casuale ma strategica).
 - [ ] **Multiplayer**: non iniziato.
 
 ---
@@ -500,7 +507,7 @@ Nuovo nodo `scripts/ManualGame.gd` che avvia una partita 1 umano + 3 CPU reusing
 
 ### Problema aperto — Prossimo step
 
-Durante il turno umano **le carte della mano non risultano selezionabili**: cliccando una carta non accade nulla; `Gioca`/`Cambia` rispondono correttamente chiedendo di selezionare una carta. Da verificare la catena `CardFace → HandPresenter → card_selected → GameController` (mouse_filter delle carte, overlap con altri nodi, stato GC).
+~~Durante il turno umano **le carte della mano non risultano selezionabili**: cliccando una carta non accade nulla.~~ **RISOLTO** (26 agosto 2026): causa era `HUDLayer.mouse_filter=PASS` che intercettava i click. Fix: `mouse_filter=IGNORE`. Test: `card_selection_test.gd`.
 
 ### Nota non bloccante
 
@@ -512,7 +519,74 @@ Tutte le suite verdi: GC 197, Provider 97, Presenter 84, Board 44, Rules 191, ma
 
 ### Prossimo passo consigliato (alternative post-F)
 
-1. **Fix selezione carte nel turno umano** — PROBLEMA APERTO sopra; bloccante per l'esperienza di gioco.
-2. **Migliorie UI/UX** — Texture carte definitive, effetti sonori, schermata di vittoria, animazioni più ricche.
-3. **AI per simulatore Python** (`simulator/ai/bot.py`): scheletro vuoto, strategie di gioco.
+1. ~~**Fix selezione carte nel turno umano**~~ — **RISOLTO** (sessione 26 agosto 2026)
+2. **AI per simulatore Python** (`simulator/ai/bot.py`): prossima implementazione per player_2.
+3. **Migliorie UI/UX** — Texture carte definitive, effetti sonori, schermata di vittoria, animazioni più ricche.
 4. **Multiplayer** (`RemoteGameAdapter`): architettura definita, implementazione futura.
+
+---
+
+## ULTIMA SESSIONE (26 agosto 2026)
+
+### Single-player core gameplay completato
+
+Chiusura della fase single-player con tutte le correzioni e miglioramenti finali:
+
+#### Fix selezione carte (RISOLTO)
+
+**Causa:** `HUDLayer` (Control full-screen) aveva `mouse_filter = 1` (PASS), che intercettava i click destinati alle carte della mano. I pulsanti d'azione funzionavano perché sono figli di HUDLayer.
+
+**Soluzione:** `HUDLayer.mouse_filter = 2` (IGNORE) — trasparente ai click sulle carte sottostanti.
+
+**Test:** `tests/card_selection_test.gd` — verifica strutturale del fix + catena completa click → CardFace.clicked → HandPresenter.card_selected → GameController selection.
+
+#### Regola `allow89`
+
+**Implementazione:** Carta 89 non giocabile fino a Piatto ≥ 20 permanentemente.
+
+- **Python** (`games/roadto100/rules.py`): `game.metadata["allow89"] = False` → True quando plateau ≥ 20
+- **GDScript** (`engine/RoadTo100Rules.gd`): stessa logica
+- **Provider** (`engine/LocalGameEngine.gd`): `"allow89"` nello snapshot
+- **UI** (`scripts/HandPresenter.gd`): carta 89 dimmed quando `allow89=false`
+- **GameController** (`scripts/GameController.gd`): guardia `_is_selected_card_89_not_allowed()`
+
+**Test Python:** `TestAllow89` — 8 test, tutti OK.
+
+#### Mazzo aggiornato (6 Imbrogli / 4 +11)
+
+- **Python:** `games/roadto100/card_database.py` — `PLUS11_COPIES=4`, `IMBROGLIO_COPIES=6`
+- **GDScript:** `engine/CardDatabase.gd` — `range(4)` / `range(6)`
+- **Test:** `tests/domain_test.gd` aggiornati (7 special, 6 imbroglio)
+
+#### +11 Gold chain — rappresentazione corretta
+
+**Problema:** La +11 giocata dopo una Gold via Gold chain appariva come carta generica sul Piatto invece che come la Gold risultante.
+
+**Soluzione minima in `RoadTo100Rules.gd`:**
+- Quando `gold_chain_value != null`, si crea una nuova `CardData` con `card_id="transformed_gold_<val>"` e `card_type="gold"`
+- Questa viene aggiunta a `plateau_cards` invece della +11 originale
+- La +11 segue i normali flussi (scarto)
+
+**Test:** `tests/plus11_gold_transformation_test.gd` — verifica:
+- Gold 45 → +11 → plateau contiene Gold 56 trasformata (ID unico)
+- Gold originale non consumata (ID diverso dalla trasformata)
+
+#### Popup/GS/GdV fixes
+
+- **Popup modality:** popup non si chiudono più con click esterno durante WAITING_FOR_CHOICE (re-open via `popup_hide` signal + `call_deferred`)
+- **GdV visual dimming:** carte non-Incremento oscurate durante Giro di Vantaggio (`_card_blocked_by_gdv`)
+
+#### Stato test finale
+
+| Suite | Esito |
+|---|---|
+| Python (test_roadto100_rules.py) | 87/87 OK |
+| domain_test | ✅ PASS |
+| rules_test | ✅ PASS (62 test, 191 assert) |
+| provider_test | ✅ PASS |
+| game_controller_test | ✅ PASS (211 assert) |
+| card_selection_test | ✅ PASS |
+| plus11_gold_transformation_test | ✅ PASS |
+| Tutte le altre suite | ✅ PASS |
+
+**Totale: ~750+ GDScript assertions + 87 Python tests — tutti verdi.**

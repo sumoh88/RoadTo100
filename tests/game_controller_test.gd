@@ -1644,6 +1644,13 @@ func _run_all():
 	out += _test_popup_outside_click_does_not_close()
 	out += _test_scene_input_blocker_config()
 
+	out += "\n--- GdV Card Blocking ---\n"
+	out += _test_gdv_blocks_non_increment_cards()
+
+	out += "\n--- Popup Re-open Protection ---\n"
+	out += _test_value_choice_popup_reopens_on_accidental_close()
+	out += _test_hand_reset_popup_reopens_on_accidental_close()
+
 	out += "\n--- Summary ---\n"
 	out += "  Assertions passed: " + str(passed) + "\n"
 	out += "  Assertions failed: " + str(failed) + "\n"
@@ -1653,3 +1660,116 @@ func _run_all():
 			out += "  - " + str(m) + "\n"
 	out += "\n========================================\n"
 	return out
+
+func _test_value_choice_popup_reopens_on_accidental_close():
+	"""Verify ValueChoicePopup re-opens if closed while state is WAITING_FOR_CHOICE."""
+	var d = _setup_gc_with_popup_nodes()
+	var gc = d["gc"]; var mp = d["mp"]; var hp = d["hp"]; var tp = d["tp"]
+	var vp = d["vp"]
+
+	var snap = _make_hand_snapshot([
+		{"card_id":"jolly_0","name":"Jolly","value":null,"color":"arancione","card_type":"jolly"},
+	])
+	mp.emit_signal("game_started", snap)
+	hp.emit_signal("card_selected", "jolly_0")
+	tp.emit_signal("play_pressed")  # opens the value-choice popup
+	var o1 = _assert_eq(gc.get_state(), 3, "WAITING_FOR_CHOICE state before close")
+	var o2 = _assert(vp.visible == true, "popup visible before close")
+
+	# Simulate accidental close and trigger the re-open handler
+	vp.hide()
+	gc._on_value_choice_popup_hide()
+	
+	# Call the deferred function directly (simulating next frame)
+	gc.re_popup_value_choice()
+	
+	var o3 = _assert(vp.visible == true, "popup re-opened after accidental close")
+	var o4 = _assert_eq(gc.get_state(), 3, "state still WAITING_FOR_CHOICE")
+
+	vp.queue_free()
+	if d.has("hr"): d["hr"].queue_free()
+	_cleanup(d)
+	return "  VC popup re-open:        " + ("[PASS]\n" if (o1 and o2 and o3 and o4) else "[FAIL]\n")
+
+func _test_hand_reset_popup_reopens_on_accidental_close():
+	"""Verify HandResetPopup re-opens if closed while state is WAITING_FOR_CHOICE."""
+	var d = _setup_gc_with_popup_nodes()
+	var gc = d["gc"]; var mp = d["mp"]; var hp = d["hp"]; var tp = d["tp"]
+	var hr = d["hr"]
+
+	# Setup GdV scenario that triggers hand reset popup
+	var snap = {
+		"players": [{
+			"id": "player_1",
+			"name": "Player 1",
+			"hand_count": 1,
+			"hand": [
+				{"card_id":"gold_12", "name": "12", "value": 12, "color": "Gold", "card_type": "gold"},
+			]
+		}],
+		"current_player_index": 0,
+		"piatto": 89,
+		"special_round_active": true,
+		"special_round_type": "advantage",
+		"special_round_player_id": "player_2",
+		"local_player_id": "player_1",
+		"available_actions": [
+			{"action_type": "reset_hand"},
+			{"action_type": "change_card", "card_id": "gold_12"},
+		]
+	}
+	mp.emit_signal("game_started", snap)
+	var o1 = _assert_eq(gc.get_state(), 3, "WAITING_FOR_CHOICE for hand reset")
+	var o2 = _assert(hr.visible == true, "HandResetPopup visible")
+
+	# Simulate accidental close and trigger the re-open handler
+	hr.hide()
+	gc._on_hand_reset_popup_hide()
+	
+	# Call the deferred function directly (simulating next frame)
+	gc.re_popup_hand_reset()
+	
+	var o3 = _assert(hr.visible == true, "popup re-opened after accidental close")
+	var o4 = _assert_eq(gc.get_state(), 3, "state still WAITING_FOR_CHOICE")
+
+	hr.queue_free()
+	_cleanup(d)
+	return "  HR popup re-open:        " + ("[PASS]\n" if (o1 and o2 and o3 and o4) else "[FAIL]\n")
+
+func _test_gdv_blocks_non_increment_cards():
+	"""Verify that non-Incremento cards are blocked during Giro di Vantaggio."""
+	var d = _setup_gc_with_hand()
+	var gc = d["gc"]; var mp = d["mp"]; var hp = d["hp"]
+
+	# Setup GdV scenario with a Gold card in hand (should be blocked)
+	var snap = {
+		"players": [{
+			"id": "player_1",
+			"name": "Player 1",
+			"hand_count": 2,
+			"hand": [
+				{"card_id": "gold_12", "name": "12", "value": 12, "color": "Gold", "card_type": "gold"},
+				{"card_id": "+5", "name": "+5", "value": 5, "color": "Orange", "card_type": "increment"},
+			]
+		}],
+		"current_player_index": 0,
+		"piatto": 89,
+		"special_round_active": true,
+		"special_round_type": "advantage",
+		"special_round_player_id": "player_2",
+	}
+	mp.emit_signal("game_started", snap)
+
+	# Select the Gold card (should be blocked during GdV)
+	hp.emit_signal("card_selected", "gold_12")
+	
+	var o1 = _assert_eq(gc.get_state(), 2, "GdV: CARD_SELECTED state after selecting Gold")
+
+	# Try to play the Gold card — should be rejected with tip
+	mp.send_action_called = false
+	gc._on_play_pressed()
+	
+	var o2 = _assert(!mp.send_action_called, "GdV: play rejected for non-Incremento (Gold)")
+
+	_cleanup(d)
+	return "  GdV blocks non-inc:      " + ("[PASS]\n" if (o1 and o2) else "[FAIL]\n")

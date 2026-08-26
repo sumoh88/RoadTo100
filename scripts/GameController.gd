@@ -189,6 +189,8 @@ func _find_popups():
 			_value_cancel_btn = _child(vb, "CancelBtn")
 			if _value_cancel_btn != null:
 				_value_cancel_btn.connect("pressed", self, "_on_value_cancel")
+		# Prevent popup from closing on outside click while waiting for choice
+		_value_choice_popup.connect("popup_hide", self, "_on_value_choice_popup_hide")
 
 	_hand_reset_popup = _child(ol, "HandResetPopup")
 	if _hand_reset_popup != null:
@@ -202,6 +204,8 @@ func _find_popups():
 					_hand_reset_yes_btn.connect("pressed", self, "_on_hand_reset_yes")
 				if _hand_reset_no_btn != null:
 					_hand_reset_no_btn.connect("pressed", self, "_on_hand_reset_no")
+		# Prevent popup from closing on outside click while waiting for choice
+		_hand_reset_popup.connect("popup_hide", self, "_on_hand_reset_popup_hide")
 
 
 func _child(p, name):
@@ -270,9 +274,19 @@ func _clear_selection():
 func _on_play_pressed():
 	if _state == State.CARD_SELECTED and _selected_card_id != "":
 		# Safe Round: a blocked card is selectable (for Cambio Carta) but not playable.
+		# 89 blocked until Piatto reaches 20 or more.
+		if _is_selected_card_89_not_allowed():
+			if _turn != null and _turn.has_method("show_tip"):
+				_turn.show_tip("Bloccata: Piatto troppo basso.")
+			return
 		if _is_selected_card_blocked_by_sr():
 			if _turn != null and _turn.has_method("show_tip"):
-				_turn.show_tip("Carta bloccata da Giro Sicuro: non giocabile")
+				_turn.show_tip("Bloccata: Giro Sicuro")
+			return
+		# GdV: non-Incremento cards are not playable during Giro di Vantaggio.
+		if _is_selected_card_blocked_by_gdv():
+			if _turn != null and _turn.has_method("show_tip"):
+				_turn.show_tip("Bloccata: Giro di Vantaggio")
 			return
 		var ct = _get_selected_card_type()
 		if ct == "jolly" or ct == "imbroglio":
@@ -409,6 +423,22 @@ func _on_value_cancel():
 	_state = State.CARD_SELECTED
 
 
+func _on_value_choice_popup_hide():
+	"""Prevent ValueChoicePopup from closing on outside click while waiting for choice.
+	
+	If the state is still WAITING_FOR_CHOICE, immediately re-show the popup to
+	prevent a hardlock where the game waits for a choice but no popup is visible.
+	"""
+	if _state == State.WAITING_FOR_CHOICE and _value_choice_popup != null:
+		call_deferred("re_popup_value_choice")
+
+
+func re_popup_value_choice():
+	if _state == State.WAITING_FOR_CHOICE and _value_choice_popup != null:
+		_value_choice_popup.popup()
+	_update_choice_blocker()
+
+
 # ---------------------------------------------------------------------------
 # Hand Reset popup (GdV: non-advantage player has no playable Orange cards)
 # ---------------------------------------------------------------------------
@@ -469,6 +499,22 @@ func _on_hand_reset_no():
 	if _state != State.WAITING_FOR_CHOICE:
 		return
 	_state = State.READY_FOR_INPUT
+
+
+func _on_hand_reset_popup_hide():
+	"""Prevent HandResetPopup from closing on outside click while waiting for choice.
+	
+	If the state is still WAITING_FOR_CHOICE, immediately re-show the popup to
+	prevent a hardlock where the game waits for a choice but no popup is visible.
+	"""
+	if _state == State.WAITING_FOR_CHOICE and _hand_reset_popup != null:
+		call_deferred("re_popup_hand_reset")
+
+
+func re_popup_hand_reset():
+	if _state == State.WAITING_FOR_CHOICE and _hand_reset_popup != null:
+		_hand_reset_popup.popup()
+	_update_choice_blocker()
 
 
 # ---------------------------------------------------------------------------
@@ -574,6 +620,36 @@ func _is_selected_card_blocked_by_sr():
 		return ct == "imbroglio"
 	return false
 
+func _is_selected_card_89_not_allowed():
+	"""True when the selected card is 89 but allow89 is still false (Piatto < 20)."""
+	if _selected_card_id == "" or _last_snapshot == null:
+		return false
+	if _last_snapshot.get("allow89", false):
+		return false
+	var card = _selected_card_dict()
+	if card == null:
+		return false
+	return str(card.get("name", "")) == "89"
+
+func _is_selected_card_blocked_by_gdv():
+	"""True when the selected card is not playable during Giro di Vantaggio.
+	
+	During GdV, only Incremento cards (increment/jolly/+11) can be played.
+	All other cards should be rejected by Play.
+	"""
+	if _selected_card_id == "" or _last_snapshot == null:
+		return false
+	if not _last_snapshot.get("special_round_active", false):
+		return false
+	var sr_type = str(_last_snapshot.get("special_round_type", ""))
+	if sr_type != "advantage":
+		return false
+	var card = _selected_card_dict()
+	if card == null:
+		return false
+	var ct = str(card.get("card_type", "")).to_lower()
+	var name = str(card.get("name", ""))
+	return not (ct == "increment" or ct == "jolly" or name == "+11")
 
 func _open_safe_round_choice():
 	"""Open ValueChoicePopup for Safe Round blocked_type selection."""

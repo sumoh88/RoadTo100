@@ -32,11 +32,11 @@ func build_deck():
 	# 3 x 89
 	for c in range(3):
 		cards.append(self.make_89_card(c))
-	# 5 x +11
-	for c in range(5):
+	# 4 x +11
+	for c in range(4):
 		cards.append(self.make_plus11_card(c))
-	# 5 x Imbroglio
-	for c in range(5):
+	# 6 x Imbroglio
+	for c in range(6):
 		cards.append(self.make_imbroglio_card(c))
 	return cards
 

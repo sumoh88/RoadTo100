@@ -333,7 +333,17 @@ Bug risolti:
 
 ## Prossimo lavoro
 
-**Passaggio E completato (Step 1–8).** Tutte le animazioni sono ora visibili in-game. Il GameController gestisce correttamente l'intero flusso di gioco: selezione carte → bottoni → popup → animazioni → snapshot.
+### ✅ Single-player core gameplay completato (26 agosto 2026)
+
+Il gioco è ora completamente giocabile in single-player con:
+
+- **1 umano + 3 CPU funzionante**: selezione carte corretta, animazioni fluide, tutti i meccanismi di gioco implementati
+- **Regola `allow89`**: carta 89 bloccata fino a Piatto ≥ 20 (implementata in Rules, Provider, UI con dimming)
+- **Mazzo aggiornato**: 6 Imbrogli / 4 +11 (totale 60 carte, coerente Python/Godot)
+- **+11 Gold chain rappresentazione**: quando una +11 viene giocata dopo una Gold, crea una nuova Gold nel Piatto senza consumare l'originale
+- **UI/popup fixes**: GdV blocking visivo, popup modalità corretta (non si chiudono con click esterno)
+
+**Test completati:** 87 Python + ~750+ GDScript assertions — tutti verdi.
 
 ### Passaggio F — Special Round (Giro Sicuro) — ✅ COMPLETATO (F1–F8)
 
@@ -356,9 +366,9 @@ Dettagli completi di F1–F8 in `PROJECT_STATE.md` sezione "Passaggio F".
 
 ### Attività successive al Passaggio F
 
-1. **Fix selezione carte nel turno umano** (PROBLEMA APERTO) — Durante il turno umano le carte della mano non risultano selezionabili; cliccando una carta non accade nulla. Da verificare la catena `CardFace → HandPresenter → card_selected → GameController`.
-2. **Migliorie UI/UX** — Texture carte definitive, effetti sonori, schermata di vittoria, animazioni più ricche.
-3. **AI per simulatore** — `simulator/ai/bot.py` (scheletro vuoto). Richiede implementazione di strategie di gioco per test di bilanciamento.
+1. ~~**Fix selezione carte nel turno umano**~~ — **RISOLTO** (HUDLayer.mouse_filter=IGNORE, test card_selection_test)
+2. **AI per simulatore** — `simulator/ai/bot.py` (implementazione in corso). Prima AI assegnata a `player_2`.
+3. **Migliorie UI/UX** — Texture carte definitive, effetti sonori, schermata di vittoria, animazioni più ricche.
 4. **Multiplayer** — `RemoteGameAdapter` + networking. Architettura definita, implementazione futura.
 
 ### Modalità manuale 1 umano + 3 CPU — ✅ Implementata (21 agosto 2026)
@@ -377,4 +387,4 @@ Tutte le suite di test sono verdi. Eseguire i test dopo ogni modifica:
 /home/sumaka/bin/Godot3 --path /media/sumaka/Giochi/GodotProjects/roadTo100 tests/<suite>.tscn --no-window
 ```
 
-Suite disponibili: `game_controller_test`, `presenter_test`, `board_test`, `provider_test`, `rules_test`, `domain_test`, `card_animator_test`, `card_animator_test2`, `demo_integration_test`, `demo_verification_test`, `manual_game_test`, `manual_game_smoke`.
+Suite disponibili: `game_controller_test`, `presenter_test`, `board_test`, `provider_test`, `rules_test`, `domain_test`, `card_animator_test`, `card_animator_test2`, `demo_integration_test`, `demo_verification_test`, `manual_game_test`, `manual_game_smoke`, `card_selection_test`, `plus11_gold_transformation_test`.

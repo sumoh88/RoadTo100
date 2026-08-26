@@ -59,6 +59,9 @@ func apply_snapshot(s):
 	if sr_active and sr_type == "safe":
 		blocked_type = str(s.get("blocked_type", "")).to_lower()
 
+	# Determine if 89 is allowed (allow89 becomes true once Piatto reaches 20+)
+	var allow89 = s.get("allow89", false)
+
 	for i in range(n):
 		var c = CARD_FACE.instance()
 		c.name = "HC" + str(i)
@@ -70,6 +73,14 @@ func apply_snapshot(s):
 		# Darken blocked cards during Safe Round (still selectable so the
 		# player can use Cambio Carta on them; Play is guarded in GameController).
 		if _card_blocked_by_sr(hd[i], blocked_type):
+			c.modulate = Color(1, 1, 1, 0.45)
+
+		# Darken 89 cards when not yet allowed (Piatto < 20); still selectable for Cambio Carta.
+		if not allow89 and str(hd[i].get("name", "")) == "89":
+			c.modulate = Color(1, 1, 1, 0.45)
+
+		# Darken non-Incremento cards during Giro di Vantaggio (only Incremento/Jolly/+11 playable).
+		if sr_active and sr_type == "advantage" and _card_blocked_by_gdv(hd[i]):
 			c.modulate = Color(1, 1, 1, 0.45)
 		# Always connect clicked so every card stays selectable.
 		c.connect("clicked", self, "_on_card_face_clicked")
@@ -96,6 +107,15 @@ func _card_blocked_by_sr(card_data, blocked_type):
 		return ct == "imbroglio"
 	return false
 
+func _card_blocked_by_gdv(card_data):
+	"""Check if a card is not playable during Giro di Vantaggio (visual only).
+	
+	During GdV, only Incremento cards (increment/jolly/+11) can be played.
+	All other cards should be darkened.
+	"""
+	var ct = str(card_data.get("card_type", "")).to_lower()
+	var name = str(card_data.get("name", ""))
+	return not (ct == "increment" or ct == "jolly" or name == "+11")
 
 func _clear():
 	for c in _card_faces:

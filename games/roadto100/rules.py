@@ -144,6 +144,7 @@ class RoadTo100RuleSet(RuleSet):
         game.metadata["special_round_type"] = "advantage"
         game.metadata["blocked_type"] = ""
         game.metadata["target_score"] = TARGET_SCORE
+        game.metadata["allow89"] = False
         game.metadata["turn_phase"] = "start"
 
         for player in game.players:
@@ -235,7 +236,8 @@ class RoadTo100RuleSet(RuleSet):
                             )
                         )
             elif self._is_special_89_card(card):
-                actions.append(RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": card}))
+                if game.metadata.get("allow89", False):
+                    actions.append(RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": card}))
             elif self._is_plus11_card(card):
                 actions.append(RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": card}))
             elif self._is_gold_card(card):
@@ -309,6 +311,8 @@ class RoadTo100RuleSet(RuleSet):
             return 0 <= candidate <= TARGET_SCORE - 1
 
         if self._is_special_89_card(card):
+            if not game.metadata.get("allow89", False):
+                return False
             return card.value is not None
 
         if self._is_plus11_card(card):
@@ -473,6 +477,10 @@ class RoadTo100RuleSet(RuleSet):
 
         # Store capped plateau value (advantage wins may show raw value for display).
         game.metadata["piatto"] = min(plateau, TARGET_SCORE) if not is_adv_player else plateau
+
+        # allow89: once the Piatto reaches 20 or more, 89 becomes permanently playable.
+        if not game.metadata.get("allow89", False) and plateau >= 20:
+            game.metadata["allow89"] = True
 
         game.metadata["turn_phase"] = "action"
         drawn_card = self._draw_or_reshuffle(game)

@@ -251,6 +251,8 @@ func _run_all():
 	tests_run += 1
 	out += _test_f7_new_gs_replacement_updates_blocked()
 	tests_run += 1
+	out += _test_plus11_gold_then_increment_no_chain()
+	tests_run += 1
 	out += _test_f7_plus11_no_preceding_gold_keeps_gs()
 	tests_run += 1
 	out += _test_f7_plus11_after_gold_replaces_gs()
@@ -1665,6 +1667,32 @@ func _f7_gs_context(p2_cards, plateau_cards, piatto, blocked_type):
 	game.current_player_index = 1
 	game.set_current_player(p2)
 	return {"p1": p1, "p2": p2, "game": game}
+
+
+func _test_plus11_gold_then_increment_no_chain():
+	"""Gold 56 → +5 → +11: plateau_cards=[Gold56, +5], last is +5 (non-Gold).
+	The +11 must NOT activate gold chain; any active GS stays unchanged."""
+	var rules = Rules.new()
+	var ctx = _f7_gs_context([plus11_card(0)], [gold_card(56), increment_card(5, 0)], 61, "Incremento")
+	var p2 = ctx["p2"]; var game = ctx["game"]
+	
+	# Before +11: verify last card is +5 (not Gold)
+	var last_card = game.metadata["plateau_cards"][game.metadata["plateau_cards"].size() - 1]
+	var o0 = _assert_eq(str(last_card.name), "+5", "plus11_gold_then_inc_last", "Last played must be +5")
+	
+	rules.apply_action(game, {"action_type": "play_card", "card": p2.hand.cards[0]})
+	
+	var o1 = _assert_eq(game.metadata["piatto"], 72, "plus11_gold_then_inc_piatto", "+11 adds 11 without gold chain")
+	var o2 = _assert_true(bool(game.metadata.get("special_round_active", false)),
+		"plus11_gold_then_inc_sr", "GS must stay active")
+	var o3 = _assert_eq(str(game.metadata.get("special_round_player_id", "")), "p1",
+		"plus11_gold_then_inc_pid", "Original GS activator unchanged")
+	var o4 = _assert_eq(str(game.metadata.get("blocked_type", "")), "Incremento",
+		"plus11_gold_then_inc_bt", "GS blocked_type unchanged")
+	if o0 and o1 and o2 and o3 and o4:
+		_test("plus11 gold then increment no chain")
+		return "  P11 G→inc no chain:    [PASS]\n"
+	return "  P11 G→inc no chain:    [FAIL]\n"
 
 
 func _test_f7_plus11_no_preceding_gold_keeps_gs():

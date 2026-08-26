@@ -140,8 +140,9 @@ func _on_timer_timeout():
 
 		# F7: a play_card that activates a Safe Round carries its blocked_type
 		# on the same single action.
-		if at == "play_card" and _play_activates_safe_round(snapshot, cid):
-			action_dict["blocked_type"] = SAFE_ROUND_CHOICES[randi() % SAFE_ROUND_CHOICES.size()]
+		if at == "play_card":
+			if _play_activates_safe_round(snapshot, cid):
+				action_dict["blocked_type"] = SAFE_ROUND_CHOICES[randi() % SAFE_ROUND_CHOICES.size()]
 
 		_gc.perform_action(action_dict)
 

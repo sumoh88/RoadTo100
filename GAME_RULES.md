@@ -335,13 +335,13 @@ Se un giocatore che non è in Vantaggio non possiede alcuna Carta Incremento nel
 
 - 10 Jolly.
 
-5 Carte Incremento Speciali +11.
+4 Carte Incremento Speciali +11.
 
 7 Carte Gold normali.
 
 3 Carte Gold Speciali 89.
 
-5 Carte Imbroglio.
+6 Carte Imbroglio.
 
 Totale:
 

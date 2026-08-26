@@ -139,6 +139,7 @@ func initialize_game(game):
 	game.metadata["special_round_type"] = "advantage"
 	game.metadata["blocked_type"] = ""
 	game.metadata["target_score"] = 100  # TARGET_SCORE
+	game.metadata["allow89"] = false
 	game.metadata["turn_phase"] = "start"
 
 	for player in game.players:
@@ -225,7 +226,8 @@ func get_available_actions(game):
 						"selected_value": chosen_value
 					})
 		elif _is_special_89_card(card):
-			actions.append({"action_type": PLAY_CARD_ACTION, "card": card})
+			if game.metadata.get("allow89", false):
+				actions.append({"action_type": PLAY_CARD_ACTION, "card": card})
 		elif _is_plus11_card(card):
 			actions.append({"action_type": PLAY_CARD_ACTION, "card": card})
 		elif _is_gold_card(card):
@@ -293,6 +295,8 @@ func validate_action(game, action_dict):
 		return 0 <= candidate and candidate <= 99
 
 	if _is_special_89_card(card):
+		if not game.metadata.get("allow89", false):
+			return false
 		return card.value != null
 
 	if _is_plus11_card(card):
@@ -367,6 +371,7 @@ func apply_action(game, action_dict):
 			var last_card = plateau_cards[plateau_cards.size() - 1]
 			if _is_gold_card(last_card):
 				gold_chain_value = GOLD_CHAIN.get(int(last_card.value), null)
+
 		if gold_chain_value != null:
 			increment = gold_chain_value
 			game.metadata["special_round_active"] = true
@@ -381,6 +386,15 @@ func apply_action(game, action_dict):
 				game.metadata["special_round_type"] = "safe"
 				game.metadata["blocked_type"] = str(action_dict.get("blocked_type", ""))
 			game.metadata["_plus11_gold_chain"] = true
+			# Create a new Gold card instance from the transformation
+			var transformed_gold = CardData.new(
+				"transformed_gold_" + str(gold_chain_value),
+				str(gold_chain_value),
+				gold_chain_value,
+				"Gold",
+				{"card_type": "gold"}
+			)
+			game.metadata["_plus11_transformed_card"] = transformed_gold
 		else:
 			increment = 11
 	elif _is_gold_card(card):
@@ -446,7 +460,12 @@ func apply_action(game, action_dict):
 
 	if not game.metadata.has("plateau_cards"):
 		game.metadata["plateau_cards"] = []
-	game.metadata["plateau_cards"].append(card)
+	# If +11 was transformed via Gold chain, use the transformed Gold card
+	var card_for_plateau = card
+	if game.metadata.has("_plus11_transformed_card"):
+		card_for_plateau = game.metadata["_plus11_transformed_card"]
+		game.metadata.erase("_plus11_transformed_card")
+	game.metadata["plateau_cards"].append(card_for_plateau)
 
 	# Victory check: +11 wins at Piatto >= 100 (ignores bounce and GdV restriction).
 	# GdV advantage player wins at >= 100. Safe Round: normal victory at 100.
@@ -473,6 +492,10 @@ func apply_action(game, action_dict):
 		game.metadata["piatto"] = plateau
 	else:
 		game.metadata["piatto"] = min(plateau, 100)
+
+	# allow89: once the Piatto reaches 20 or more, 89 becomes permanently playable.
+	if not game.metadata.get("allow89", false) and plateau >= 20:
+		game.metadata["allow89"] = true
 
 	game.metadata["turn_phase"] = "action"
 	var drawn_card = _draw_or_reshuffle(game)

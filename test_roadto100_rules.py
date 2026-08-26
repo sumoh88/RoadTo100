@@ -1866,5 +1866,331 @@ class TestF7SafeRoundPlayability(unittest.TestCase):
         self.assertNotIn("imbroglio_0", play_cids)
 
 
+class TestAllow89(unittest.TestCase):
+    """Tests for the allow89 rule: 89 is not playable until Piatto reaches 20+."""
+
+    def test_new_game_allow89_false(self):
+        """New game starts with allow89=False."""
+        p1 = Player("p1", "P1", Hand())
+        game = make_game(players=[p1], deck_cards=[], metadata={"piatto": 0, "target_score": TARGET_SCORE})
+        rules = RoadTo100RuleSet()
+        rules.initialize_game(game)
+        self.assertFalse(game.metadata.get("allow89", False))
+
+    def test_piatto_19_blocks_89_in_available_actions(self):
+        """Piatto at 19: 89 not in available_actions but Cambio Carta is."""
+        c89 = card89(0)
+        p1 = Player("p1", "P1", Hand([c89, increment_card(5)]))
+        game = make_game(
+            players=[p1],
+            deck_cards=[],
+            metadata={"piatto": 19, "allow89": False, "target_score": TARGET_SCORE},
+        )
+        game.set_current_player(p1)
+        rules = RoadTo100RuleSet()
+        actions = rules.get_available_actions(game)
+        play_cids = [a.parameters.get("card").card_id for a in actions if a.action_type == PLAY_CARD_ACTION]
+        self.assertNotIn("89_0", play_cids, "89 must not be playable when allow89=False")
+        change_cids = [a.parameters.get("card").card_id for a in actions if a.action_type == CHANGE_CARD_ACTION]
+        self.assertIn("89_0", change_cids, "Cambio Carta for 89 must still be available")
+
+    def test_piatto_19_blocks_89_in_validate_action(self):
+        """Piatto at 19: validate_action rejects playing 89."""
+        c89 = card89(0)
+        p1 = Player("p1", "P1", Hand([c89]))
+        game = make_game(
+            players=[p1],
+            deck_cards=[],
+            metadata={"piatto": 19, "allow89": False, "target_score": TARGET_SCORE},
+        )
+        game.set_current_player(p1)
+        rules = RoadTo100RuleSet()
+        action = RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": c89})
+        self.assertFalse(rules.validate_action(game, action))
+
+    def test_piatto_reaches_20_sets_allow89_true(self):
+        """Playing a card that brings Piatto to 20 sets allow89=True."""
+        c5 = increment_card(5)
+        p1 = Player("p1", "P1", Hand([c5]))
+        game = make_game(
+            players=[p1],
+            deck_cards=[],
+            metadata={"piatto": 15, "allow89": False, "target_score": TARGET_SCORE},
+        )
+        game.set_current_player(p1)
+        rules = RoadTo100RuleSet()
+        action = RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": c5})
+        self.assertTrue(rules.validate_action(game, action))
+        rules.apply_action(game, action)
+        # Piatto was 15, played +5 → 20
+        self.assertEqual(int(game.metadata.get("piatto", 0)), 20)
+        self.assertTrue(game.metadata.get("allow89", False), "allow89 must be True after Piatto reaches 20")
+
+    def test_allow89_stays_true_after_imbroglio_decrease(self):
+        """Once allow89=True, it stays true even if Imbroglio lowers Piatto below 20."""
+        imb = imbroglio_card(0)
+        p1 = Player("p1", "P1", Hand([imb]))
+        game = make_game(
+            players=[p1],
+            deck_cards=[],
+            metadata={"piatto": 25, "allow89": True, "target_score": TARGET_SCORE},
+        )
+        game.set_current_player(p1)
+        rules = RoadTo100RuleSet()
+        # Play Imbroglio with -15 → Piatto goes from 25 to 10
+        action = RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": imb, "selected_value": -15})
+        self.assertTrue(rules.validate_action(game, action))
+        rules.apply_action(game, action)
+        self.assertEqual(int(game.metadata.get("piatto", 0)), 10)
+        self.assertTrue(game.metadata.get("allow89", False), "allow89 must remain True after decrease")
+
+    def test_allow89_true_89_playable_in_available_actions(self):
+        """When allow89=True, 89 appears in available play actions."""
+        c89 = card89(0)
+        p1 = Player("p1", "P1", Hand([c89]))
+        game = make_game(
+            players=[p1],
+            deck_cards=[],
+            metadata={"piatto": 25, "allow89": True, "target_score": TARGET_SCORE},
+        )
+        game.set_current_player(p1)
+        rules = RoadTo100RuleSet()
+        actions = rules.get_available_actions(game)
+        play_cids = [a.parameters.get("card").card_id for a in actions if a.action_type == PLAY_CARD_ACTION]
+        self.assertIn("89_0", play_cids, "89 must be playable when allow89=True")
+
+    def test_allow89_true_89_passes_validate_action(self):
+        """When allow89=True, validate_action accepts playing 89."""
+        c89 = card89(0)
+        p1 = Player("p1", "P1", Hand([c89]))
+        game = make_game(
+            players=[p1],
+            deck_cards=[],
+            metadata={"piatto": 25, "allow89": True, "target_score": TARGET_SCORE},
+        )
+        game.set_current_player(p1)
+        rules = RoadTo100RuleSet()
+        action = RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": c89})
+        self.assertTrue(rules.validate_action(game, action))
+
+    def test_new_game_after_previous_allow89_true_starts_false(self):
+        """initialize_game resets allow89 to False for a new game."""
+        p1 = Player("p1", "P1", Hand())
+        game = make_game(
+            players=[p1],
+            deck_cards=[],
+            metadata={"piatto": 50, "allow89": True, "target_score": TARGET_SCORE},
+        )
+        rules = RoadTo100RuleSet()
+        # Re-initialize simulates a new game
+        rules.initialize_game(game)
+        self.assertFalse(game.metadata.get("allow89", False))
+
+
+class TestPlus11DuringSafeRound(unittest.TestCase):
+    """Tests for +11 behavior during Safe Round (GS).
+    
+    Per GAME_RULES.md: A +11 only activates a new Special Round if it was
+    played immediately after a Gold card. Otherwise, any active GS continues
+    unchanged with the same activator and blocked_type.
+    """
+
+    def test_plus11_non_gold_prev_during_gs_no_new_sr(self):
+        """+11 during GS where previous card was NOT Gold: no new GS activated."""
+        p1 = Player("p1", "P1", Hand())
+        c5 = increment_card(5)
+        p2 = Player("p2", "P2", Hand([plus11_card(0)]))
+        game = make_game(
+            players=[p1, p2],
+            deck_cards=[],
+            metadata={
+                "piatto": 30,
+                "plateau_cards": [gold_card(12), c5],
+                "special_round_active": True,
+                "special_round_player_id": "p1",
+                "special_round_type": "safe",
+                "blocked_type": "Gold",  # Gold blocked, so +11 (Incremento type) is allowed
+                "_activator_has_played_next": False,
+                "target_score": TARGET_SCORE,
+            },
+        )
+        game.set_current_player(p2)
+        rules = RoadTo100RuleSet()
+        
+        action = RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": plus11_card(0)})
+        self.assertTrue(rules.validate_action(game, action))
+        rules.apply_action(game, action)
+        
+        # GS must remain active with same activator and blocked_type
+        self.assertTrue(game.metadata.get("special_round_active", False), "GS must remain active")
+        self.assertEqual(game.metadata.get("special_round_player_id"), "p1", "Same activator")
+        self.assertEqual(game.metadata.get("special_round_type"), "safe", "Still Safe Round")
+        self.assertEqual(game.metadata.get("blocked_type"), "Gold", "Same blocked_type")
+        # Piatto should be 30 + 11 = 41
+        self.assertEqual(int(game.metadata.get("piatto", 0)), 41)
+
+    def test_plus11_gold_prev_during_gs_new_sr(self):
+        """+11 during GS where previous card WAS a Gold: new GS activated."""
+        p1 = Player("p1", "P1", Hand())
+        p2 = Player("p2", "P2", Hand([plus11_card(0)]))
+        game = make_game(
+            players=[p1, p2],
+            deck_cards=[],
+            metadata={
+                "piatto": 23,
+                "plateau_cards": [gold_card(23)],
+                "special_round_active": True,
+                "special_round_player_id": "p1",
+                "special_round_type": "safe",
+                "blocked_type": "Gold",
+                "_activator_has_played_next": False,
+                "target_score": TARGET_SCORE,
+            },
+        )
+        game.set_current_player(p2)
+        rules = RoadTo100RuleSet()
+        
+        action = RoadTo100Action(
+            action_type=PLAY_CARD_ACTION, 
+            parameters={"card": plus11_card(0), "blocked_type": "Imbroglio"}
+        )
+        self.assertTrue(rules.validate_action(game, action))
+        rules.apply_action(game, action)
+        
+        # New GS should be activated with +11 player as activator
+        self.assertTrue(game.metadata.get("special_round_active", False))
+        self.assertEqual(game.metadata.get("special_round_player_id"), "p2", "+11 player is new activator")
+        self.assertEqual(game.metadata.get("special_round_type"), "safe", "New Safe Round")
+        self.assertEqual(game.metadata.get("blocked_type"), "Imbroglio", "New blocked_type from +11")
+        # Piatto should be 34 (Gold chain: 23 → 34)
+        self.assertEqual(int(game.metadata.get("piatto", 0)), 34)
+
+    def test_plus11_gold78_prev_activates_gdv(self):
+        """+11 after Gold 78: activates Giro di Vantaggio (GdV)."""
+        p1 = Player("p1", "P1", Hand())
+        p2 = Player("p2", "P2", Hand([plus11_card(0)]))
+        game = make_game(
+            players=[p1, p2],
+            deck_cards=[],
+            metadata={
+                "piatto": 78,
+                "plateau_cards": [gold_card(78)],
+                "special_round_active": True,
+                "special_round_player_id": "p1",
+                "special_round_type": "safe",
+                "blocked_type": "Gold",  # Gold blocked, so +11 (Incremento type) is allowed
+                "_activator_has_played_next": False,
+                "target_score": TARGET_SCORE,
+            },
+        )
+        game.set_current_player(p2)
+        rules = RoadTo100RuleSet()
+        
+        action = RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": plus11_card(0)})
+        self.assertTrue(rules.validate_action(game, action))
+        rules.apply_action(game, action)
+        
+        # GdV should be activated
+        self.assertTrue(game.metadata.get("special_round_active", False))
+        self.assertEqual(game.metadata.get("special_round_player_id"), "p2")
+        self.assertEqual(game.metadata.get("special_round_type"), "advantage", "GdV activated")
+        self.assertEqual(str(game.metadata.get("blocked_type", "")), "", "No blocked_type in GdV")
+        # Piatto should be 89 (Gold chain: 78 → 89)
+        self.assertEqual(int(game.metadata.get("piatto", 0)), 89)
+
+    def test_gs_preserved_after_plus11_non_gold(self):
+        """After +11 (non-Gold prev), GS lifecycle parameters are unchanged."""
+        p1 = Player("p1", "P1", Hand())
+        imb = imbroglio_card(0)
+        p2 = Player("p2", "P2", Hand([plus11_card(0)]))
+        game = make_game(
+            players=[p1, p2],
+            deck_cards=[],
+            metadata={
+                "piatto": 45,
+                "plateau_cards": [gold_card(12), imb],
+                "special_round_active": True,
+                "special_round_player_id": "p1",
+                "special_round_type": "safe",
+                "blocked_type": "Gold",
+                "_activator_has_played_next": False,
+                "target_score": TARGET_SCORE,
+            },
+        )
+        game.set_current_player(p2)
+        rules = RoadTo100RuleSet()
+        
+        sr_before = {
+            "active": game.metadata.get("special_round_active"),
+            "player_id": game.metadata.get("special_round_player_id"),
+            "type": game.metadata.get("special_round_type"),
+            "blocked_type": game.metadata.get("blocked_type"),
+        }
+        
+        action = RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": plus11_card(0)})
+        rules.apply_action(game, action)
+        
+        # GS state must be identical
+        self.assertEqual(sr_before["active"], game.metadata.get("special_round_active"))
+        self.assertEqual(sr_before["player_id"], game.metadata.get("special_round_player_id"))
+        self.assertEqual(sr_before["type"], game.metadata.get("special_round_type"))
+        self.assertEqual(sr_before["blocked_type"], game.metadata.get("blocked_type"))
+
+
+class TestPlus11RealisticFlow(unittest.TestCase):
+    """Test with full game flow to catch bugs that unit tests miss."""
+
+    def test_gold_then_increment_then_plus11_no_chain(self):
+        """Gold 56 → +5 → +11: the +11 must NOT activate gold chain."""
+        p1 = Player("p1", "P1", Hand())
+        p2 = Player("p2", "P2", Hand())
+        p3 = Player("p3", "P3", Hand())
+        
+        # Create deck with specific cards
+        deck_cards = [gold_card(56), increment_card(5, 1), plus11_card(1)] + [increment_card(v) for v in range(1, 10)] * 3
+        
+        game = make_game(players=[p1, p2, p3], deck_cards=deck_cards)
+        rules = RoadTo100RuleSet()
+        rules.initialize_game(game)
+        
+        # Setup: manually place cards in hands for testing
+        p1.clear_hand(); p2.clear_hand(); p3.clear_hand()
+        
+        g56 = gold_card(56)
+        c5 = increment_card(5, 2)
+        p11 = plus11_card(2)
+        
+        p1.receive_card(g56)
+        game.set_current_player(p1)
+        game.metadata["piatto"] = 0
+        game.metadata["plateau_cards"] = []
+        # Play Gold 56
+        rules.apply_action(game, RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": g56}))
+        
+        # Now P2 plays +5
+        p2.receive_card(c5)
+        game.set_current_player(p2)
+        rules.apply_action(game, RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": c5}))
+        
+        # Check: what is plateau_cards[-1]?
+        last_played = game.metadata["plateau_cards"][-1]
+        self.assertEqual(last_played.name, "+5", "Last played should be +5")
+        
+        # Now P3 plays +11
+        p3.receive_card(p11)
+        game.set_current_player(p3)
+        rules.apply_action(game, RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": p11}))
+        
+        # The +11 should NOT have activated a gold chain (no new SR from P3)
+        # If there was an SR before, it should be unchanged
+        # Piatto should be: 56 (gold) + 5 (increment) + 11 (just increment) = 72
+        self.assertEqual(int(game.metadata.get("piatto", 0)), 72, "Piatto should be 56+5+11=72")
+        
+        # If an SR was active, it should NOT have been replaced by P3
+        sr_player = game.metadata.get("special_round_player_id")
+        # Either no SR or the original activator (from Gold 56 = P1)
+        self.assertNotEqual(sr_player, "p3", "+11 must not activate new SR when prev card was +5")
+
+
 if __name__ == "__main__":
     unittest.main()

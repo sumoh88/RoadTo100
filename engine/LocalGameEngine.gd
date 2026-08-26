@@ -218,6 +218,7 @@ func _build_snapshot():
 		"special_round_player_id": game_state.metadata.get("special_round_player_id", null),
 		"special_round_type": str(game_state.metadata.get("special_round_type", "advantage")),
 		"blocked_type": str(game_state.metadata.get("blocked_type", "")),
+		"allow89": game_state.metadata.get("allow89", false),
 		"winner": game_state.winner.player_id if game_state.winner != null else null,
 		"turn_number": game_state.turn_number,
 		"available_actions": _build_available_actions(),
