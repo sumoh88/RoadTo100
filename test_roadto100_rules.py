@@ -1821,11 +1821,12 @@ class TestF7SafeRoundPlayability(unittest.TestCase):
         return RoadTo100RuleSet(), p2, game
 
     def test_change_card_when_no_playable_in_gs(self):
-        """GS with blocked type == the player's only card type: RESET_HAND + Cambio."""
+        """GS with blocked type == the player's only card type: Cambio Carta only (no reset_hand)."""
         rules, p2, game = self._gs_game([imbroglio_card()], "Imbroglio")
         actions = rules.get_available_actions(game)
         types = [a.action_type for a in actions]
-        self.assertIn(RESET_HAND_ACTION, types)
+        # reset_hand is ONLY allowed during GdV, not GS
+        self.assertNotIn(RESET_HAND_ACTION, types, "reset_hand should not be available during GS")
         self.assertNotIn(PLAY_CARD_ACTION, types)
         change_cards = [a.parameters.get("card") for a in actions
                         if a.action_type == CHANGE_CARD_ACTION]

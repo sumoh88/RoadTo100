@@ -197,9 +197,14 @@ class RoadTo100RuleSet(RuleSet):
 
         # During Special Round: non-activator players with no playable cards
         # get RESET_HAND; Cambio Carta remains available in all cases.
+        # reset_hand is ONLY allowed during GdV (advantage type), not GS (safe type)
         if special_round_active and not is_special_round_active and current_player.hand.cards:
+            sr_type = str(game.metadata.get("special_round_type", "advantage"))
             if not any(card_playable(c) for c in current_player.hand.cards):
-                actions.append(RoadTo100Action(action_type=RESET_HAND_ACTION))
+                # Only allow reset_hand during GdV (not GS), and only if not already used this turn
+                if sr_type == "advantage" and not game.metadata.get("_reset_hand_used_this_turn", False):
+                    actions.append(RoadTo100Action(action_type=RESET_HAND_ACTION))
+                # Cambio Carta is always available
                 for card in current_player.hand.cards:
                     actions.append(RoadTo100Action(action_type=CHANGE_CARD_ACTION, parameters={"card": card}))
                 return actions
@@ -279,8 +284,12 @@ class RoadTo100RuleSet(RuleSet):
             # Always valid when the player has no cards (safety net)
             if not current_player.hand.cards:
                 return True
-            # During Special Round: valid for non-activator players
-            return special_round_active and not is_special_round_player
+            # During GdV (advantage only): valid for non-activator players, but only once per turn
+            sr_type = str(game.metadata.get("special_round_type", "advantage"))
+            if special_round_active and not is_special_round_player and sr_type == "advantage":
+                # Check if reset_hand was already used this turn
+                return not game.metadata.get("_reset_hand_used_this_turn", False)
+            return False
 
         if action.action_type == CHANGE_CARD_ACTION:
             return isinstance(card, Card) and current_player.has_card(card)
@@ -342,6 +351,8 @@ class RoadTo100RuleSet(RuleSet):
             game.deck.shuffle()
             for card in self._draw_cards(game, 3):
                 current_player.receive_card(card)
+            # Mark that reset_hand was used this turn
+            game.metadata["_reset_hand_used_this_turn"] = True
             game.metadata["turn_phase"] = "action"
             return
 
@@ -491,6 +502,9 @@ class RoadTo100RuleSet(RuleSet):
         """Advance the game flow after an action has been processed."""
         if not game.players:
             return
+
+        # Reset the reset_hand flag for the new turn
+        game.metadata["_reset_hand_used_this_turn"] = False
 
         previous_player_index = game.current_player_index
 

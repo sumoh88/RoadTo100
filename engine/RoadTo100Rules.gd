@@ -191,7 +191,10 @@ func get_available_actions(game):
 				has_playable = true
 				break
 		if not has_playable:
-			actions.append({"action_type": RESET_HAND_ACTION})
+			# reset_hand is ONLY allowed during GdV (advantage type), not GS (safe type)
+			var sr_type_val = str(game.metadata.get("special_round_type", "advantage"))
+			if sr_type_val == "advantage" and !game.metadata.get("_reset_hand_used_this_turn", false):
+				actions.append({"action_type": RESET_HAND_ACTION})
 			for card in current_player.hand.cards:
 				actions.append({"action_type": CHANGE_CARD_ACTION, "card": card})
 			return actions
@@ -264,7 +267,12 @@ func validate_action(game, action_dict):
 	if action_dict["action_type"] == RESET_HAND_ACTION:
 		if current_player.hand.cards.empty():
 			return true
-		return advantage_turn and not is_advantage_player
+		# During GdV (advantage only): valid for non-activator players, but only once per turn
+		var sr_type = str(game.metadata.get("special_round_type", "advantage"))
+		if advantage_turn and not is_advantage_player and sr_type == "advantage":
+			# Check if reset_hand was already used this turn
+			return !game.metadata.get("_reset_hand_used_this_turn", false)
+		return false
 
 	if action_dict["action_type"] == CHANGE_CARD_ACTION:
 		return card != null and typeof(card) == TYPE_OBJECT and current_player.has_card(card)
@@ -326,6 +334,8 @@ func apply_action(game, action_dict):
 		game.deck.shuffle()
 		for c in _draw_cards(game, 3):
 			current_player.receive_card(c)
+		# Mark that reset_hand was used this turn
+		game.metadata["_reset_hand_used_this_turn"] = true
 		game.metadata["turn_phase"] = "action"
 		return
 
@@ -507,6 +517,9 @@ func advance_turn(game):
 	(mirrors advance_turn)"""
 	if game.players.empty():
 		return
+
+	# Reset the reset_hand flag for the new turn
+	game.metadata["_reset_hand_used_this_turn"] = false
 
 	var previous_player_index = game.current_player_index
 

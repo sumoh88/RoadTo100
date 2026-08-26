@@ -3,6 +3,7 @@ extends Node
 # ManualGame — 1 Human + 3 CPU playable mode.
 # Routes all game logic through GameController (parent node).
 # CPU players: chosen automatically from available_actions (same as DebugDemo).
+# player_2 uses the new RoadTo100AI; other CPUs use random selection.
 # Human player (local_player_id): automation pauses, UI input handles the turn.
 # After the human completes their action, CPU resumes automatically.
 
@@ -19,6 +20,9 @@ const SAFE_ROUND_CHOICES = ["Incremento", "Gold", "Imbroglio"]
 
 var stats = {"play_card":0,"change_card":0,"reset_hand":0,"advantage_turns":0}
 
+# AI instance for player_2 (new strategic bot)
+var _ai_player2 = null
+
 
 func _ready():
 	_gc = get_parent()
@@ -27,6 +31,10 @@ func _ready():
 	timer.wait_time = step_delay_ms / 1000.0
 	timer.connect("timeout", self, "_on_timer_timeout")
 	add_child(timer)
+
+	# Initialize AI for player_2
+	var ai_class = load("res://engine/RoadTo100AI.gd")
+	_ai_player2 = ai_class.new()
 
 	if _gc != null and _gc.has_signal("action_applied"):
 		_gc.connect("action_applied", self, "_on_gc_action_applied")
@@ -120,7 +128,21 @@ func _on_timer_timeout():
 		_schedule_next_step()
 		return
 
-	var action = _choose_action(acts)
+	# Check if this is player_2's turn (use AI for them)
+	var cur_player_idx = int(snapshot.get("current_player_index", -1))
+	var players = snapshot.get("players", [])
+	var cur_player_id = ""
+	if cur_player_idx >= 0 and cur_player_idx < players.size():
+		cur_player_id = str(players[cur_player_idx].get("id", ""))
+
+	var action
+	if cur_player_id == "player_2" and _ai_player2 != null:
+		# Use the new strategic AI for player_2
+		action = _ai_player2.select_action(acts, snapshot)
+	else:
+		# Other CPUs use random selection
+		action = _choose_action(acts)
+
 	if action == null:
 		_schedule_next_step()
 		return
@@ -131,12 +153,16 @@ func _on_timer_timeout():
 	if at == "play_card" or at == "change_card":
 		var action_dict = {"action_type": at, "card_id": cid}
 
-		# Handle Jolly/Imbroglio: pick first available value from choices
-		var choices = action.get("choices", [])
-		if choices.size() > 0:
-			var params = choices[0].get("parameters", {})
-			for k in params.keys():
-				action_dict[k] = params[k]
+		# If AI explicitly chose a value (Jolly/Imbroglio), use it
+		if action.has("selected_value"):
+			action_dict["selected_value"] = action["selected_value"]
+		else:
+			# Fallback: pick first available value from choices
+			var choices = action.get("choices", [])
+			if choices.size() > 0:
+				var params = choices[0].get("parameters", {})
+				for k in params.keys():
+					action_dict[k] = params[k]
 
 		# F7: a play_card that activates a Safe Round carries its blocked_type
 		# on the same single action.
