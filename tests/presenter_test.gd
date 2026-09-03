@@ -70,7 +70,11 @@ func _test_all_textures():
 	ok = ok and _assert(r.texture(cd89) != null, "spe89 texture")
 	var p89 = r.path(cd89)
 	_assert(p89 != null and p89.ends_with("spe89.png"), "spe89 path: " + str(p89))
-
+	# 100
+	var cd100 = {"card_type": "special", "name": "100", "value": 100}
+	ok = ok and _assert(r.texture(cd100) != null, "spe89 texture")
+	var p100 = r.path(cd100)
+	_assert(p100 != null and p100.ends_with("spe100.png"), "spe100 path: " + str(p100))
 	# +11
 	var cp11 = {"card_type": "special", "name": "+11", "value": 11}
 	ok = ok and _assert(r.texture(cp11) != null, "spe+11 texture")

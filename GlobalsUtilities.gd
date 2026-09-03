@@ -3,6 +3,7 @@ extends Node
 onready var sr_active = false
 onready var selected_value = ""
 onready var gameStarted = false
+onready var plateValue = 0
 
 
 const THRESHOLD_PIANO: int = 30

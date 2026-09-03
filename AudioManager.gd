@@ -132,6 +132,7 @@ func _ready():
 	set_menu_music()
 
 func _process(delta):
+	set_plate_value(GlobalsUtilities.plateValue)
 	set_special_round_active(GlobalsUtilities.sr_active)
 
 # =========================

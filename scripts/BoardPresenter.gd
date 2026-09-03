@@ -143,9 +143,19 @@ func _update_sr_badges(snapshot):
 		badge.visible = sr_active and (pid == sr_player)
 
 func apply_snapshot(s):
-	if s == null: return
-	if _value_label != null: _value_label.text = str(s.get("piatto", 0))
-	if _draw_pile_count != null: _draw_pile_count.text = str(s.get("deck_count", 0))
+	if s == null:
+		return
+
+	var plate_value = int(s.get("piatto", 0))
+
+	if _value_label != null:
+		_value_label.text = str(plate_value)
+
+	AudioManager.set_plate_value(plate_value)
+	GlobalsUtilities.plateValue = plate_value
+
+	if _draw_pile_count != null:
+		_draw_pile_count.text = str(s.get("deck_count", 0))
 	if _discard_top != null:
 		var t = s.get("discard_top", null)
 		if t != null: _discard_top.texture = _resolver.texture(t)
@@ -204,7 +214,10 @@ func _update_plateau(stack):
 			# Carta Piatto (value card)
 			var p = TextureRect.new()
 			p.name = "PL" + str(i)
-			p.texture = PLATE_TEXTURE
+			if int(item["value"]) >= 100:
+				p.texture = load("res://imgs/spe100.png")
+			else:
+				p.texture = PLATE_TEXTURE
 			p.expand = true
 			p.mouse_filter = 2
 			# Match PlateauValueCard dimensions from Main.tscn
@@ -216,6 +229,8 @@ func _update_plateau(stack):
 			var lbl = Label.new()
 			# var lbl = valueLabel
 			lbl.text = str(item["value"])
+			if int(item["value"]) >= 100:
+				lbl.text = ""
 			lbl.align = Label.ALIGN_CENTER
 			lbl.valign = Label.VALIGN_CENTER
 			lbl.anchor_right = 1.0
@@ -235,7 +250,6 @@ func _update_plateau(stack):
 
 			p.add_child(lbl)
 			_permanent_layer.add_child(p)
-			AudioManager.set_plate_value(item["value"])
 
 func _update_opponents(players):
 	for idx in range(min(_opp_seats.size(), players.size() - 1)):
