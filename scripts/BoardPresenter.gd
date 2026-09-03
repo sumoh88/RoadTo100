@@ -68,8 +68,8 @@ func _ready():
 				_opp_seats.append(null)
 
 	# Create SR badges (special round indicators) for each seat + local player
-	if GlobalsUtilities.gameStarted:
-		_sr_badges = _create_sr_badges(ga, ol)
+#	if GlobalsUtilities.gameStarted:
+	_sr_badges = _create_sr_badges(ga, ol)
 	if ResolvedValueLabel == null:
 		ResolvedValueLabel = Label.new()
 		ResolvedValueLabel.text = ""
@@ -109,34 +109,38 @@ func _create_sr_badges(ga, ol):
 		var s = _ch(ol, seat_names[i])
 		if s != null:
 			var badge = main.get_node("GameArea/OpponentsLayer/"+seat_names[i]+"/SRBadge")
-			badge.visible = false
-			badge.mouse_filter = 2
-			badges[seat_map[i]] = badge
-			print("YES OPP")
+			if badge != null:
+				badge.visible = false
+				badge.mouse_filter = 2
+				badges[seat_map[i]] = badge
+				print("YES OPP")
 	# Local player (player_1): badge near the hand area
 	var lpa = _ch(ga, "LocalPlayerArea")
 	if lpa != null:
 		var badge = main.get_node("GameArea/LocalPlayerArea/SRBadge")
-		badge.visible = false
-		badge.mouse_filter = 2
-		badges["player_1"] = badge
-		print("YES pla")
+		if badge != null:
+			badge.visible = false
+			badge.mouse_filter = 2
+			badges["player_1"] = badge
+			print("YES pla")
 	print("return badges")
 	return badges
+
 
 
 func _update_sr_badges(snapshot):
 	"""Show the SR badge only on the player who activated the special round."""
 	var sr_active = snapshot.get("special_round_active", false)
 	var sr_player = snapshot.get("special_round_player_id", null)
+
+	GlobalsUtilities.sr_active = sr_active
+
 	for pid in _sr_badges.keys():
 		var badge = _sr_badges[pid]
-		if badge == null: continue
-		GlobalsUtilities.sr_active = snapshot.get("special_round_active", false)
-		badge.visible = sr_active and (pid == sr_player)
-		if badge.visible == true: print("badge: ",pid)
-		
+		if badge == null:
+			continue
 
+		badge.visible = sr_active and (pid == sr_player)
 
 func apply_snapshot(s):
 	if s == null: return

@@ -131,19 +131,8 @@ func _ready():
 	# Stato iniziale = menu: tutti e 5 al 100%
 	set_menu_music()
 
-#func _process(delta):
-#	if valueLabel == null or not is_instance_valid(valueLabel):
-#		var scene = get_tree().current_scene
-#
-#		if scene != null and scene.name == "Main":
-#			valueLabel = scene.get_node_or_null(
-#				"GameArea/BoardArea/PlateauZone/ValueLabel"
-#			)
-#
-#	if valueLabel != null and is_instance_valid(valueLabel):
-#		set_plate_value(int(valueLabel.text))
-#	set_special_round_active(GlobalsUtilities.sr_active)
-	#print("######################### VALUE: ", currValue)
+func _process(delta):
+	set_special_round_active(GlobalsUtilities.sr_active)
 
 # =========================
 #  CARICAMENTO CANZONI — rileva sottocartelle, sceglie casuale
