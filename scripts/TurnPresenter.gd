@@ -70,6 +70,7 @@ func show_tip(msg):
 
 
 func apply_snapshot(s):
+	GlobalsUtilities.selected_value = ""
 	if s == null: return
 	var t = s.get("turn_number", 0); var w = s.get("winner", null)
 	var sr = s.get("special_round_active", false); var lid = s.get("local_player_id", "p1")

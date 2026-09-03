@@ -69,8 +69,17 @@ _global_script_class_icons={
 [application]
 
 config/name="Road To 100"
-run/main_scene="res://Main.tscn"
+run/main_scene="res://MainMenu.tscn"
 config/icon="res://icon.png"
+
+[audio]
+
+default_bus_layout="res://default_env.tres"
+
+[autoload]
+
+GlobalsUtilities="*res://GlobalsUtilities.gd"
+AudioManager="*res://AudioManager.tscn"
 
 [display]
 

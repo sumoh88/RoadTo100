@@ -53,8 +53,10 @@
 │   │   ├── __init__.py
 │   │   ├── config.py      # Static game parameters
 │   │   ├── cards.py       # Card definitions (per CARD_DATABASE.md)
+│   │   ├── card_database.py # Deck builder + composition constants
 │   │   ├── actions.py     # Action models (play_card, change_card, reveal_gold, etc.)
 │   │   ├── rules.py       # RoadTo100RuleSet implementation (all rules incl. GdV bounce + Safe Round)
+│   │   ├── ai.py          # RoadTo100Bot — score-based strategic AI
 │   │   ├── setup.py       # Initial game state construction
 │   │   ├── helpers.py     # Shared utility functions
 │   │   └── README.md      # Architecture proposal document
@@ -74,6 +76,7 @@
 │   ├── GameConstants.gd   # Domain port from Python
 │   ├── CardDatabase.gd    # Domain port from Python
 │   ├── RoadTo100Rules.gd  # Rules port from Python (complete)
+│   ├── RoadTo100AI.gd     # Score-based strategic AI bot (player_2)
 │   ├── GameStateProvider.gd  # Abstract contract for game state provider
 │   ├── LocalGameEngine.gd    # Concrete local implementation
 │   └── TextureResolver.gd    # Centralized texture resolution
@@ -102,8 +105,11 @@
 │   ├── demo_verification_test.gd/.tscn # 4-player event verification (9 assert)
 │   ├── manual_game_test.gd/.tscn    # ManualGame 1H+3C tests (25 assert)
 │   ├── plus11_gold_transformation_test.gd/.tscn # +11 Gold chain creates new Gold (3 assert)
+│   ├── ai_test.gd/.tscn                        # AI decision patterns (3 assert)
+│   ├── ai_advanced_test.gd/.tscn               # AI win/bounce/Jolly/Imbroglio/+11 hold-back (7 assert)
 │   └── manual_game_smoke.tscn       # Real-scene wiring + CPU auto-play smoke test
 ├── test_roadto100_rules.py  # Python unit tests for RoadTo100 rules (87 tests)
+├── test_roadto100_ai.py     # Python unit tests for AI bot (6 tests)
 └── run_simulations.py       # Python batch simulation runner
 ```
 
@@ -196,10 +202,10 @@ from games.roadto100.rules import RoadTo100Rules  # (to be implemented)
 
 ### Testing
 
-**Python tests:** Standard library `unittest` — 87 tests in `test_roadto100_rules.py` covering Gold chain, GdV lifecycle, +11 during GdV, card 89 behavior (allow89), deck reconstitution, bounce rule, Safe Round (Giro Sicuro) activation/persistence/lifecycle. Run with:
+**Python tests:** Standard library `unittest` — 93 tests (87 in `test_roadto100_rules.py` + 6 in `test_roadto100_ai.py`) covering Gold chain, GdV lifecycle, +11 during GdV, card 89 behavior (allow89), deck reconstitution, bounce rule, Safe Round activation/persistence/lifecycle, AI strategic decisions. Run with:
 
 ```bash
-python3 -m unittest test_roadto100_rules
+python3 -m unittest test_roadto100_rules test_roadto100_ai
 ```
 
 **Godot tests:** Headless GDScript suites in `tests/` — 15+ suites (domain_test, rules_test, provider_test, presenter_test, board_test, game_controller_test, card_selection_test, card_animator_test, card_animator_test2, demo_integration_test, demo_verification_test, manual_game_test, plus11_gold_transformation_test), ~750+ total assertions. Run with:
@@ -236,10 +242,10 @@ python3 -m unittest test_roadto100_rules
 | **Deck composition** | ✅ Updated: 6 Imbrogli / 4 +11 (total 60) |
 | **+11 Gold chain** | ✅ Creates new transformed Gold on Plate without consuming original |
 | **Single-player core gameplay** | ✅ **Complete and functional** |
+| **AI player_2 (RoadTo100AI)** | ✅ **Implemented** — score-based strategic AI in Python (`games/roadto100/ai.py`) + GDScript (`engine/RoadTo100AI.gd`) |
 | Multiplayer | ❌ Not started |
-| AI (bot.py) | 🔲 Next — implement first AI assigned to player_2 |
 
-**Next work:** Implement first strategic AI for `player_2` (currently random CPU). See `simulator/ai/bot.py`.
+**Next work:** Multiplayer networking (`RemoteGameAdapter`), UI polish, or AI personality variants.
 
 ---
 

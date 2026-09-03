@@ -106,7 +106,7 @@ func send_action(action_dict):
 
 	# Build final snapshot
 	var snapshot = _build_snapshot()
-
+	
 	emit_signal("action_completed", {
 		"snapshot": snapshot,
 		"events": events
@@ -447,7 +447,13 @@ func _generate_events(before, rules_action, card):
 	if rules._is_gold_card(card) or rules._is_special_89_card(card):
 		dest = "plateau"
 
-	events.append({"type": "card_played", "player_id": cp_id, "card_id": card_id, "destination": dest})
+	events.append({
+		"type": "card_played",
+		"player_id": cp_id,
+		"card_id": card_id,
+		"destination": dest,
+		"resolved_value": rules_action.get("selected_value", null)
+	})
 
 	var is_plus11 = rules._is_plus11_card(card)
 	var was_advantage = before.get("special_round_active", false)

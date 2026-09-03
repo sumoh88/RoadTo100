@@ -1,7 +1,9 @@
 extends Node
 # BoardPresenter — updates board area, plateau stacking, opponent cards, rotations.
 # Does NOT contain game rules.
-
+onready var main = get_tree().current_scene
+onready var ResolvedValueLabel = main.get_node("GameArea/BoardArea/DiscardPile/TopCard/ResolvedValueLabel")
+onready var valueLabel = main.get_node("GameArea/BoardArea/PlateauZone/ValueLabel")
 const CARD_FACE = preload("res://scenes/CardFace.tscn")
 const PLATE_TEXTURE = preload("res://imgs/plate.png")
 
@@ -40,9 +42,8 @@ func _ready():
 				_plateau_value_card.visible = false
 			# Hide the static ValueLayer — its Label duplicates the value
 			# shown by dynamic plate labels and appears on top of Gold cards.
-			_value_layer = _ch(pl, "ValueLayer")
-			if _value_layer != null:
-				_value_layer.visible = false
+			if _value_label != null:
+				_value_label.visible = false
 		_draw_pile_count = _ch(_ch(brd, "DrawPile"), "CountLabel")
 		var dp = _ch(brd, "DiscardPile")
 		if dp != null: _discard_top = _ch(dp, "TopCard")
@@ -67,7 +68,11 @@ func _ready():
 				_opp_seats.append(null)
 
 	# Create SR badges (special round indicators) for each seat + local player
-	_sr_badges = _create_sr_badges(ga, ol)
+	if GlobalsUtilities.gameStarted:
+		_sr_badges = _create_sr_badges(ga, ol)
+	if ResolvedValueLabel == null:
+		ResolvedValueLabel = Label.new()
+		ResolvedValueLabel.text = ""
 
 func _up(name):
 	var p = get_parent()
@@ -94,30 +99,29 @@ func _create_sr_badges(ga, ol):
 	"""Create small Label badges on each seat and the local player area."""
 	var badges = {}
 	if ol == null:
+		print("ol null")
 		return badges
+		
 	# Opponent seats: player_2 (Top), player_3 (Left), player_4 (Right)
 	var seat_map = ["player_2", "player_3", "player_4"]
 	var seat_names = ["TopSeat", "LeftSeat", "RightSeat"]
 	for i in range(3):
 		var s = _ch(ol, seat_names[i])
 		if s != null:
-			var badge = Label.new()
-			badge.name = "SRBadge"
-			badge.text = "★"
+			var badge = main.get_node("GameArea/OpponentsLayer/"+seat_names[i]+"/SRBadge")
 			badge.visible = false
 			badge.mouse_filter = 2
-			s.add_child(badge)
 			badges[seat_map[i]] = badge
+			print("YES OPP")
 	# Local player (player_1): badge near the hand area
 	var lpa = _ch(ga, "LocalPlayerArea")
 	if lpa != null:
-		var badge = Label.new()
-		badge.name = "SRBadge"
-		badge.text = "★"
+		var badge = main.get_node("GameArea/LocalPlayerArea/SRBadge")
 		badge.visible = false
 		badge.mouse_filter = 2
-		lpa.add_child(badge)
 		badges["player_1"] = badge
+		print("YES pla")
+	print("return badges")
 	return badges
 
 
@@ -128,7 +132,10 @@ func _update_sr_badges(snapshot):
 	for pid in _sr_badges.keys():
 		var badge = _sr_badges[pid]
 		if badge == null: continue
+		GlobalsUtilities.sr_active = snapshot.get("special_round_active", false)
 		badge.visible = sr_active and (pid == sr_player)
+		if badge.visible == true: print("badge: ",pid)
+		
 
 
 func apply_snapshot(s):
@@ -141,9 +148,16 @@ func apply_snapshot(s):
 		else: _discard_top.texture = null
 		_discard_top.visible = t != null
 	var vstack = s.get("plateau_visual_stack", [])
+	var mathSign = ""
+	if not int(GlobalsUtilities.selected_value) >=1:
+		mathSign = "" 
+	else:
+		mathSign = "+"
+	ResolvedValueLabel.text = mathSign + str(GlobalsUtilities.selected_value)
 	_update_plateau(vstack)
 	_update_opponents(s.get("players", []))
 	_update_sr_badges(s)
+		
 
 func _update_plateau(stack):
 	"""Rebuild the plateau visual stack from the provider's visual stack data.
@@ -178,6 +192,8 @@ func _update_plateau(stack):
 			c.name = "SV" + str(i)
 			c.set_card(item["card"], false)
 			c.rect_position = Vector2(0, 0)
+			c.rect_min_size = Vector2(203, 292)
+			c.rect_size = Vector2(203, 292)
 			c.mouse_filter = 2
 			_permanent_layer.add_child(c)
 		elif item["type"] == "plate":
@@ -190,10 +206,11 @@ func _update_plateau(stack):
 			# Match PlateauValueCard dimensions from Main.tscn
 			p.rect_min_size = Vector2(203, 292)
 			p.rect_size = Vector2(203, 292)
-			p.rect_position = Vector2(0, -12)
+			p.rect_position = Vector2(0, 0)
 
 			# Value label overlay
 			var lbl = Label.new()
+			# var lbl = valueLabel
 			lbl.text = str(item["value"])
 			lbl.align = Label.ALIGN_CENTER
 			lbl.valign = Label.VALIGN_CENTER
@@ -201,7 +218,7 @@ func _update_plateau(stack):
 			lbl.anchor_bottom = 1.0
 			# Match the style from Main.tscn's PlateauValueCard ValueLabel
 			lbl.margin_left = -7.0
-			lbl.margin_top = 60.0
+			lbl.margin_top = 62.0
 #			lbl.add_color_override("font_color", Color(1, 1, 1, 1))
 			# Try to load the Dyuthi font at size 105
 			var font_data = load("res://fonts/Dyuthi.ttf")
@@ -214,6 +231,7 @@ func _update_plateau(stack):
 
 			p.add_child(lbl)
 			_permanent_layer.add_child(p)
+			AudioManager.set_plate_value(item["value"])
 
 func _update_opponents(players):
 	for idx in range(min(_opp_seats.size(), players.size() - 1)):
@@ -233,7 +251,6 @@ func _update_opponents(players):
 		var pivot = layer.rect_size / 2
 		layer.rect_pivot_offset = pivot
 		layer.rect_rotation = rotation
-
 		# Place cards at (0,0) in local unrotated space, properly spaced
 		var cw = 60; var sp = 6
 		for i in range(count):

@@ -333,6 +333,18 @@ Bug risolti:
 
 ## Prossimo lavoro
 
+### ✅ Prima AI strategica di player_2 completata (28 agosto 2026)
+
+AI score-based implementata in entrambe le codebase con capacità:
+- Vittoria immediata, valutazione Piatto/distanza da 100
+- Scelta strategica valori Jolly e Imbroglio
+- Hold-back +11 (salvo Gold chain, GdV, vittoria)
+- Bounce avoidance, attivazione GS strategica
+- Integrazione in ManualGame per `player_2` (gli altri CPU restano random)
+
+**File:** `games/roadto100/ai.py`, `engine/RoadTo100AI.gd`, `scripts/ManualGame.gd`
+**Test:** 6 Python + 10 GDScript (ai_test + ai_advanced_test) — tutti verdi
+
 ### ✅ Single-player core gameplay completato (26 agosto 2026)
 
 Il gioco è ora completamente giocabile in single-player con:
@@ -367,9 +379,10 @@ Dettagli completi di F1–F8 in `PROJECT_STATE.md` sezione "Passaggio F".
 ### Attività successive al Passaggio F
 
 1. ~~**Fix selezione carte nel turno umano**~~ — **RISOLTO** (HUDLayer.mouse_filter=IGNORE, test card_selection_test)
-2. **AI per simulatore** — `simulator/ai/bot.py` (implementazione in corso). Prima AI assegnata a `player_2`.
+2. ~~**AI per player_2**~~ — **IMPLEMENTATA** (`games/roadto100/ai.py` + `engine/RoadTo100AI.gd`). Score-based strategic AI integrata in ManualGame.
 3. **Migliorie UI/UX** — Texture carte definitive, effetti sonori, schermata di vittoria, animazioni più ricche.
 4. **Multiplayer** — `RemoteGameAdapter` + networking. Architettura definita, implementazione futura.
+5. **AI personalità multiple** — Varianti difficulty (aggressive/defensive) bilanciando i pesi esistenti.
 
 ### Modalità manuale 1 umano + 3 CPU — ✅ Implementata (21 agosto 2026)
 

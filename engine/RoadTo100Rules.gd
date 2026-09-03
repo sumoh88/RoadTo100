@@ -237,7 +237,6 @@ func get_available_actions(game):
 			actions.append({"action_type": PLAY_CARD_ACTION, "card": card})
 		elif card.value != null:
 			actions.append({"action_type": PLAY_CARD_ACTION, "card": card})
-
 	# CHANGE_CARD is always available for every card in hand
 	for card in current_player.hand.cards:
 		actions.append({"action_type": CHANGE_CARD_ACTION, "card": card})
@@ -504,7 +503,7 @@ func apply_action(game, action_dict):
 		game.metadata["piatto"] = min(plateau, 100)
 
 	# allow89: once the Piatto reaches 20 or more, 89 becomes permanently playable.
-	if not game.metadata.get("allow89", false) and plateau >= 20:
+	if not game.metadata.get("allow89", false) and plateau >= GlobalsUtilities.THRESHOLD_PIANO:
 		game.metadata["allow89"] = true
 
 	game.metadata["turn_phase"] = "action"

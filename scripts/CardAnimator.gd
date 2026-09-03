@@ -42,7 +42,7 @@ const CARD_H = 112
 
 # Animation timing
 const PLAY_ANIM_DURATION = 0.35
-const DRAW_ANIM_DURATION = 0.3
+const DRAW_ANIM_DURATION = 0.5
 const FADE_DURATION = 0.75
 
 
@@ -128,7 +128,7 @@ func _animate_card_played(event):
 	var card_id = event.get("card_id", "")
 	var player_id = event.get("player_id", "")
 	var destination = event.get("destination", "discard")
-
+	var resolved_value = event.get("resolved_value", null)
 	# Find the card in the correct player's hand
 	var card_node = _find_card_node(player_id, card_id)
 	if card_node == null:

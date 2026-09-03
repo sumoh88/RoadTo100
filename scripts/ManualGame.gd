@@ -43,6 +43,7 @@ func _ready():
 func start_game():
 	if running:
 		return
+	randomize()
 	if _gc == null:
 		print("[ManualGame] ERROR: No GameController reference.")
 		return

@@ -1,6 +1,6 @@
 # RoadTo100 — Stato Progetto
 
-> Aggiornato al: 26 agosto 2026
+> Aggiornato al: 28 agosto 2026
 > Scopo: documento di avvio per future sessioni di sviluppo.
 
 ---
@@ -15,8 +15,9 @@ Il progetto è composto da due codebase separati:
 | Client Godot — Passaggio A→F | **Completo e verificato** (A→F chiusi) |
 | Modalità manuale 1 umano + 3 CPU | **Funzionante** (ManualGame.gd, pulsante "Inizia Partita", selezione carte corretta) |
 | Regola `allow89` | ✅ Implementata (carta 89 bloccata fino a Piatto ≥ 20) |
-| Mazzo aggiornato | ✅ 6 Imbrogli / 4 +11 (totale 60) |
+| Mazzo aggiornato | ✅ 6 Imbrogli / 4 +11 (totale 60: 40 Incrementi+Jolly, 7 Gold, 3×89, 4 +11, 6 Imbrogli) |
 | +11 Gold chain | ✅ Rappresentazione corretta: crea nuova Gold nel Piatto senza consumare l'originale |
+| **AI player_2** | ✅ **Implementata** — score-based strategic AI in Python (`games/roadto100/ai.py`) e GDScript (`engine/RoadTo100AI.gd`), integrata in ManualGame |
 | **Single-player core gameplay** | ✅ **Completato e funzionante** |
 
 ---
@@ -184,19 +185,22 @@ Tutte le azioni transitano esclusivamente per `GameController.perform_action(act
 | CardAnimator Multi-Player | `tests/card_animator_test2.gd` | 20 | ✅ 0 FAIL |
 | Demo Integrazione | `tests/demo_integration_test.gd` | 5 | ✅ 5/5 partite complete, nessun hang |
 | Demo Verifica Eventi | `tests/demo_verification_test.gd` | 9 | ✅ 0 FAIL |
-| Manual Game (1H+3C) | `tests/manual_game_test.gd` | 25 | ✅ 0 FAIL |
+| Manual Game (1H+3C) | `tests/manual_game_test.gd` | 26 | ✅ 0 FAIL |
 | Manual Game Smoke | `tests/manual_game_smoke.tscn` | — | ✅ PASS |
 | +11 Gold Transformation | `tests/plus11_gold_transformation_test.gd` | 3 | ✅ 0 FAIL (Gold chain crea nuova Gold) |
-| +11/GS Bug Repro | `tests/manual_game_bug_11_test.gd` | 4 | ✅ 0 FAIL (bug confermato grafico, non logico) |
+| AI Decisioni Base | `tests/ai_test.gd` | 3 | ✅ 0 FAIL (preferenza alta, Gold, Gold chain) |
+| AI Avanzate | `tests/ai_advanced_test.gd` | 7 | ✅ 0 FAIL (vittoria, Jolly strategico, bounce, Imbroglio, hold-back +11) |
+| Reset Hand Rule | `tests/reset_hand_rule_test.gd` | 3 | ✅ 0 FAIL (GS vietato, GdV una volta) |
 
-**Test Python:** `test_roadto100_rules.py` — 87 test, 0 FAIL.
+**Test Python:** 93 test totali — 87 in `test_roadto100_rules.py` + 6 in `test_roadto100_ai.py` — tutti OK.
 
 ---
 
 ## TODO rimasti
 
 - [x] ~~**Fix selezione carte nel turno umano**~~ — **RISOLTO** (HUDLayer.mouse_filter=IGNORE, test card_selection_test)
-- [ ] **AI avversaria** (`simulator/ai/bot.py`): implementare prima AI assegnata a `player_2` (CPU non casuale ma strategica).
+- [x] ~~**AI avversaria** (`player_2`)~~ — **IMPLEMENTATA** (score-based strategic AI in Python/GDScript, integrata in ManualGame)
+- [ ] **AI personalità multiple**: varianti difficulty/aggressive/defensive della RoadTo100AI.
 - [ ] **Multiplayer**: non iniziato.
 
 ---
@@ -590,3 +594,79 @@ Chiusura della fase single-player con tutte le correzioni e miglioramenti finali
 | Tutte le altre suite | ✅ PASS |
 
 **Totale: ~750+ GDScript assertions + 87 Python tests — tutti verdi.**
+
+---
+
+## ULTIMA SESSIONE (28 agosto 2026)
+
+### Prima AI strategica di player_2 — Completata
+
+Implementazione completa della prima AI non-casuale per `player_2`, sia in Python che in GDScript, con equivalenza funzionale tra le due implementazioni.
+
+#### Architettura AI
+
+Score-based: ogni azione disponibile viene valutata con un punteggio euristico, la più alta viene scelta (con jitter casuale minimo per rompere i pari). L'AI usa solo informazioni legittimamente disponibili (snapshot pubblico, proprie carte, stato Piatto/SR).
+
+#### Capacità implementate
+
+| Capacità | Dettaglio |
+|---|---|
+| Vittoria immediata | Rileva quando `piatto + valore >= 100` e gioca per vincere (priorità massima: `W_IMMEDIATE_WIN = 10000`) |
+| Valutazione Piatto/distanza | Score proporzionale all'avanzamento verso 100 (`W_ADVANCE = 100 × valore / 10`) |
+| Scelta Jolly strategica | Valuta ogni valore 1–10, sceglie quello che massimizza progresso senza rimbalzo; vince se possibile |
+| Scelta Imbroglio strategica | Scegli il valore positivo più alto per massimizzare il Piatto (vincolato a max 99) |
+| Hold-back +11 | `W_PLUS11_HOLD_BACK = -150` — conserva la +11 salvo vittoria, Gold chain, o GdV |
+| Gold chain | `W_PLUS11_GOLD_CHAIN = 70` — priorità alta per +11 dopo Gold |
+| GdV | Bonus per attivatore +11 e incrementi alti durante Giro di Vantaggio |
+| Bounce avoidance | Penalizza `-50` le azioni che supererebbero 100 causando rimbalzo |
+| Gold/GS | `W_GOLD_ACTIVATE_SR = 60` — valore strategico dell'attivazione Safe Round |
+| Cambio Carta | `W_CHANGE_CARD = -10` — ultima risorsa |
+
+#### File creati/modificati
+
+| File | Ruolo |
+|---|---|
+| `games/roadto100/ai.py` | AI Python (class `RoadTo100Bot`) — usa reali `available_actions` da `RoadTo100RuleSet` |
+| `engine/RoadTo100AI.gd` | AI GDScript (class `RoadTo100AI`) — interfaccia `select_action(available_actions, snapshot)` |
+| `scripts/ManualGame.gd` | Integrata AI per `player_2`, supporto `selected_value` per Jolly/Imbroglio |
+| `tests/ai_test.gd/.tscn` | 3 test base (preferenza alta, Gold, Gold chain) |
+| `tests/ai_advanced_test.gd/.tscn` | 7 test avanzati (vittoria, Jolly vincente, bounce, Imbroglio, hold-back +11, +11 vittoria, Jolly anti-bounce) |
+| `test_roadto100_ai.py` | 6 test Python con integrazione reale available_actions |
+
+#### Pesi euristiche (costanti configurabili)
+
+```python
+W_IMMEDIATE_WIN = 10000      # Vittoria immediata
+W_ADVANCE = 100              # Progresso verso 100
+W_BOUNCE_PENALTY = -50       # Rimbalzo
+W_JOLLY_FLEXIBILITY = 15     # Flessibilità Jolly
+W_GOLD_ACTIVATE_SR = 60      # Attivazione GS
+W_PLUS11_GOLD_CHAIN = 70     # Gold chain
+W_PLUS11_NORMAL = 40         # +11 normale
+W_PLUS11_HOLD_BACK = -150    # Hold-back +11
+W_IMBROGLIO_STRATEGIC = 25   # Imbroglio
+W_GDV_BONUS = 30             # Bonus GdV
+W_CHANGE_CARD = -10          # Cambio carta
+TIE_BREAKER_JITTER = 5       # Random jitter per anti-predictability
+```
+
+#### Stato test finale (28 agosto 2026)
+
+| Suite | Esito |
+|---|---|
+| Python (93 test: rules + AI) | ✅ 93/93 OK |
+| ai_test | ✅ 3/0 |
+| ai_advanced_test | ✅ 7/0 |
+| manual_game_test | ✅ 26/0 |
+| domain_test | ✅ PASS |
+| Tutte le altre suite | ✅ PASS |
+
+### Fix reset_hand durante GS (sessione precedente, verificato)
+
+`reset_hand` è consentito **solo** durante GdV (`special_round_type == "advantage"`), mai durante Giro Sicuro. Flag `_reset_hand_used_this_turn` previene uso ripetuto nello stesso turno. Test: `tests/reset_hand_rule_test.gd`.
+
+### Prossimo step
+
+1. **Multiplayer** (`RemoteGameAdapter`): architettura definita, implementazione futura.
+2. **AI personalità multiple**: varianti aggressive/difensive bilanciando i pesi esistenti.
+3. **Migliorie UI/UX**: texture definitive, effetti sonori, animazioni più ricche.

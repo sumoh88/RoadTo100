@@ -7,6 +7,9 @@ extends Node
 # Signals:
 #   action_applied(result) — fired after each completed action (for debug/demo)
 
+onready var main = get_tree().current_scene
+onready var valueLabel = main.get_node("GameArea/BoardArea/PlateauZone/ValueLabel")
+onready var ResolvedValueLabel = main.get_node("GameArea/BoardArea/DiscardPile/TopCard/ResolvedValueLabel")
 signal action_applied(result)
 #
 # States (in order of progression):
@@ -77,6 +80,14 @@ const GOLD_CHAIN = {12: 23, 23: 34, 34: 45, 45: 56, 56: 67, 67: 78, 78: 89}
 
 
 # ---------------------------------------------------------------------------
+# Audio Manager reference (sibling of this node under Main)
+# ---------------------------------------------------------------------------
+
+func _get_audio_manager():
+	return get_node_or_null("/root/AudioManager")
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -94,6 +105,12 @@ func start_game(player_count):
 	_last_error = ""
 	_selected_card_id = ""
 	_provider.start_game(player_count)
+
+	# Switch to dynamic game music (Piatto starts at 0, no special round)
+	var am = _get_audio_manager()
+	if am != null and am.has_method("set_game_music"):
+		var valueLabelInt = int(valueLabel.text)
+		am.set_game_music(valueLabelInt, false)
 
 
 func get_state():
@@ -141,7 +158,12 @@ func _ready():
 	_provider.connect("game_started", self, "_on_game_started")
 	_provider.connect("action_completed", self, "_on_action_completed")
 	_provider.connect("action_rejected", self, "_on_action_rejected")
-
+	if valueLabel == null:
+		valueLabel = Label.new()
+		valueLabel.text = ""
+	if ResolvedValueLabel == null:
+		ResolvedValueLabel = Label.new()
+		ResolvedValueLabel.text = ""
 
 func _find_presenters():
 	var main = _node_up("Main")
@@ -227,6 +249,7 @@ func _update_choice_blocker():
 	clicks outside a popup are absorbed instead of closing it or reaching the
 	game UI underneath."""
 	if _choice_input_blocker == null:
+
 		return
 	var any_visible = false
 	for p in [_value_choice_popup, _hand_reset_popup]:
@@ -404,6 +427,7 @@ func _on_value_chosen(value):
 	_update_choice_blocker()
 	var action = {"action_type": _pending_action_type, "card_id": _pending_card_id}
 	action["selected_value"] = value
+	GlobalsUtilities.selected_value = str(value)
 	_pending_action_type = ""
 	_pending_card_id = ""
 	_pending_valid_values = []
@@ -527,6 +551,7 @@ func _on_game_started(snapshot):
 	_apply_snapshot(snapshot)
 	if snapshot.get("winner", null) != null:
 		_state = State.GAME_OVER
+		GlobalsUtilities.gameStarted = false
 	else:
 		_state = State.READY_FOR_INPUT
 	_check_reset_hand(snapshot)
@@ -712,6 +737,10 @@ func _finish_post_action():
 	if _last_snapshot != null and _last_snapshot.get("winner", null) != null:
 		_clear_selection()
 		_state = State.GAME_OVER
+		# Return to menu music when game ends
+		var am = _get_audio_manager()
+		if am != null and am.has_method("set_menu_music"):
+			am.set_menu_music()
 		return
 
 	_validate_selection(_last_snapshot)
