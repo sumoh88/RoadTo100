@@ -102,9 +102,9 @@ func _create_sr_badges(ga, ol):
 		print("ol null")
 		return badges
 		
-	# Opponent seats: player_2 (Top), player_3 (Left), player_4 (Right)
+	# Opponent seats: player_2 (Left), player_3 (Top), player_4 (Right)
 	var seat_map = ["player_2", "player_3", "player_4"]
-	var seat_names = ["TopSeat", "LeftSeat", "RightSeat"]
+	var seat_names = ["LeftSeat", "TopSeat", "RightSeat"]
 	for i in range(3):
 		var s = _ch(ol, seat_names[i])
 		if s != null:
@@ -151,7 +151,6 @@ func apply_snapshot(s):
 	if _value_label != null:
 		_value_label.text = str(plate_value)
 
-	AudioManager.set_plate_value(plate_value)
 	GlobalsUtilities.plateValue = plate_value
 
 	if _draw_pile_count != null:

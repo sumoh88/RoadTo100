@@ -13,3 +13,7 @@ func _on_Play_pressed():
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 #func _process(delta):
 #	pass
+
+
+func _on_ExitGame_pressed():
+	get_tree().quit()

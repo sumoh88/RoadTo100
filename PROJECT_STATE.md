@@ -1,6 +1,6 @@
 # RoadTo100 — Stato Progetto
 
-> Aggiornato al: 28 agosto 2026
+> Aggiornato al: 3 settembre 2026
 > Scopo: documento di avvio per future sessioni di sviluppo.
 
 ---
@@ -17,8 +17,83 @@ Il progetto è composto da due codebase separati:
 | Regola `allow89` | ✅ Implementata (carta 89 bloccata fino a Piatto ≥ 20) |
 | Mazzo aggiornato | ✅ 6 Imbrogli / 4 +11 (totale 60: 40 Incrementi+Jolly, 7 Gold, 3×89, 4 +11, 6 Imbrogli) |
 | +11 Gold chain | ✅ Rappresentazione corretta: crea nuova Gold nel Piatto senza consumare l'originale |
-| **AI player_2** | ✅ **Implementata** — score-based strategic AI in Python (`games/roadto100/ai.py`) e GDScript (`engine/RoadTo100AI.gd`), integrata in ManualGame |
+| **AI player_2 (bilanciata)** | ✅ RoadTo100AI — score-based strategic AI |
+| **AI player_3 (aggressiva)** | ✅ RoadTo100AI con pesi aggressivi (preferisce incrementi alti, accetta più rischio) |
+| **AI player_4 (tattica/prudente)** | ✅ RoadTo100AI con pesi tattici (preferisce controllo, evita rimbalzi) |
+| **Ordine giocatori corretto** | ✅ P1→P2(Left)→P3(Top)→P4(Right) — turni logici e UI allineati |
 | **Single-player core gameplay** | ✅ **Completato e funzionante** |
+| **MainMenu** | ✅ **Implementata** — scena principale (`run/main_scene`), pulsante GIOCA → Main.tscn |
+| **AudioManager (singleton)** | ✅ **Musica dinamica funzionante** — 5 stem (Beat/Piano/Cello/Violin/Trumpet), autoloader globale |
+| **GlobalsUtilities (singleton)** | ✅ **Stato condiviso** — plateValue, sr_active, selected_value, gameStarted, soglie musica |
+| **spe100.png** | ✅ Piatto ≥ 100 usa texture speciale senza numero sovrapposto |
+| **Valore Jolly/Imbroglio sugli Scarti** | ✅ `GlobalsUtilities.selected_value` + `ResolvedValueLabel` — visibile per tutti i giocatori (inclusa CPU) |
+
+---
+
+## Flusso Menu → Partita
+
+```
+App avvio → MainMenu.tscn (run/main_scene)
+  ├─ _ready() → AudioManager.set_menu_music() (tutti e 5 stem a stemsVolume=0.7)
+  └─ [GIOCA] pulsante
+       └─ get_tree().change_scene("res://Main.tscn")
+            ├─ GlobalsUtilities.gameStarted = true
+            └─ Main.gd._ready() → $StartGameButton.emit_signal("pressed")
+                 └─ ManualGame.start_game(4) → partita 1 umano + 3 CPU
+
+Durante la partita:
+  ├─ BoardPresenter.apply_snapshot() aggiorna:
+  │    ├─ GlobalsUtilities.plateValue = piatto
+  │    ├─ GlobalsUtilities.sr_active = special_round_active
+  │    └─ AudioManager.set_plate_value(plate_value) [ridondante: AudioManager lo fa da solo in _process]
+  ├─ TurnPresenter.apply_snapshot() resetta:
+  │    └─ GlobalsUtilities.selected_value = ""
+  ├─ GameController._on_value_chosen():
+  │    └─ GlobalsUtilities.selected_value = str(value) [solo per Jolly/Imbroglio del giocatore locale]
+  └─ BoardPresenter mostra ResolvedValueLabel con il valore (+N o -N) sugli Scarti
+
+Torna al Menu:
+  └─ [Torna al Menu] pulsante (BackMenuButton in ActionPanel)
+       └─ Main.gd._on_BackMenuButton_pressed()
+            ├─ get_tree().change_scene("res://MainMenu.tscn")
+            └─ GlobalsUtilities.gameStarted = false
+```
+
+### Note sul flusso
+- `Main.gd._ready()` **auto-inizia** la partita quando la scena viene caricata dal menu (emette il segnale del pulsante StartGameButton).
+- `AudioManager` è un **singleton autoloader** (`[autoload] AudioManager="*res://AudioManager.tscn"` in `project.godot`): sempre disponibile globalmente come `AudioManager`.
+- `GlobalsUtilities` è un **singleton autoloader** per lo stato condiviso tra scene.
+
+---
+
+## AudioManager — Musica Dinamica
+
+### Architettura
+- **File**: `AudioManager.gd` + `AudioManager.tscn`
+- **Tipo**: Autoloader/singleton globale (registrato in `project.godot`)
+- **5 stem musicali** (tutti `AudioStreamPlayer`, figli di `MusicPlayer`):
+  - `Beat`, `Piano`, `Cello`, `Violin`, `Trumpet`
+- **SFXPlayer**: AudioStreamPlayer con effetti posizionali (Select, ShuffleDeal, Draw, PlayCard, Victory)
+- **Cartelle canzoni**: `res://sound/<nome_canzone>/` — rileva automaticamente le sottocartelle con `beat.mp3`
+
+### Comportamento
+1. **Avvio** (`_ready()`): rileva una canzone casuale da `res://sound/`, carica i 5 stem, avvia tutti in loop simultaneamente.
+2. **Menu**: `set_menu_music()` → tutti e 5 gli stem a `stemsVolume` (0.7).
+3. **Partita**: `set_game_music(piatto, sr_active)` → dinamica per soglie del Piatto.
+4. **Ogni frame** (`_process()`): legge `GlobalsUtilities.plateValue` e `GlobalsUtilities.sr_active` e aggiorna i volumi con fade (0.7s).
+5. **Nessun stop/play**: durante menu/partita gli stem non si fermano mai; l'ingresso/uscita avviene SOLO tramite volume_db con tween.
+
+### Soglie musica (da `GlobalsUtilities`)
+
+| Piatto | Beat | Piano | Cello | Violin | Trumpet |
+|---|---|---|---|---|---|
+| 0–29 | ✅ 0.7 | 0 | 0 | 0 | 0 (o 0.7 se SR) |
+| 30–59 | ✅ 0.7 | ✅ 0.7 | 0 | 0 | 0 (o 0.7 se SR) |
+| 60–88 | ✅ 0.7 | ✅ 0.7 | ✅ 0.7 | 0 | 0 (o 0.7 se SR) |
+| 89–99 | ✅ 0.7 | ✅ 0.7 | ✅ 0.7 | ✅ 0.7 | 0 (o 0.7 se SR) |
+
+- **Trumpet** si aggiunge indipendentemente quando `GlobalsUtilities.sr_active == true` (GS o GdV).
+- `stemsVolume` è un export(float) configurabile (default 0.7).
 
 ---
 
@@ -89,6 +164,18 @@ Tutte le azioni transitano esclusivamente per `GameController.perform_action(act
 
 ---
 
+## AI e personalizzazione giocatori
+
+Tutti e tre i giocatori CPU utilizzano il sistema `RoadTo100AI` con configurazioni di pesi diverse per produrre personalità distinte:
+
+| Giocatore | Personalità | Strategia | Pesi chiave diversi da default |
+|---|---|---|---|
+| **P2** | Bilanciata | Ottimizzazione bilanciata tra progresso e rischio | Default (W_INCREMENT_HIGH=3, W_BOUNCE_PENALTY=-50) |
+| **P3** | Aggressiva | Preferisce incrementi alti, accetta più rischio rimbalzo | W_INCREMENT_HIGH=8, W_BOUNCE_PENALTY=-20, W_JOLLY_FLEXIBILITY=25 |
+| **P4** | Tattica/Prudente | Preferisce controllo Piatto, evita rimbalzi, usa Imbroglio strategicamente | W_INCREMENT_HIGH=2, W_BOUNCE_PENALTY=-80, W_IMBROGLIO_STRATEGIC=50 |
+
+Il sistema di scoring è comune; solo i pesi (costanti) variano. Questo consente di aggiungere nuove personalità in futuro modificando solo la configurazione, non il codice base dell'AI.
+
 ## Componenti completati
 
 ### Simulatore Python
@@ -131,26 +218,38 @@ Tutte le azioni transitano esclusivamente per `GameController.perform_action(act
 | **Debug / Automazione** | | |
 | DebugDemo | `scripts/DebugDemo.gd` | ✅ Integrato con GC (E6), esclusione reciproca |
 | ManualGame | `scripts/ManualGame.gd` | ✅ 1 umano + 3 CPU, pausa turno umano, esclusione reciproca |
-| StartGameButton | In `Main.tscn` | ✅ "Inizia Partita" → ManualGame.start_game(4) |
+| StartGameButton | In `Main.tscn` | ✅ "Inizia Partita" → ManualGame.start_game(4), auto-emesso da Main.gd._ready() |
+| BackMenuButton | In `Main.tscn` | ✅ "Torna al Menu" → Main.gd._on_BackMenuButton_pressed() → MainMenu.tscn |
+| **Singleton / Autoloaders** | | |
+| MainMenu | `MainMenu.tscn` + `MainMenu.gd` | ✅ Scena principale, pulsante GIOCA → Main.tscn |
+| AudioManager | `AudioManager.tscn` + `AudioManager.gd` | ✅ Singleton musica dinamica (5 stem) + SFX |
+| GlobalsUtilities | `GlobalsUtilities.gd` | ✅ Singleton stato condiviso (plateValue, sr_active, selected_value, soglie) |
+| Main.gd | `Main.gd` | ✅ Auto-start partita, BackMenuButton handler |
 
 ### Architettura finale
 
 ```
-┌─────────────────────────────────────────────────┐
-│              UI Layer (Main.tscn)                 │
-│  BoardPresenter  HandPresenter  TurnPresenter     │
-│  CardAnimator (queue + tween)  CardFace  popup    │
-│  DemoButton (Debug)                               │
-│  Non conoscono le regole                          │
-└─────────────────────┬───────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│              AUTLOADERS (globali, sempre attivi)              │
+│  AudioManager  — musica dinamica 5 stem + SFX               │
+│  GlobalsUtilities — stato condiviso (piatto, SR, valori)    │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────┐
+│              UI Layer (MainMenu.tscn → Main.tscn)            │
+│  MainMenu: GIOCA → Main.tscn                                │
+│  Main: BoardPresenter  HandPresenter  TurnPresenter          │
+│        CardAnimator  CardFace  popup  BackMenuButton         │
+│  Non conoscono le regole                                     │
+└─────────────────────┬───────────────────────────────────────┘
                       │ snapshot / events / segnali
-┌─────────────────────▼───────────────────────────┐
-│              GameController.gd                    │
-│  Stati: WAITING → READY → CARD_SELECTED →        │
-│         WAITING_CHOICE → ACTION_PENDING →        │
-│         ANIMATING → GAME_OVER                    │
-│  Public API: start_game(), perform_action()      │
-│  Signal: action_applied(result)                  │
+┌─────────────────────▼───────────────────────────────────────┐
+│              GameController.gd                               │
+│  Stati: WAITING → READY → CARD_SELECTED →                    │
+│         WAITING_CHOICE → ACTION_PENDING →                    │
+│         ANIMATING → GAME_OVER                                │
+│  Public API: start_game(), perform_action()                  │
+│  Signal: action_applied(result)                              │
 └─────────────────────┬───────────────────────────┘
                       │ perform_action(action_dict)
                       │ start_game(player_count)
@@ -200,7 +299,7 @@ Tutte le azioni transitano esclusivamente per `GameController.perform_action(act
 
 - [x] ~~**Fix selezione carte nel turno umano**~~ — **RISOLTO** (HUDLayer.mouse_filter=IGNORE, test card_selection_test)
 - [x] ~~**AI avversaria** (`player_2`)~~ — **IMPLEMENTATA** (score-based strategic AI in Python/GDScript, integrata in ManualGame)
-- [ ] **AI personalità multiple**: varianti difficulty/aggressive/defensive della RoadTo100AI.
+- [x] ~~**AI personalità multiple**~~ — **COMPLETATO** (P3 aggressiva, P4 tattica/prudente, stessa base RoadTo100AI con pesi diversi)
 - [ ] **Multiplayer**: non iniziato.
 
 ---

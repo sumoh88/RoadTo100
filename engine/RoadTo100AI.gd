@@ -4,23 +4,27 @@ class_name RoadTo100AI
 # RoadTo100 AI Bot Implementation.
 # A heuristic-based bot that makes strategic decisions using visible information only.
 # Design: score each available action, pick the highest with small random tie-breaking.
+#
+# Personality profiles are configured via constructor parameters that override
+# the default weights. Different weight configurations produce different play
+# styles while reusing the same core scoring logic.
 
-# --- Tunable weights (for future difficulty/personality profiles) ---
-const W_IMMEDIATE_WIN = 10000       # Score for winning immediately
-const W_ADVANCE = 100               # Base score per point of progress toward 100
-const W_BOUNCE_PENALTY = -50        # Penalty for actions that cause bounce
-const W_INCREMENT_HIGH = 3          # Bonus for high-value increment cards (8-10)
-const W_INCREMENT_MED = 2           # Bonus for medium increment (5-7)
-const W_INCREMENT_LOW = 1           # Base score for low increment (1-4)
-const W_JOLLY_FLEXIBILITY = 15      # Jolly is flexible, add bonus
-const W_GOLD_ACTIVATE_SR = 60       # Gold activates Safe Round - strategic value
-const W_PLUS11_GOLD_CHAIN = 70      # +11 after Gold creates transformed Gold
-const W_PLUS11_NORMAL = 40          # +11 just adds 11 points
-const W_PLUS11_HOLD_BACK = -150     # Penalty for using +11 when not strategic (must exceed max advancement 110)
-const W_IMBROGLIO_STRATEGIC = 25    # Imbroglio can be used strategically
-const W_GDV_BONUS = 30              # Bonus during GdV for +11 or high increments
-const W_CHANGE_CARD = -10           # Cambio Carta is last resort (negative score)
-const TIE_BREAKER_JITTER = 5        # Max random jitter for tie-breaking
+# --- Default balanced weights (can be overridden per personality) ---
+var W_IMMEDIATE_WIN = 10000       # Score for winning immediately
+var W_ADVANCE = 100               # Base score per point of progress toward 100
+var W_BOUNCE_PENALTY = -50        # Penalty for actions that cause bounce
+var W_INCREMENT_HIGH = 3          # Bonus for high-value increment cards (8-10)
+var W_INCREMENT_MED = 2           # Bonus for medium increment (5-7)
+var W_INCREMENT_LOW = 1           # Base score for low increment (1-4)
+var W_JOLLY_FLEXIBILITY = 15      # Jolly is flexible, add bonus
+var W_GOLD_ACTIVATE_SR = 60       # Gold activates Safe Round - strategic value
+var W_PLUS11_GOLD_CHAIN = 70      # +11 after Gold creates transformed Gold
+var W_PLUS11_NORMAL = 40          # +11 just adds 11 points
+var W_PLUS11_HOLD_BACK = -150     # Penalty for using +11 when not strategic (must exceed max advancement 110)
+var W_IMBROGLIO_STRATEGIC = 25    # Imbroglio can be used strategically
+var W_GDV_BONUS = 30              # Bonus during GdV for +11 or high increments
+var W_CHANGE_CARD = -10           # Cambio Carta is last resort (negative score)
+const TIE_BREAKER_JITTER = 5      # Max random jitter for tie-breaking
 
 const GOLD_CHAIN = {12: 23, 23: 34, 34: 45, 45: 56, 56: 67, 67: 78, 78: 89}
 

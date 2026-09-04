@@ -540,17 +540,18 @@ script = ExtResource( 9 )
 script = ExtResource( 10 )
 
 [node name="DemoButton" type="Button" parent="."]
-margin_left = 10.0
-margin_top = 10.0
-margin_right = 260.0
-margin_bottom = 46.0
-text = "Demo Automatica (Debug)"
-
-[node name="StartGameButton" type="Button" parent="."]
+visible = false
 margin_left = 10.0
 margin_top = 56.0
 margin_right = 260.0
 margin_bottom = 92.0
+text = "Demo Automatica (Debug)"
+
+[node name="StartGameButton" type="Button" parent="."]
+margin_left = 10.0
+margin_top = 10.0
+margin_right = 260.0
+margin_bottom = 46.0
 text = "Inizia Partita"
 
 [connection signal="pressed" from="GameArea/HUDLayer/ActionPanel/BackMenuButton" to="." method="_on_BackMenuButton_pressed"]

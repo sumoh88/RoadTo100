@@ -135,6 +135,11 @@ func perform_action(action_dict):
 	if _provider == null:
 		print("[GC] ERROR: No provider set")
 		return
+	# If this action has a resolved value (Jolly/Imbroglio), propagate it to
+	# GlobalsUtilities so BoardPresenter can display it on the discard pile.
+	# This is necessary for CPU plays which don't go through _on_value_chosen().
+	if action_dict.has("selected_value"):
+		GlobalsUtilities.selected_value = str(action_dict["selected_value"])
 	# Close the specific popup if this direct call resolves it (demo/CPU path)
 	var at = action_dict.get("action_type", "")
 	if at == "play_card" and _value_choice_popup != null and _value_choice_popup.visible:
@@ -570,14 +575,20 @@ func _on_action_completed(result):
 		_state = State.ANIMATING
 		_card_animator.play_events(_last_events, _last_snapshot)
 
-	_apply_snapshot(_last_snapshot)
+		# During animation, update board and hand but NOT the turn indicator.
+		# The turn indicator will be updated when animation completes, so the
+		# text remains "Il tuo turno" / "Turno di Player X" during the card movement.
+		if _board != null and _board.has_method("apply_snapshot"):
+			_board.apply_snapshot(_last_snapshot)
+		if _hand != null and _hand.has_method("apply_snapshot"):
+			_hand.apply_snapshot(_last_snapshot)
 
-	# Pre-hide any cards that will be drawn, so they don't flicker into
-	# existence before the draw animation reveals them.
-	if should_animate and _card_animator != null and _card_animator.has_method("hide_drawn_cards"):
-		_card_animator.hide_drawn_cards(_last_events)
-
-	if not should_animate:
+		# Pre-hide any cards that will be drawn, so they don't flicker into
+		# existence before the draw animation reveals them.
+		if _card_animator != null and _card_animator.has_method("hide_drawn_cards"):
+			_card_animator.hide_drawn_cards(_last_events)
+	else:
+		_apply_snapshot(_last_snapshot)
 		_finish_post_action()
 
 
@@ -729,6 +740,9 @@ func _on_safe_round_choice_chosen(choice):
 
 
 func _on_animation_finished():
+	# Now that animation is complete, update the turn indicator to show the next player.
+	if _turn != null and _turn.has_method("apply_snapshot"):
+		_turn.apply_snapshot(_last_snapshot)
 	_finish_post_action()
 
 

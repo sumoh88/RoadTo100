@@ -21,7 +21,7 @@
 
 ```
 /media/sumaka/Giochi/GodotProjects/roadTo100/
-├── project.godot          # Godot engine project config (1280×720, "Road To 100")
+├── project.godot          # Godot engine config (1920×1080, main_scene=MainMenu.tscn, autoloads)
 ├── default_env.tres       # Godot default environment
 ├── icon.png / .import     # Game icon (auto-imported by Godot)
 ├── CARD_DATABASE.md       # Official card database v1.0
@@ -30,9 +30,24 @@
 ├── ENGINE_API.md          # Framework API reference (frozen contract)
 ├── TODO.md                # Development roadmap
 ├── regole.md              # Italian-language rules summary (informal)
+├── PROJECT_STATE.md       # Current project state (update on changes)
+├── PROJECT_RULES.md       # Project-specific development rules
 ├── .vscode/settings.json  # VSCode IDE config
 ├── memories/              # Project context memory files
 │   └── repo/framework-guardrails.md
+├── # ** Root scenes & scripts (Godot) **
+│   ├── MainMenu.tscn      # Main menu scene (run/main_scene) — GIOCA, STATISTICHE, etc.
+│   ├── MainMenu.gd        # Menu logic: _ready→set_menu_music, _on_Play_pressed→Main.tscn
+│   ├── Main.tscn          # Game scene (game board, presenters, popups, BackMenuButton)
+│   ├── Main.gd            # Auto-starts game on load; _on_BackMenuButton_pressed→MainMenu
+│   ├── Play.gd            # Empty script (legacy/placeholder)
+│   ├── AudioManager.tscn  # AudioManager scene: 5 stem AudioStreamPlayers + SFXPlayer
+│   ├── AudioManager.gd    # Singleton dynamic music: menu/game modes, fade, volume control
+│   ├── GlobalsUtilities.gd # Singleton state: plateValue, sr_active, selected_value, soglie
+├── sound/                 # Music tracks (auto-detected subfolders)
+│   └── default/           # beat.mp3, piano.mp3, cello.mp3, violin.mp3, trumpet.mp3
+├── imgs/                  # Game textures (cards, plate, spe100.png, mainMenu.png, etc.)
+├── fonts/                 # Fonts (Dyuthi.ttf, menuFont.tres)
 ├── simulator/             # ** Python card-game simulation framework (frozen) **
 │   ├── domain/            # Generic domain types (Game, Card, Player, Deck, etc.)
 │   │   ├── game.py        # Game state (players, deck, phase, winner)
@@ -168,7 +183,11 @@ Be the player who brings the **Plate** (shared score) to **100 or more**.
 ## Running the Project
 
 ### Godot Client
-Open `project.godot` in **Godot Engine 3.4.4**.
+Open `project.godot` in **Godot Engine 3.4.4**. Main scene: `MainMenu.tscn`.
+
+**Autoloaders (global singletons):**
+- `GlobalsUtilities` — shared state (plateValue, sr_active, selected_value, music thresholds)
+- `AudioManager` — dynamic music with 5 stems + SFX
 
 ### Python Simulator
 ```bash
@@ -243,6 +262,10 @@ python3 -m unittest test_roadto100_rules test_roadto100_ai
 | **+11 Gold chain** | ✅ Creates new transformed Gold on Plate without consuming original |
 | **Single-player core gameplay** | ✅ **Complete and functional** |
 | **AI player_2 (RoadTo100AI)** | ✅ **Implemented** — score-based strategic AI in Python (`games/roadto100/ai.py`) + GDScript (`engine/RoadTo100AI.gd`) |
+| **MainMenu scene** | ✅ **Working** — `run/main_scene`, GIOCA button → Main.tscn, AudioManager.set_menu_music() |
+| **AudioManager (singleton)** | ✅ **Dynamic music** — 5 stems (Beat/Piano/Cello/Violin/Trumpet), fade-based volume control, menu/game modes |
+| **GlobalsUtilities (singleton)** | ✅ **Shared state** — plateValue, sr_active, selected_value, gameStarted, music thresholds |
+| **spe100.png** | ✅ Piatto ≥ 100 uses special texture without number overlay |
 | Multiplayer | ❌ Not started |
 
 **Next work:** Multiplayer networking (`RemoteGameAdapter`), UI polish, or AI personality variants.

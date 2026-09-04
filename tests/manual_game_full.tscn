@@ -1,0 +1,6 @@
+[gd_scene format=2]
+
+[ext_resource path="res://tests/manual_game_full.gd" type="Script" id=1]
+
+[node name="FullGameTest" type="Node"]
+script = ExtResource( 1 )

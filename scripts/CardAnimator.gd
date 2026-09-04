@@ -31,8 +31,8 @@ var _queue = []
 
 # Opponent seat mapping: player_id -> seat name
 const OPPONENT_SEATS = {
-	"player_2": "TopSeat",
-	"player_3": "LeftSeat",
+	"player_2": "LeftSeat",
+	"player_3": "TopSeat",
 	"player_4": "RightSeat",
 }
 

@@ -20,8 +20,10 @@ const SAFE_ROUND_CHOICES = ["Incremento", "Gold", "Imbroglio"]
 
 var stats = {"play_card":0,"change_card":0,"reset_hand":0,"advantage_turns":0}
 
-# AI instance for player_2 (new strategic bot)
-var _ai_player2 = null
+# AI instances for each CPU player with different personalities
+var _ai_player2 = null  # Balanced (default)
+var _ai_player3 = null  # Aggressive
+var _ai_player4 = null  # Tactical/Prudent
 
 
 func _ready():
@@ -32,9 +34,28 @@ func _ready():
 	timer.connect("timeout", self, "_on_timer_timeout")
 	add_child(timer)
 
-	# Initialize AI for player_2
+	# Initialize AI for player_2 (balanced — default weights)
 	var ai_class = load("res://engine/RoadTo100AI.gd")
 	_ai_player2 = ai_class.new()
+
+	# Initialize AI for player_3 (aggressive)
+	_ai_player3 = ai_class.new()
+	_ai_player3.W_INCREMENT_HIGH = 8          # Strong preference for big jumps
+	_ai_player3.W_INCREMENT_MED = 4
+	_ai_player3.W_BOUNCE_PENALTY = -20        # Accept more bounce risk
+	_ai_player3.W_JOLLY_FLEXIBILITY = 25      # Aggressive Jolly use
+	_ai_player3.W_GOLD_ACTIVATE_SR = 80       # Willing to start SR
+	_ai_player3.W_PLUS11_NORMAL = 60          # More willing to use +11
+	_ai_player3.W_PLUS11_HOLD_BACK = -50      # Less conservative about +11
+
+	# Initialize AI for player_4 (tactical/prudent)
+	_ai_player4 = ai_class.new()
+	_ai_player4.W_INCREMENT_HIGH = 2          # Prefer smaller, safer increments
+	_ai_player4.W_BOUNCE_PENALTY = -80        # Very bounce-averse
+	_ai_player4.W_JOLLY_FLEXIBILITY = 8       # Conservative Jolly use
+	_ai_player4.W_GOLD_ACTIVATE_SR = 40       # Less willing to start SR
+	_ai_player4.W_PLUS11_HOLD_BACK = -200     # Very conservative about +11
+	_ai_player4.W_IMBROGLIO_STRATEGIC = 50    # Prefer Imbroglio for control
 
 	if _gc != null and _gc.has_signal("action_applied"):
 		_gc.connect("action_applied", self, "_on_gc_action_applied")
@@ -123,7 +144,7 @@ func _on_timer_timeout():
 		_schedule_next_step()
 		return
 
-	# CPU performs action
+	# CPU performs action — all CPU players use AI (no random behavior)
 	var acts = snapshot.get("available_actions", [])
 	if acts.empty():
 		_schedule_next_step()
@@ -140,8 +161,14 @@ func _on_timer_timeout():
 	if cur_player_id == "player_2" and _ai_player2 != null:
 		# Use the new strategic AI for player_2
 		action = _ai_player2.select_action(acts, snapshot)
+	elif cur_player_id == "player_3" and _ai_player3 != null:
+		# Use aggressive AI for player_3
+		action = _ai_player3.select_action(acts, snapshot)
+	elif cur_player_id == "player_4" and _ai_player4 != null:
+		# Use tactical/prudent AI for player_4
+		action = _ai_player4.select_action(acts, snapshot)
 	else:
-		# Other CPUs use random selection
+		# Fallback: random selection (should never happen in normal play)
 		action = _choose_action(acts)
 
 	if action == null:
