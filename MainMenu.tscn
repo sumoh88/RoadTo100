@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=2]
+[gd_scene load_steps=26 format=2]
 
 [ext_resource path="res://imgs/mainMenu.png" type="Texture" id=1]
 [ext_resource path="res://fonts/menuFont.tres" type="DynamicFont" id=2]
@@ -61,6 +61,17 @@ extra_spacing_top = 4
 extra_spacing_bottom = -18
 extra_spacing_char = -1
 font_data = SubResource( 1 )
+
+[sub_resource type="DynamicFontData" id=22]
+font_path = "res://fonts/Dyuthi.ttf"
+
+[sub_resource type="DynamicFont" id=23]
+size = 39
+use_mipmaps = true
+use_filter = true
+extra_spacing_top = 9
+extra_spacing_char = -1
+font_data = SubResource( 22 )
 
 [sub_resource type="StyleBoxEmpty" id=11]
 
@@ -232,7 +243,7 @@ margin_right = 275.0
 margin_bottom = -10.0
 custom_colors/font_color = Color( 1, 1, 1, 1 )
 custom_colors/font_color_hover = Color( 1, 0.921569, 0.745098, 1 )
-custom_fonts/font = ExtResource( 2 )
+custom_fonts/font = SubResource( 23 )
 custom_styles/hover = SubResource( 11 )
 custom_styles/pressed = SubResource( 12 )
 custom_styles/focus = SubResource( 13 )

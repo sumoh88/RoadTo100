@@ -1,7 +1,7 @@
 extends Control
 
 const FADE_IN_TIME = 0.7
-const DISPLAY_TIME = 1.2
+const DISPLAY_TIME = 1.5
 const FADE_OUT_TIME = 0.7
 
 onready var logo = $LogoCont/Logo

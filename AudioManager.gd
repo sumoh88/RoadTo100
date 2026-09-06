@@ -139,35 +139,36 @@ func _process(delta):
 #  CARICAMENTO CANZONI — rileva sottocartelle, sceglie casuale
 # =========================
 func _load_random_song():
-	var dir = Directory.new()
-	var err = dir.open(SOUND_DIR)
-	if err != OK:
-		printerr("[AudioManager] Impossibile aprire ", SOUND_DIR, " (error ", err, ")")
-		return
+#	var dir = Directory.new()
+#	var err = dir.open(SOUND_DIR)
+#	if err != OK:
+#		printerr("[AudioManager] Impossibile aprire ", SOUND_DIR, " (error ", err, ")")
+#		return
+#
+#	var song_folders: Array = []
+#
+#	dir.list_dir_begin(true, true)
+#	var item_name: String = dir.get_next()
+#
+#	while item_name != "":
+#		if dir.current_is_dir():
+#			var folder_path: String = SOUND_DIR + item_name
+#
+#			if dir.file_exists(folder_path + "/beat.mp3"):
+#				song_folders.append(item_name)
+#
+#		item_name = dir.get_next()
+#
+#	dir.list_dir_end()
+#
+#	if song_folders.size() == 0:
+#		printerr("[AudioManager] Nessuna canzone trovata in ", SOUND_DIR)
+#		return
+#
+#	var chosen: String = song_folders[randi() % song_folders.size()]
+#	print("[AudioManager] Canzone selezionata: ", chosen)
 
-	var song_folders: Array = []
-
-	dir.list_dir_begin(true, true)
-	var item_name: String = dir.get_next()
-
-	while item_name != "":
-		if dir.current_is_dir():
-			var folder_path: String = SOUND_DIR + item_name
-
-			if dir.file_exists(folder_path + "/beat.mp3"):
-				song_folders.append(item_name)
-
-		item_name = dir.get_next()
-
-	dir.list_dir_end()
-
-	if song_folders.size() == 0:
-		printerr("[AudioManager] Nessuna canzone trovata in ", SOUND_DIR)
-		return
-
-	var chosen: String = song_folders[randi() % song_folders.size()]
-	print("[AudioManager] Canzone selezionata: ", chosen)
-
+	var chosen = "CardTrickLoop"
 	_current_song_paths = {
 		"beat": load(SOUND_DIR + chosen + "/beat.mp3"),
 		"piano": load(SOUND_DIR + chosen + "/piano.mp3"),
