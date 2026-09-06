@@ -5,6 +5,7 @@ onready var selected_value = ""
 onready var gameStarted = false
 onready var plateValue = 0
 
+var splash_shown = false
 
 const THRESHOLD_PIANO: int = 30
 const THRESHOLD_CELLO: int = 60

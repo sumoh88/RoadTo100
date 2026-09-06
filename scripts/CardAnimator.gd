@@ -48,12 +48,15 @@ const FADE_DURATION = 0.75
 
 func _ready():
 	_animation_layer = _find_node_by_name(get_parent(), "CardAnimationLayer")
+	var main
 	if _animation_layer == null:
-		var main = _find_node_by_name(get_parent(), "Main")
+		main = _find_node_by_name(get_parent(), "Main")
 		if main != null:
 			_animation_layer = _find_node_by_name(main, "CardAnimationLayer")
 	_tween = Tween.new()
 	add_child(_tween)
+	var ShuffleDeal = AudioManager.get_node("SFXPlayer/ShuffleDeal")
+	if GlobalsUtilities.gameStarted: AudioManager.play_sfx(ShuffleDeal)
 
 
 func _find_node_by_name(parent, name):
@@ -168,8 +171,10 @@ func _animate_card_played(event):
 
 	clone.queue_free()
 	yield(get_tree().create_timer(0.02), "timeout")
+	
+	var PlayCard = AudioManager.get_node("SFXPlayer/PlayCard")
+	AudioManager.play_sfx(PlayCard)
 	_process_next()
-
 
 # ---------------------------------------------------------------------------
 # Card drawn animation
@@ -234,6 +239,8 @@ func _animate_card_drawn(event):
 			end_card.visible = true
 
 	yield(get_tree().create_timer(0.02), "timeout")
+	var DrawCard = AudioManager.get_node("SFXPlayer/DrawCard")
+	AudioManager.play_sfx(DrawCard)
 	_process_next()
 
 
@@ -398,12 +405,16 @@ func _get_hand_center(player_id):
 
 func _get_main_node():
 	var p = get_parent()
-	if p != null and p.name == "Main":
-		return p
-	var main = _find_node_by_name(p, "Main")
-	if main == null:
-		main = get_node("/root/Main")
-	return main
+	while p != null:
+		if p.name == "Main":
+			return p
+		p = p.get_parent()
+	# Fallback: walk from root
+	var r = get_tree().root
+	for c in r.get_children():
+		if c.name == "Main":
+			return c
+	return null
 
 
 # ---------------------------------------------------------------------------

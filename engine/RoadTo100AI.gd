@@ -12,7 +12,7 @@ class_name RoadTo100AI
 # --- Default balanced weights (can be overridden per personality) ---
 var W_IMMEDIATE_WIN = 10000       # Score for winning immediately
 var W_ADVANCE = 100               # Base score per point of progress toward 100
-var W_BOUNCE_PENALTY = -50        # Penalty for actions that cause bounce
+var W_PLATEAU_DANGER = 15         # Penalty per point above 92 left to next player (danger zone)
 var W_INCREMENT_HIGH = 3          # Bonus for high-value increment cards (8-10)
 var W_INCREMENT_MED = 2           # Bonus for medium increment (5-7)
 var W_INCREMENT_LOW = 1           # Base score for low increment (1-4)
@@ -41,7 +41,7 @@ func select_action(available_actions, snapshot):
 		var score = _score_action(snapshot, action)
 
 		# For Jolly/Imbroglio with choices, find the best value
-		var chosen_value = -1
+		var chosen_value = -999999
 		if action.get("choices", []).size() > 0:
 			chosen_value = _select_best_choice(snapshot, action)
 
@@ -52,7 +52,7 @@ func select_action(available_actions, snapshot):
 		if final_score > best_score:
 			best_score = final_score
 			# Build the result action with selected_value if applicable
-			if chosen_value >= 0:
+			if chosen_value != -999999:
 				best_action = {"action_type": action["action_type"], "card_id": action["card_id"], "selected_value": chosen_value}
 			else:
 				best_action = {"action_type": action["action_type"], "card_id": str(action.get("card_id", ""))}
@@ -130,12 +130,29 @@ func _score_action(snapshot, action):
 	else:
 		var raw_new_plateau = plateau + effective_value
 		var no_bounce = is_plus11_check or (special_round_active and special_round_type == "advantage" and is_activator)
+
+		# Compute actual resulting plateau using engine formula
+		var result_plateau
 		if raw_new_plateau > 100 and not no_bounce:
-			# Bounce will occur - penalize heavily
-			score += float(W_BOUNCE_PENALTY)
+			result_plateau = 200 - raw_new_plateau
 		else:
-			# No bounce or bounce exempt - reward advancement
-			score += (effective_value * W_ADVANCE) / 10.0
+			result_plateau = raw_new_plateau
+
+		# Progress: reward movement toward 100 (only positive changes)
+		var actual_change = result_plateau - plateau
+		if actual_change > 0:
+			if result_plateau < 93:
+				score += (actual_change * W_ADVANCE) / 10.0
+			else:
+				score += (actual_change * W_ADVANCE) / 20.0
+
+		# Strategic safety: net danger change vs starting position
+		var start_danger = max(0, plateau - 92)
+		var end_danger = max(0, result_plateau - 92)
+		if end_danger < start_danger:
+			score += (start_danger - end_danger) * W_PLATEAU_DANGER
+		elif end_danger > start_danger:
+			score -= (end_danger - start_danger) * W_PLATEAU_DANGER
 
 	# Card-specific scoring
 	if card_type == "increment":
@@ -189,13 +206,13 @@ func _select_best_choice(snapshot, action):
 	"""Select the best value for Jolly/Imbroglio from available choices."""
 	var choices = action.get("choices", [])
 	if choices.size() == 0:
-		return -1
+		return -999999
 
 	var plateau = int(snapshot.get("piatto", 0))
 	var card_id = str(action.get("card_id", ""))
 	var card = _find_card_by_id(snapshot, card_id)
 	if card == null:
-		return -1
+		return -999999
 
 	var card_type = str(card.get("card_type", "")).to_lower()
 	var best_value = int(choices[0].get("parameters", {}).get("selected_value", 5))
@@ -221,8 +238,22 @@ func _score_choice(plateau, card_type, value):
 		if new_plateau == target:
 			return W_IMMEDIATE_WIN  # Immediate win!
 		elif new_plateau > target:
-			# Would bounce - bad choice
-			return (2 * target - new_plateau) * 0.5 + W_BOUNCE_PENALTY
+			# Would bounce — evaluate actual resulting plateau
+			var result_plateau = 2 * target - new_plateau
+			var s = 0.0
+			var actual_change = result_plateau - plateau
+			if actual_change > 0:
+				if result_plateau < 93:
+					s += (actual_change * W_ADVANCE) / 10.0
+				else:
+					s += (actual_change * W_ADVANCE) / 20.0
+			var start_danger = max(0, plateau - 92)
+			var end_danger = max(0, result_plateau - 92)
+			if end_danger < start_danger:
+				s += (start_danger - end_danger) * W_PLATEAU_DANGER
+			elif end_danger > start_danger:
+				s -= (end_danger - start_danger) * W_PLATEAU_DANGER
+			return s
 		else:
 			# Good advancement, higher is better
 			return value * W_ADVANCE / 10.0

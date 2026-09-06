@@ -116,8 +116,8 @@ func _check_card_counts_by_type():
 		"increment": 30,
 		"jolly": 10,
 		"gold": 7,
-		"special": 7,   # 3 x card89 + 4 x +11
-		"imbroglio": 6,
+		"special": 6,   # 3 x card89 + 3 x +11
+		"imbroglio": 7,
 	}
 
 	var all_ok = true

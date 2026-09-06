@@ -204,23 +204,43 @@ func _on_gc_action_applied(result):
 	var event_summary = []
 	for e in events:
 		var es = e["type"]
-		if e.has("player_id"): es += "(" + str(e["player_id"]) + ")"
-		if e.has("card_id"): es += "[" + str(e["card_id"]) + "]"
+		if e.has("player_id"):
+			es += "(" + str(e["player_id"]) + ")"
+		if e.has("card_id"):
+			es += "[" + str(e["card_id"]) + "]"
 		event_summary.append(es)
+
 	print("[Demo] Turn " + str(snapshot["turn_number"]) + " — " + PoolStringArray(event_summary).join(", "))
+
+	# Print CPU hands for debugging
+	print("[Demo] CPU hands:")
+	for p in snapshot["players"]:
+		if p["id"] == "player_1":
+			continue  # Skip human player
+
+		var card_ids = []
+		for c in p["hand"]:
+			card_ids.append(str(c["card_id"]))
+
+		print("  " + str(p["id"]) + ": [" + PoolStringArray(card_ids).join(", ") + "]")
 
 	# Track stats
 	for e in events:
 		var t = e["type"]
-		if t == "card_played": stats["play_card"] += 1
-		elif t == "card_changed": stats["change_card"] += 1
-		elif t == "hand_reset": stats["reset_hand"] += 1
-		elif t == "advantage_started": stats["advantage_turns"] += 1
+		if t == "card_played":
+			stats["play_card"] += 1
+		elif t == "card_changed":
+			stats["change_card"] += 1
+		elif t == "hand_reset":
+			stats["reset_hand"] += 1
+		elif t == "advantage_started":
+			stats["advantage_turns"] += 1
 
 	# Handle game over
 	if snapshot.get("winner", null) != null:
 		_on_game_won(snapshot)
 		return
+
 	if turn_count >= max_demo_turns:
 		stop_demo()
 

@@ -1,11 +1,16 @@
-[gd_scene load_steps=19 format=2]
+[gd_scene load_steps=24 format=2]
 
 [ext_resource path="res://imgs/mainMenu.png" type="Texture" id=1]
 [ext_resource path="res://fonts/menuFont.tres" type="DynamicFont" id=2]
 [ext_resource path="res://MainMenu.gd" type="Script" id=3]
-[ext_resource path="res://Main.tscn" type="PackedScene" id=4]
+[ext_resource path="res://imgs/CS.png" type="Texture" id=5]
 
-[sub_resource type="StyleBoxEmpty" id=5]
+[sub_resource type="StyleBoxFlat" id=20]
+bg_color = Color( 1, 0.921569, 0.745098, 0.27451 )
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
 
 [sub_resource type="StyleBoxEmpty" id=6]
 
@@ -24,6 +29,20 @@ use_mipmaps = true
 use_filter = true
 extra_spacing_char = -1
 font_data = SubResource( 1 )
+
+[sub_resource type="StyleBoxEmpty" id=16]
+
+[sub_resource type="StyleBoxEmpty" id=17]
+
+[sub_resource type="StyleBoxEmpty" id=18]
+
+[sub_resource type="StyleBoxEmpty" id=19]
+
+[sub_resource type="StyleBoxTexture" id=21]
+texture = ExtResource( 5 )
+region_rect = Rect2( 0, 0, 228, 328 )
+axis_stretch_horizontal = 2
+axis_stretch_vertical = 2
 
 [sub_resource type="DynamicFont" id=3]
 size = 32
@@ -58,9 +77,6 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 script = ExtResource( 3 )
 
-[node name="Main" parent="." instance=ExtResource( 4 )]
-visible = false
-
 [node name="MenuBG" type="TextureRect" parent="."]
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -75,7 +91,8 @@ margin_bottom = 942.0
 [node name="Play" type="Button" parent="ButtonsArea"]
 margin_right = 230.0
 margin_bottom = 330.0
-custom_styles/hover = SubResource( 5 )
+custom_colors/font_color = Color( 1, 1, 1, 1 )
+custom_styles/hover = SubResource( 20 )
 custom_styles/pressed = SubResource( 6 )
 custom_styles/focus = SubResource( 7 )
 custom_styles/disabled = SubResource( 8 )
@@ -101,10 +118,16 @@ PARTITA VELOCE"
 align = 1
 valign = 1
 
-[node name="Stats" type="Control" parent="ButtonsArea"]
+[node name="Stats" type="Button" parent="ButtonsArea"]
 margin_left = 266.0
 margin_right = 496.0
 margin_bottom = 330.0
+custom_colors/font_color = Color( 1, 1, 1, 1 )
+custom_styles/hover = SubResource( 20 )
+custom_styles/pressed = SubResource( 16 )
+custom_styles/focus = SubResource( 17 )
+custom_styles/disabled = SubResource( 18 )
+custom_styles/normal = SubResource( 19 )
 
 [node name="Label" type="Label" parent="ButtonsArea/Stats"]
 margin_right = 230.0
@@ -115,10 +138,17 @@ text = "STATISTICHE"
 align = 1
 valign = 1
 
-[node name="Online" type="Control" parent="ButtonsArea"]
+[node name="Online" type="Button" parent="ButtonsArea"]
 margin_left = 532.0
 margin_right = 762.0
 margin_bottom = 330.0
+custom_colors/font_color_disabled = Color( 0, 0, 0, 1 )
+custom_styles/hover = SubResource( 20 )
+custom_styles/pressed = SubResource( 16 )
+custom_styles/focus = SubResource( 17 )
+custom_styles/disabled = SubResource( 21 )
+custom_styles/normal = SubResource( 19 )
+disabled = true
 
 [node name="Label" type="Label" parent="ButtonsArea/Online"]
 margin_right = 230.0
@@ -130,10 +160,16 @@ ONLINE"
 align = 1
 valign = 1
 
-[node name="Tutorial" type="Control" parent="ButtonsArea"]
+[node name="Tutorial" type="Button" parent="ButtonsArea"]
 margin_left = 798.0
 margin_right = 1028.0
 margin_bottom = 330.0
+custom_colors/font_color = Color( 1, 1, 1, 1 )
+custom_styles/hover = SubResource( 20 )
+custom_styles/pressed = SubResource( 16 )
+custom_styles/focus = SubResource( 17 )
+custom_styles/disabled = SubResource( 18 )
+custom_styles/normal = SubResource( 19 )
 
 [node name="Label" type="Label" parent="ButtonsArea/Tutorial"]
 margin_right = 230.0
@@ -145,10 +181,16 @@ GIOCA"
 align = 1
 valign = 1
 
-[node name="Credits" type="Control" parent="ButtonsArea"]
+[node name="Credits" type="Button" parent="ButtonsArea"]
 margin_left = 1064.0
 margin_right = 1294.0
 margin_bottom = 330.0
+custom_colors/font_color = Color( 1, 1, 1, 1 )
+custom_styles/hover = SubResource( 20 )
+custom_styles/pressed = SubResource( 16 )
+custom_styles/focus = SubResource( 17 )
+custom_styles/disabled = SubResource( 18 )
+custom_styles/normal = SubResource( 19 )
 
 [node name="Label" type="Label" parent="ButtonsArea/Credits"]
 margin_right = 230.0
@@ -159,10 +201,16 @@ text = "CREDITS"
 align = 1
 valign = 1
 
-[node name="Options" type="Control" parent="ButtonsArea"]
+[node name="Options" type="Button" parent="ButtonsArea"]
 margin_left = 1330.0
 margin_right = 1560.0
 margin_bottom = 330.0
+custom_colors/font_color = Color( 1, 1, 1, 1 )
+custom_styles/hover = SubResource( 20 )
+custom_styles/pressed = SubResource( 16 )
+custom_styles/focus = SubResource( 17 )
+custom_styles/disabled = SubResource( 18 )
+custom_styles/normal = SubResource( 19 )
 
 [node name="Label" type="Label" parent="ButtonsArea/Options"]
 margin_right = 230.0
@@ -182,6 +230,8 @@ margin_left = -275.0
 margin_top = -60.0
 margin_right = 275.0
 margin_bottom = -10.0
+custom_colors/font_color = Color( 1, 1, 1, 1 )
+custom_colors/font_color_hover = Color( 1, 0.921569, 0.745098, 1 )
 custom_fonts/font = ExtResource( 2 )
 custom_styles/hover = SubResource( 11 )
 custom_styles/pressed = SubResource( 12 )
@@ -199,5 +249,3 @@ text = "Demo Automatica (Debug)"
 
 [connection signal="pressed" from="ButtonsArea/Play" to="." method="_on_Play_pressed"]
 [connection signal="pressed" from="ExitGame" to="." method="_on_ExitGame_pressed"]
-
-[editable path="Main"]

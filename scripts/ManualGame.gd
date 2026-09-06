@@ -13,6 +13,8 @@ var running = false
 var max_turns = 1000
 var step_delay_ms = 600
 
+var BGsQnty = 4
+
 # F7: +11 Gold chain (mirrors RoadTo100Rules.GOLD_CHAIN) — decides whether a
 # +11 play activates a Safe Round (23-78) vs the Advantage Round (89).
 const GOLD_CHAIN = {12: 23, 23: 34, 34: 45, 45: 56, 56: 67, 67: 78, 78: 89}
@@ -42,7 +44,7 @@ func _ready():
 	_ai_player3 = ai_class.new()
 	_ai_player3.W_INCREMENT_HIGH = 8          # Strong preference for big jumps
 	_ai_player3.W_INCREMENT_MED = 4
-	_ai_player3.W_BOUNCE_PENALTY = -20        # Accept more bounce risk
+	_ai_player3.W_PLATEAU_DANGER = 6          # Accepts higher plateau risk for progress
 	_ai_player3.W_JOLLY_FLEXIBILITY = 25      # Aggressive Jolly use
 	_ai_player3.W_GOLD_ACTIVATE_SR = 80       # Willing to start SR
 	_ai_player3.W_PLUS11_NORMAL = 60          # More willing to use +11
@@ -51,19 +53,22 @@ func _ready():
 	# Initialize AI for player_4 (tactical/prudent)
 	_ai_player4 = ai_class.new()
 	_ai_player4.W_INCREMENT_HIGH = 2          # Prefer smaller, safer increments
-	_ai_player4.W_BOUNCE_PENALTY = -80        # Very bounce-averse
+	_ai_player4.W_PLATEAU_DANGER = 30         # Very danger-averse, uses bounce defensively
 	_ai_player4.W_JOLLY_FLEXIBILITY = 8       # Conservative Jolly use
-	_ai_player4.W_GOLD_ACTIVATE_SR = 40       # Less willing to start SR
+	_ai_player4.W_GOLD_ACTIVATE_SR = -40       # Less willing to start SR
 	_ai_player4.W_PLUS11_HOLD_BACK = -200     # Very conservative about +11
 	_ai_player4.W_IMBROGLIO_STRATEGIC = 50    # Prefer Imbroglio for control
 
 	if _gc != null and _gc.has_signal("action_applied"):
 		_gc.connect("action_applied", self, "_on_gc_action_applied")
 
-
 func start_game():
-	if running:
-		return
+#	if running:
+#		return
+	var bgImage = "res://imgs/tableBG"+str((randi() % BGsQnty) + 1)+".png"
+	var main = get_tree().get_root().find_node("Main",true, false)
+	var bgImagePath = main.get_node("Background/BackgroundImage")
+	bgImagePath.texture = load(bgImage)
 	randomize()
 	if _gc == null:
 		print("[ManualGame] ERROR: No GameController reference.")
@@ -133,29 +138,46 @@ func _on_timer_timeout():
 		_schedule_next_step()
 		return
 
+	# CPU turn — debug current state
+	var cur_player_idx = int(snapshot.get("current_player_index", -1))
+	var players = snapshot.get("players", [])
+	var cur_player_id = ""
+	var cur_hand = []
+
+	if cur_player_idx >= 0 and cur_player_idx < players.size():
+		cur_player_id = str(players[cur_player_idx].get("id", ""))
+
+		for c in players[cur_player_idx].get("hand", []):
+			cur_hand.append(str(c.get("card_id", "")))
+
+	print("[CPU DEBUG] player=" + cur_player_id)
+	print("[CPU DEBUG] state=" + str(state))
+	print("[CPU DEBUG] hand=[" + PoolStringArray(cur_hand).join(", ") + "]")
+
 	# CPU turn — check if we can act
 	# Only act when READY_FOR_INPUT(1) or CARD_SELECTED(2) — same as DebugDemo
 	if state != 1 and state != 2:
+		print("[CPU DEBUG] not ready for input, state=" + str(state))
+
 		# WAITING_FOR_CHOICE (3): a popup is open; the GC opens it, and for CPU
 		# we resolve it via _handle_cpu_choice (value choices / reset hand).
 		if state == 3:
+			print("[CPU DEBUG] WAITING_FOR_CHOICE -> _handle_cpu_choice")
 			_handle_cpu_choice(snapshot, lid)
 			return
+
 		_schedule_next_step()
 		return
 
 	# CPU performs action — all CPU players use AI (no random behavior)
 	var acts = snapshot.get("available_actions", [])
+
+	print("[CPU DEBUG] available_actions=" + str(acts))
+
 	if acts.empty():
+		print("[CPU DEBUG] STUCK CANDIDATE: available_actions is EMPTY")
 		_schedule_next_step()
 		return
-
-	# Check if this is player_2's turn (use AI for them)
-	var cur_player_idx = int(snapshot.get("current_player_index", -1))
-	var players = snapshot.get("players", [])
-	var cur_player_id = ""
-	if cur_player_idx >= 0 and cur_player_idx < players.size():
-		cur_player_id = str(players[cur_player_idx].get("id", ""))
 
 	var action
 	if cur_player_id == "player_2" and _ai_player2 != null:
@@ -171,7 +193,10 @@ func _on_timer_timeout():
 		# Fallback: random selection (should never happen in normal play)
 		action = _choose_action(acts)
 
+	print("[CPU DEBUG] chosen_action=" + str(action))
+
 	if action == null:
+		print("[CPU DEBUG] STUCK CANDIDATE: AI returned NULL")
 		_schedule_next_step()
 		return
 
@@ -198,9 +223,11 @@ func _on_timer_timeout():
 			if _play_activates_safe_round(snapshot, cid):
 				action_dict["blocked_type"] = SAFE_ROUND_CHOICES[randi() % SAFE_ROUND_CHOICES.size()]
 
+		print("[CPU DEBUG] perform_action=" + str(action_dict))
 		_gc.perform_action(action_dict)
 
 	elif at == "reset_hand":
+		print("[CPU DEBUG] perform_action=reset_hand")
 		_gc.perform_action({"action_type": "reset_hand"})
 
 	_schedule_next_step()

@@ -7,7 +7,8 @@ extends Control
 #func _process(delta):
 #	pass
 func _ready():
-	$StartGameButton.emit_signal("pressed")
+	if GlobalsUtilities.gameStarted: 
+		$StartGameButton.emit_signal("pressed")
 
 func _on_BackMenuButton_pressed():
 	get_tree().change_scene("res://MainMenu.tscn")

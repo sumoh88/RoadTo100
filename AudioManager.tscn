@@ -1,6 +1,11 @@
-[gd_scene load_steps=2 format=2]
+[gd_scene load_steps=7 format=2]
 
 [ext_resource path="res://AudioManager.gd" type="Script" id=1]
+[ext_resource path="res://sound/playCard.wav" type="AudioStream" id=2]
+[ext_resource path="res://sound/select.wav" type="AudioStream" id=3]
+[ext_resource path="res://sound/drawCard.wav" type="AudioStream" id=4]
+[ext_resource path="res://sound/shuffleDeal.wav" type="AudioStream" id=5]
+[ext_resource path="res://sound/changeCard.wav" type="AudioStream" id=6]
 
 [node name="AudioManager" type="Node"]
 script = ExtResource( 1 )
@@ -18,13 +23,28 @@ script = ExtResource( 1 )
 [node name="Trumpet" type="AudioStreamPlayer" parent="MusicPlayer"]
 
 [node name="SFXPlayer" type="AudioStreamPlayer" parent="."]
+volume_db = -10.0
+pitch_scale = 10.0
 
-[node name="Select" type="AudioStreamPlayer2D" parent="SFXPlayer"]
+[node name="Select" type="AudioStreamPlayer" parent="SFXPlayer"]
+stream = ExtResource( 3 )
+volume_db = -80.0
 
-[node name="ShuffleDeal" type="AudioStreamPlayer2D" parent="SFXPlayer"]
+[node name="ShuffleDeal" type="AudioStreamPlayer" parent="SFXPlayer"]
+stream = ExtResource( 5 )
+volume_db = -80.0
 
-[node name="Draw" type="AudioStreamPlayer2D" parent="SFXPlayer"]
+[node name="DrawCard" type="AudioStreamPlayer" parent="SFXPlayer"]
+stream = ExtResource( 4 )
+volume_db = -80.0
 
-[node name="PlayCard" type="AudioStreamPlayer2D" parent="SFXPlayer"]
+[node name="PlayCard" type="AudioStreamPlayer" parent="SFXPlayer"]
+stream = ExtResource( 2 )
+volume_db = -80.0
 
-[node name="Victory" type="AudioStreamPlayer2D" parent="SFXPlayer"]
+[node name="ChangeCard" type="AudioStreamPlayer" parent="SFXPlayer"]
+stream = ExtResource( 6 )
+volume_db = -80.0
+
+[node name="Victory" type="AudioStreamPlayer" parent="SFXPlayer"]
+volume_db = -80.0

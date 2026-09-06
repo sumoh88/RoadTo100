@@ -5,6 +5,11 @@ extends Control
 # var a = 2
 # var b = "text"
 func _ready():
+	if not GlobalsUtilities.splash_shown:
+		print("WEFIOWRMIFIMEMFOWEPC")
+		GlobalsUtilities.splash_shown = true
+		get_tree().change_scene("res://SplashScreen.tscn")
+		return
 	AudioManager.set_menu_music()
 	
 func _on_Play_pressed():
