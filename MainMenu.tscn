@@ -252,6 +252,7 @@ custom_styles/normal = SubResource( 10 )
 text = "ESCI DAL GIOCO"
 
 [node name="DemoButton" type="Button" parent="."]
+visible = false
 margin_left = 10.0
 margin_top = 10.0
 margin_right = 260.0
