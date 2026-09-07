@@ -215,6 +215,7 @@ func _find_popups():
 			_value_btn_grid = _child(vb, "BtnGrid")
 			_value_cancel_btn = _child(vb, "CancelBtn")
 			if _value_cancel_btn != null:
+				_value_cancel_btn.rect_position = Vector2(0, 265)
 				_value_cancel_btn.connect("pressed", self, "_on_value_cancel")
 		# Prevent popup from closing on outside click while waiting for choice
 		_value_choice_popup.connect("popup_hide", self, "_on_value_choice_popup_hide")
@@ -398,6 +399,7 @@ func _open_value_choice(card_name, all_values, valid_values):
 
 	if _value_choice_label != null:
 		_value_choice_label.text = "Scegli il valore per " + card_name
+		GlobalsUtilities.setCustomFont(_value_choice_label, 32)
 
 	# Clear old buttons from grid
 	if _value_btn_grid != null:
@@ -409,7 +411,9 @@ func _open_value_choice(card_name, all_values, valid_values):
 		for v in all_values:
 			var btn = Button.new()
 			btn.text = str(v)
-			btn.rect_min_size = Vector2(60, 40)
+			btn.rect_min_size = Vector2(90, 90)
+			GlobalsUtilities.setCustomFont(btn, 48, -3)
+			GlobalsUtilities.setCustomStyle(btn)
 			if not v in valid_values:
 				btn.disabled = true
 				btn.modulate = Color(1, 1, 1, 0.35)

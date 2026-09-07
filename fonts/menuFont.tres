@@ -7,5 +7,6 @@ font_path = "res://fonts/Dyuthi.ttf"
 size = 32
 use_mipmaps = true
 use_filter = true
+extra_spacing_top = 4
 extra_spacing_char = -1
 font_data = SubResource( 22 )

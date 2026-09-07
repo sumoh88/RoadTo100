@@ -1,4 +1,4 @@
-[gd_scene load_steps=44 format=2]
+[gd_scene load_steps=45 format=2]
 
 [ext_resource path="res://imgs/table.png" type="Texture" id=1]
 [ext_resource path="res://imgs/plate.png" type="Texture" id=2]
@@ -23,6 +23,7 @@
 [ext_resource path="res://imgs/btnPlay.png" type="Texture" id=21]
 [ext_resource path="res://imgs/btnHover.png" type="Texture" id=22]
 [ext_resource path="res://imgs/btnPressed.png" type="Texture" id=23]
+[ext_resource path="res://fonts/menuFont.tres" type="DynamicFont" id=24]
 
 [sub_resource type="Theme" id=1]
 
@@ -517,33 +518,46 @@ anchor_bottom = 1.0
 color = Color( 0, 0, 0, 0.45 )
 
 [node name="ValueChoicePopup" type="PopupPanel" parent="OverlayLayer"]
-margin_left = 750.0
-margin_top = 390.0
-margin_right = 1170.0
-margin_bottom = 690.0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -237.0
+margin_top = -290.0
+margin_right = 237.0
+margin_bottom = 290.0
+rect_pivot_offset = Vector2( 237, 290 )
 
-[node name="VBox" type="VBoxContainer" parent="OverlayLayer/ValueChoicePopup"]
+[node name="VBox" type="GridContainer" parent="OverlayLayer/ValueChoicePopup"]
 margin_left = 4.0
 margin_top = 4.0
-margin_right = 416.0
-margin_bottom = 296.0
+margin_right = 470.0
+margin_bottom = 576.0
 
 [node name="MsgLabel" type="Label" parent="OverlayLayer/ValueChoicePopup/VBox"]
-margin_right = 412.0
-margin_bottom = 14.0
+margin_right = 172.0
+margin_bottom = 37.0
+custom_fonts/font = ExtResource( 24 )
 text = "Scegli il valore"
 align = 1
+valign = 1
 
 [node name="BtnGrid" type="GridContainer" parent="OverlayLayer/ValueChoicePopup/VBox"]
-margin_top = 18.0
-margin_right = 412.0
-margin_bottom = 18.0
+margin_top = 41.0
+margin_right = 172.0
+margin_bottom = 41.0
 columns = 5
 
+[node name="Control" type="Control" parent="OverlayLayer/ValueChoicePopup/VBox"]
+margin_top = 45.0
+margin_right = 172.0
+margin_bottom = 45.0
+
 [node name="CancelBtn" type="Button" parent="OverlayLayer/ValueChoicePopup/VBox"]
-margin_top = 22.0
-margin_right = 412.0
-margin_bottom = 42.0
+margin_top = 49.0
+margin_right = 172.0
+margin_bottom = 92.0
+custom_fonts/font = ExtResource( 24 )
 text = "Annulla"
 
 [node name="CardDetailsPopup" type="PopupPanel" parent="OverlayLayer"]
