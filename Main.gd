@@ -8,7 +8,11 @@ extends Control
 #	pass
 func _ready():
 	if GlobalsUtilities.gameStarted: 
+		GlobalsUtilities.gameStarted = false
 		$StartGameButton.emit_signal("pressed")
+	elif GlobalsUtilities.demoStarted: 
+		GlobalsUtilities.gameStarted = false
+		$DemoButton.emit_signal("pressed")
 
 func _on_BackMenuButton_pressed():
 	get_tree().change_scene("res://MainMenu.tscn")

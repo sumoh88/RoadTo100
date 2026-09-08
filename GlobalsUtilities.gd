@@ -3,6 +3,7 @@ extends Node
 onready var sr_active = false
 onready var selected_value = ""
 onready var gameStarted = false
+onready var demoStarted = false
 onready var plateValue = 0
 
 var splash_shown = false
@@ -14,12 +15,14 @@ const THRESHOLD_VIOLIN: int = 89
 var font_data = load("res://fonts/Dyuthi.ttf")
 
 
-func setCustomFont(currNode, size, spacing = 0):
+func setCustomFont(currNode, size, spacing = 0, spacingTop = 12):
 	if font_data != null:
 		var dyn_font = DynamicFont.new()
 		dyn_font.font_data = font_data
 		dyn_font.size = size
-		dyn_font.extra_spacing_top = 12
+		dyn_font.outline_size = 2
+		dyn_font.outline_color = Color(0, 0, 0, 1)
+		dyn_font.extra_spacing_top = spacingTop
 		dyn_font.use_filter = true
 		dyn_font.use_mipmaps = true
 		dyn_font.extra_spacing_char = spacing
@@ -27,20 +30,46 @@ func setCustomFont(currNode, size, spacing = 0):
 
 
 
-func setCustomStyle(currNode):
+func setCustomStyle(currNode, type, image):
 	var styleN = StyleBoxTexture.new()
 	var styleD = StyleBoxTexture.new()
 	var styleP = StyleBoxTexture.new()
 	var styleH = StyleBoxTexture.new()
+	var styleF = StyleBoxEmpty.new()
+	var imgPath = "res://imgs/"+image+".png"
+	
+	styleN.texture = load(imgPath)
+	currNode.add_stylebox_override(type, styleN)
+
+	styleD.texture = load("res://imgs/btnDisabled.png")
+	currNode.add_stylebox_override("disabled", styleD)
+
+	styleP.texture = load("res://imgs/btnPressed.png")
+	currNode.add_stylebox_override("pressed", styleP)
+
+	styleH.texture = load("res://imgs/btnChange.png")
+	currNode.add_stylebox_override("hover", styleH)
+	
+	currNode.add_stylebox_override("focus", styleF)
+	
+func setBtnStyle(currNode):
+	var styleN = StyleBoxTexture.new()
+	var styleD = StyleBoxTexture.new()
+	var styleP = StyleBoxTexture.new()
+	var styleH = StyleBoxTexture.new()
+	var styleF = StyleBoxEmpty.new()
 	
 	styleN.texture = load("res://imgs/btnChoice.png")
 	currNode.add_stylebox_override("normal", styleN)
 	
 	styleD.texture = load("res://imgs/btnChoice.png")
 	currNode.add_stylebox_override("disabled", styleD)
-	
+
 	styleP.texture = load("res://imgs/btnChoicePressed.png")
 	currNode.add_stylebox_override("pressed", styleP)
-	
+
 	styleH.texture = load("res://imgs/btnChoiceHover.png")
 	currNode.add_stylebox_override("hover", styleH)
+	
+	currNode.add_stylebox_override("focus", styleF)
+	

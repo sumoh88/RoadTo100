@@ -13,8 +13,9 @@ func _ready():
 	AudioManager.set_menu_music()
 	
 func _on_Play_pressed():
-	get_tree().change_scene("res://Main.tscn")
+	GlobalsUtilities.demoStarted = false
 	GlobalsUtilities.gameStarted = true
+	get_tree().change_scene("res://Main.tscn")
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 #func _process(delta):
 #	pass
@@ -22,3 +23,9 @@ func _on_Play_pressed():
 
 func _on_ExitGame_pressed():
 	get_tree().quit()
+
+
+func _on_Tutorial_pressed():
+	GlobalsUtilities.gameStarted = false
+	GlobalsUtilities.demoStarted = true
+	get_tree().change_scene("res://Main.tscn")

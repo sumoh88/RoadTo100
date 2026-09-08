@@ -215,7 +215,6 @@ func _find_popups():
 			_value_btn_grid = _child(vb, "BtnGrid")
 			_value_cancel_btn = _child(vb, "CancelBtn")
 			if _value_cancel_btn != null:
-				_value_cancel_btn.rect_position = Vector2(0, 265)
 				_value_cancel_btn.connect("pressed", self, "_on_value_cancel")
 		# Prevent popup from closing on outside click while waiting for choice
 		_value_choice_popup.connect("popup_hide", self, "_on_value_choice_popup_hide")
@@ -413,7 +412,7 @@ func _open_value_choice(card_name, all_values, valid_values):
 			btn.text = str(v)
 			btn.rect_min_size = Vector2(90, 90)
 			GlobalsUtilities.setCustomFont(btn, 48, -3)
-			GlobalsUtilities.setCustomStyle(btn)
+			GlobalsUtilities.setBtnStyle(btn)
 			if not v in valid_values:
 				btn.disabled = true
 				btn.modulate = Color(1, 1, 1, 0.35)
@@ -708,12 +707,26 @@ func _open_safe_round_choice():
 			_value_btn_grid.remove_child(c)
 			c.queue_free()
 
+		var vList = VBoxContainer.new()
+		vList.rect_min_size = Vector2(465, 650)
+		vList.add_constant_override("separation", 10)
+		vList.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		_value_btn_grid.add_child(vList)
 		for choice in SAFE_ROUND_CHOICES:
 			var btn = Button.new()
 			btn.text = choice
-			btn.rect_min_size = Vector2(80, 40)
+			btn.rect_min_size = Vector2(180, 70)
+			btn.margin_bottom = 20
+			btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+			GlobalsUtilities.setCustomFont(btn, 32, 0, 6)
+			if choice == "Incremento":
+				GlobalsUtilities.setCustomStyle(btn,"normal", "btnHover")
+			elif choice == "Gold":
+				GlobalsUtilities.setCustomStyle(btn,"normal", "btnFocus")
+			elif choice == "Imbroglio":
+				GlobalsUtilities.setCustomStyle(btn,"normal", "btnPlay")
 			btn.connect("pressed", self, "_on_safe_round_choice_chosen", [choice])
-			_value_btn_grid.add_child(btn)
+			vList.add_child(btn)
 
 	if _value_choice_popup != null:
 		_value_choice_popup.popup()

@@ -251,13 +251,6 @@ custom_styles/disabled = SubResource( 14 )
 custom_styles/normal = SubResource( 10 )
 text = "ESCI DAL GIOCO"
 
-[node name="DemoButton" type="Button" parent="."]
-visible = false
-margin_left = 10.0
-margin_top = 10.0
-margin_right = 260.0
-margin_bottom = 46.0
-text = "Demo Automatica (Debug)"
-
 [connection signal="pressed" from="ButtonsArea/Play" to="." method="_on_Play_pressed"]
+[connection signal="pressed" from="ButtonsArea/Tutorial" to="." method="_on_Tutorial_pressed"]
 [connection signal="pressed" from="ExitGame" to="." method="_on_ExitGame_pressed"]
