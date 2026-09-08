@@ -53,10 +53,10 @@ func _ready():
 	# Initialize AI for player_4 (tactical/prudent)
 	_ai_player4 = ai_class.new()
 	_ai_player4.W_INCREMENT_HIGH = 2          # Prefer smaller, safer increments
-	_ai_player4.W_PLATEAU_DANGER = 30         # Very danger-averse, uses bounce defensively
+	_ai_player4.W_PLATEAU_DANGER = 40         # Very danger-averse, uses bounce defensively
 	_ai_player4.W_JOLLY_FLEXIBILITY = 8       # Conservative Jolly use
 	_ai_player4.W_GOLD_ACTIVATE_SR = -40       # Less willing to start SR
-	_ai_player4.W_PLUS11_HOLD_BACK = -200     # Very conservative about +11
+	_ai_player4.W_PLUS11_HOLD_BACK = -100     # Very conservative about +11
 	_ai_player4.W_IMBROGLIO_STRATEGIC = 50    # Prefer Imbroglio for control
 
 	if _gc != null and _gc.has_signal("action_applied"):

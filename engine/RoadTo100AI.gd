@@ -12,7 +12,7 @@ class_name RoadTo100AI
 # --- Default balanced weights (can be overridden per personality) ---
 var W_IMMEDIATE_WIN = 10000       # Score for winning immediately
 var W_ADVANCE = 100               # Base score per point of progress toward 100
-var W_PLATEAU_DANGER = 15         # Penalty per point above 92 left to next player (danger zone)
+var W_PLATEAU_DANGER = 25         # Penalty per point above 92 left to next player (danger zone)
 var W_INCREMENT_HIGH = 3          # Bonus for high-value increment cards (8-10)
 var W_INCREMENT_MED = 2           # Bonus for medium increment (5-7)
 var W_INCREMENT_LOW = 1           # Base score for low increment (1-4)
@@ -20,7 +20,7 @@ var W_JOLLY_FLEXIBILITY = 15      # Jolly is flexible, add bonus
 var W_GOLD_ACTIVATE_SR = 60       # Gold activates Safe Round - strategic value
 var W_PLUS11_GOLD_CHAIN = 70      # +11 after Gold creates transformed Gold
 var W_PLUS11_NORMAL = 40          # +11 just adds 11 points
-var W_PLUS11_HOLD_BACK = -150     # Penalty for using +11 when not strategic (must exceed max advancement 110)
+var W_PLUS11_HOLD_BACK = -75      # Penalty for using +11 when not strategic (must exceed max advancement 110)
 var W_IMBROGLIO_STRATEGIC = 25    # Imbroglio can be used strategically
 var W_GDV_BONUS = 30              # Bonus during GdV for +11 or high increments
 var W_CHANGE_CARD = -10           # Cambio Carta is last resort (negative score)

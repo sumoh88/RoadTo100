@@ -191,6 +191,13 @@ func _build_snapshot():
 	if !game_state.discard_pile.empty():
 		discard_top = _card_to_dict(game_state.discard_pile[game_state.discard_pile.size() - 1])
 
+	# Discard visual stack — last N discarded cards (presentation only), so the
+	# discard pile can be rendered as a hand-placed stack with slight jitter.
+	var discard_stack = []
+	var _disc = game_state.discard_pile
+	for i in range(max(0, _disc.size() - 6), _disc.size()):
+		discard_stack.append(_card_to_dict(_disc[i]))
+
 	# Plateau cards (all played cards, in chronological order)
 	var plateau = []
 	var plateau_cards = game_state.metadata.get("plateau_cards", [])
@@ -212,6 +219,7 @@ func _build_snapshot():
 		"piatto": display_piatto,
 		"deck_count": game_state.deck.size(),
 		"discard_top": discard_top,
+		"discard_stack": discard_stack,
 		"plateau_cards": plateau,
 		"plateau_visual_stack": plateau_visual_stack,
 		"special_round_active": game_state.metadata.get("special_round_active", false),

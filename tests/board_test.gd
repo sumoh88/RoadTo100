@@ -77,29 +77,28 @@ func _t1_stacked_position():
 	# Gold + plate
 	bp._update_plateau([{"type":"plate","value":0},{"type":"card","card":gold}])
 	_a(bp._permanent_layer.get_child_count() == 2, "plate+gold: 2 children: " + str(bp._permanent_layer.get_child_count()))
-	# SV (card faces) positioned at (0,0); PL (plate value cards) at (0,-12) per BoardPresenter.
-	var sv_all_origin = true
-	var pl_all_at_offset = true
+	# SV/PL cards sit within a small controlled jitter of the origin (base card
+	# stays at (0,0); later cards get hand-placed offsets within ±7 px / ~±2.5°).
+	var sv_in_bounds = true
+	var pl_in_bounds = true
 	for c in bp._permanent_layer.get_children():
-		if c.name.begins_with("SV"):
-			if c.rect_position != Vector2(0,0): sv_all_origin = false
-		elif c.name.begins_with("PL"):
-			if c.rect_position != Vector2(0,-12): pl_all_at_offset = false
-	_a(sv_all_origin, "SV at (0,0)")
-	_a(pl_all_at_offset, "PL at (0,-12)")
+		var inb = (abs(c.rect_position.x) <= 7 and abs(c.rect_position.y) <= 7 and abs(c.rect_rotation) <= 2.5)
+		if c.name.begins_with("SV") and not inb: sv_in_bounds = false
+		elif c.name.begins_with("PL") and not inb: pl_in_bounds = false
+	_a(sv_in_bounds, "SV within jitter bounds of origin")
+	_a(pl_in_bounds, "PL within jitter bounds of origin")
 
 	# Multiple items: plate, card, plate
 	bp._update_plateau([{"type":"plate","value":0},{"type":"card","card":gold},{"type":"plate","value":28}])
 	_a(bp._permanent_layer.get_child_count() == 3, "3 items: " + str(bp._permanent_layer.get_child_count()))
-	sv_all_origin = true
-	pl_all_at_offset = true
+	sv_in_bounds = true
+	pl_in_bounds = true
 	for c in bp._permanent_layer.get_children():
-		if c.name.begins_with("SV"):
-			if c.rect_position != Vector2(0,0): sv_all_origin = false
-		elif c.name.begins_with("PL"):
-			if c.rect_position != Vector2(0,-12): pl_all_at_offset = false
-	_a(sv_all_origin, "SV at (0,0)")
-	_a(pl_all_at_offset, "PL at (0,-12)")
+		var inb = (abs(c.rect_position.x) <= 7 and abs(c.rect_position.y) <= 7 and abs(c.rect_rotation) <= 2.5)
+		if c.name.begins_with("SV") and not inb: sv_in_bounds = false
+		elif c.name.begins_with("PL") and not inb: pl_in_bounds = false
+	_a(sv_in_bounds, "SV within jitter bounds of origin (3)")
+	_a(pl_in_bounds, "PL within jitter bounds of origin (3)")
 	_cleanup_board(bp)
 	return "  Plateau stacking:      [PASS]\n"
 

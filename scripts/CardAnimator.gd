@@ -302,16 +302,18 @@ func _find_opponent_card(main, player_id, card_id):
 
 	# Opponent cards all have card_id="" (set_card_back), so matching by
 	# card_id is not possible. Return the rightmost card (newest position)
-	# as a reasonable approximation.
+	# as a reasonable approximation. Skip soft-shadow nodes ("OPS" prefix).
 	var rightmost = null
 	var max_x = -99999.0
 	for c in cards_layer.get_children():
+		if c.name.begins_with("OPS"): continue
 		if c.rect_position.x > max_x:
 			max_x = c.rect_position.x
 			rightmost = c
 	# Also check if any card happens to have a matching non-empty card_id
 	if card_id != "":
 		for c in cards_layer.get_children():
+			if c.name.begins_with("OPS"): continue
 			if c.card_id == card_id:
 				return c
 	return rightmost
