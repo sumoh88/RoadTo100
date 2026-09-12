@@ -33,6 +33,7 @@ volume_db = -80.0
 [node name="ShuffleDeal" type="AudioStreamPlayer" parent="SFXPlayer"]
 stream = ExtResource( 5 )
 volume_db = -80.0
+pitch_scale = 0.63
 
 [node name="DrawCard" type="AudioStreamPlayer" parent="SFXPlayer"]
 stream = ExtResource( 4 )

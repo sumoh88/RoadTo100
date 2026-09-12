@@ -154,6 +154,20 @@ func _run_all():
 	out += _test_89_not_playable_during_gdv()
 	tests_run += 1
 
+	# --- TestChangeCardDisabledDuringGdv ---
+	out += _test_change_card_disabled_during_gdv()
+	tests_run += 1
+
+	# --- GdV reset_hand/change_card tests ---
+	out += _test_gdv_no_playable_both_available()
+	tests_run += 1
+	out += _test_gdv_reset_still_no_playable_change_available()
+	tests_run += 1
+	out += _test_gdv_advantage_player_same_behavior()
+	tests_run += 1
+	out += _test_gdv_has_playable_normal_actions()
+	tests_run += 1
+
 	# --- TestPlus11DuringGdv ---
 	out += _test_plus11_during_gdv()
 	tests_run += 1
@@ -467,14 +481,283 @@ func _test_89_not_playable_during_gdv():
 
 	var play_ok = _assert_true(!c89_found_as_play,
 		"89 not playable", "89 card should NOT be playable during GdV")
-	var change_ok = _assert_true(c89_found_as_change,
-		"89 changeable", "89 card should be changeable during GdV")
+	var change_ok = _assert_true(!c89_found_as_change,
+		"89 not changeable", "89 card should NOT be changeable during GdV")
 
 	if play_ok and change_ok:
 		_test("89 not playable during GdV")
 		return "  89 not playable GdV: [PASS]\n"
 	else:
 		return "  89 not playable GdV: [FAIL]\n"
+
+
+# ---------------------------------------------------------------------------
+# Change card behavior during GdV
+# ---------------------------------------------------------------------------
+func _test_change_card_disabled_during_gdv():
+	var rules = Rules.new()
+	# Non-advantage player with an Incremento card (playable in GdV) → no change needed
+	var p1 = PlayerData.new("p1", "P1", Hand.new([increment_card(3, 0)]))
+
+	var game = make_game(
+		[p1],
+		[increment_card(4, 0)],
+		null,
+		{
+			"piatto": 50,
+			"plateau_cards": [],
+			"special_round_active": true,
+			"special_round_player_id": "p2",
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+
+	var actions = rules.get_available_actions(game)
+	var has_change = false
+	var has_play = false
+	for a in actions:
+		if a["action_type"] == "change_card":
+			has_change = true
+		elif a["action_type"] == "play_card":
+			has_play = true
+
+	var ok1 = _assert_true(!has_change, "gdv no change (has playable)",
+		"change_card must NOT be available when player has playable cards in GdV")
+	var ok2 = _assert_true(has_play, "gdv has play",
+		"play_card must still be available for playable cards in GdV")
+
+	# Also verify: non-advantage player with no playable cards gets reset_hand AND change_card
+	var p2 = PlayerData.new("p1", "P1", Hand.new([gold_card(12)]))
+	var game2 = make_game(
+		[p2],
+		[increment_card(4, 0)],
+		null,
+		{
+			"piatto": 50,
+			"plateau_cards": [],
+			"special_round_active": true,
+			"special_round_player_id": "p2",
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+	var actions2 = rules.get_available_actions(game2)
+	var has_change2 = false
+	var has_reset = false
+	for a in actions2:
+		if a["action_type"] == "change_card":
+			has_change2 = true
+		elif a["action_type"] == "reset_hand":
+			has_reset = true
+
+	var ok3 = _assert_true(has_change2, "gdv change (no playable)",
+		"change_card MUST be available during GdV when no playable cards")
+	var ok4 = _assert_true(has_reset, "gdv has reset_hand",
+		"reset_hand must be available for non-advantage player with no playable cards in GdV")
+
+	if ok1 and ok2 and ok3 and ok4:
+		_test("change_card behavior during GdV")
+		return "  GdV change_card logic: [PASS]\n"
+	else:
+		return "  GdV no change_card:    [FAIL]\n"
+
+
+# ---------------------------------------------------------------------------
+# GdV reset_hand/change_card logic — comprehensive tests
+# ---------------------------------------------------------------------------
+
+# 1. GdV + no playable cards → BOTH reset_hand AND change_card available
+func _test_gdv_no_playable_both_available():
+	var rules = Rules.new()
+
+	# Player with Gold + Imbroglio + Imbroglio (none playable in GdV)
+	var p_hand = Hand.new([
+		gold_card(34),
+		imbroglio_card(0),
+		imbroglio_card(1),
+	])
+	var p = PlayerData.new("p1", "P1", p_hand)
+
+	var game = make_game(
+		[p],
+		[increment_card(5, 0)],
+		null,
+		{
+			"piatto": 89,
+			"plateau_cards": [],
+			"special_round_active": true,
+			"special_round_player_id": "p2",  # Not this player
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+
+	var actions = rules.get_available_actions(game)
+
+	var has_change = false
+	var has_reset = false
+	for a in actions:
+		if a["action_type"] == "change_card":
+			has_change = true
+		elif a["action_type"] == "reset_hand":
+			has_reset = true
+
+	var ok1 = _assert_true(has_reset, "gdv reset yes",
+		"reset_hand MUST be available when no playable cards in GdV")
+	var ok2 = _assert_true(has_change, "gdv change yes",
+		"change_card MUST be available when no playable cards in GdV")
+
+	if ok1 and ok2:
+		_test("GdV no-playable both reset+change available")
+		return "  GdV both available:    [PASS]\n"
+	else:
+		return "  GdV both available:    [FAIL]\n"
+
+
+# 2. After reset → still no playable cards → change_card remains available
+func _test_gdv_reset_still_no_playable_change_available():
+	var rules = Rules.new()
+
+	# Simulate: player used reset_hand, got new cards, still no playable
+	var p_hand = Hand.new([
+		gold_card(12),  # New card after reset
+		imbroglio_card(0),
+		imbroglio_card(1),
+	])
+	var p = PlayerData.new("p1", "P1", p_hand)
+
+	var game = make_game(
+		[p],
+		[increment_card(5, 0)],
+		null,
+		{
+			"piatto": 89,
+			"plateau_cards": [],
+			"special_round_active": true,
+			"special_round_player_id": "p2",
+			"turn_phase": "start",
+			"target_score": 100,
+			"_reset_hand_used_this_turn": true,  # Reset already used
+		}
+	)
+
+	var actions = rules.get_available_actions(game)
+
+	var has_change = false
+	var has_reset = false
+	for a in actions:
+		if a["action_type"] == "change_card":
+			has_change = true
+		elif a["action_type"] == "reset_hand":
+			has_reset = true
+
+	var ok1 = _assert_true(has_change, "post-reset change yes",
+		"change_card MUST be available after reset when still no playable cards")
+	var ok2 = _assert_true(!has_reset, "post-reset reset no",
+		"reset_hand must NOT be available again after use")
+
+	if ok1 and ok2:
+		_test("GdV post-reset change_card available")
+		return "  GdV post-reset change: [PASS]\n"
+	else:
+		return "  GdV post-reset change: [FAIL]\n"
+
+
+# 3. Advantage player → same behavior as non-advantage
+func _test_gdv_advantage_player_same_behavior():
+	var rules = Rules.new()
+
+	# Advantage player with no playable cards
+	var p_hand = Hand.new([
+		gold_card(34),
+		imbroglio_card(0),
+		imbroglio_card(1),
+	])
+	var p = PlayerData.new("p4", "P4", p_hand)
+
+	var game = make_game(
+		[p],
+		[increment_card(5, 0)],
+		null,
+		{
+			"piatto": 89,
+			"plateau_cards": [],
+			"special_round_active": true,
+			"special_round_player_id": "p4",  # P4 IS the advantage player
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+
+	var actions = rules.get_available_actions(game)
+
+	var has_change = false
+	var has_reset = false
+	for a in actions:
+		if a["action_type"] == "change_card":
+			has_change = true
+		elif a["action_type"] == "reset_hand":
+			has_reset = true
+
+	var ok1 = _assert_true(has_reset, "adv reset yes",
+		"Advantage player gets reset_hand when no playable cards")
+	var ok2 = _assert_true(has_change, "adv change yes",
+		"Advantage player gets change_card when no playable cards")
+
+	if ok1 and ok2:
+		_test("GdV advantage player same behavior")
+		return "  GdV adv player same:   [PASS]\n"
+	else:
+		return "  GdV adv player same:   [FAIL]\n"
+
+
+# 4. Has playable cards → normal play (no reset_hand, no change_card needed)
+func _test_gdv_has_playable_normal_actions():
+	var rules = Rules.new()
+
+	# Player with an Incremento card (playable in GdV)
+	var p_hand = Hand.new([
+		increment_card(5, 0),  # Playable!
+		gold_card(34),
+		imbroglio_card(0),
+	])
+	var p = PlayerData.new("p1", "P1", p_hand)
+
+	var game = make_game(
+		[p],
+		[increment_card(5, 0)],
+		null,
+		{
+			"piatto": 89,
+			"plateau_cards": [],
+			"special_round_active": true,
+			"special_round_player_id": "p2",
+			"turn_phase": "start",
+			"target_score": 100,
+		}
+	)
+
+	var actions = rules.get_available_actions(game)
+
+	var has_play = false
+	var has_reset = false
+	for a in actions:
+		if a["action_type"] == "play_card":
+			has_play = true
+		elif a["action_type"] == "reset_hand":
+			has_reset = true
+
+	var ok1 = _assert_true(has_play, "gdv play yes",
+		"play_card MUST be available when player has playable cards")
+	var ok2 = _assert_true(!has_reset, "gdv reset no",
+		"reset_hand must NOT be available when player can play")
+
+	if ok1 and ok2:
+		_test("GdV has-playable normal actions")
+		return "  GdV has playable:      [PASS]\n"
+	else:
+		return "  GdV has playable:      [FAIL]\n"
 
 
 # ---------------------------------------------------------------------------
@@ -1885,7 +2168,8 @@ func _test_f7_activator_exact_100_wins():
 
 
 func _test_f7_change_when_no_playable_in_gs():
-	"""GS with blocked type == the player's only card type: RESET_HAND + Cambio."""
+	"""GS with blocked type == the player's only card type: RESET_HAND is forbidden
+	in GS (only allowed in GdV), so only Cambio Carta stays available."""
 	var rules = Rules.new()
 	var ctx = _f7_gs_context([imbroglio_card(0)], [gold_card(12)], 50, "Imbroglio")
 	var game = ctx["game"]
@@ -1900,7 +2184,7 @@ func _test_f7_change_when_no_playable_in_gs():
 			has_play = true
 		elif a["action_type"] == "change_card":
 			change_count += 1
-	var o1 = _assert_true(has_reset, "f7 no playable reset", "RESET_HAND must be offered")
+	var o1 = _assert_true(!has_reset, "f7 no playable reset", "RESET_HAND must NOT be offered in GS (GdV only)")
 	var o2 = _assert_true(!has_play, "f7 no playable play", "no PLAY_CARD when every card is blocked")
 	var o3 = _assert_eq(change_count, 1, "f7 no playable cambio", "Cambio Carta must stay available")
 	if o1 and o2 and o3:

@@ -37,6 +37,11 @@ func send_action(action_dict):
 		emit_signal("action_completed", result_to_emit)
 
 
+func set_reset_hand_refused(refused):
+	# Mock implementation - no-op for testing
+	pass
+
+
 func reset():
 	start_game_called = false
 	last_start_game_count = 0

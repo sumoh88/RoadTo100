@@ -3,16 +3,16 @@ extends Reference
 # ShadowFactory — purely visual soft-shadow helpers for board elements.
 
 const BORDER_RADIUS = 15.0
-const BLUR_SIZE = 10.0
-const SHADOW_ALPHA = 0.30
+const BLUR_SIZE = 5.0
+const SHADOW_ALPHA = 0.40
 
 const SHADOW_CODE = """
 shader_type canvas_item;
 
 uniform vec2 rect_size_px = vec2(100.0, 100.0);
 uniform float radius_px = 15.0;
-uniform float blur_px = 0.0;
-uniform float shadow_alpha = 1.0;
+uniform float blur_px = 5.0;
+uniform float shadow_alpha = 0.40;
 
 void fragment() {
 	// Coordinate in pixel, con (0,0) al centro del rettangolo.

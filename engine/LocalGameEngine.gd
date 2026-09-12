@@ -113,6 +113,14 @@ func send_action(action_dict):
 	})
 
 
+func set_reset_hand_refused(refused):
+	"""Mark whether reset_hand was refused by the current player.
+	Called when user clicks 'No' on the HandResetPopup during GdV."""
+	if game_state == null:
+		return
+	game_state.metadata["_reset_hand_refused_this_turn"] = bool(refused)
+
+
 # ---------------------------------------------------------------------------
 # Card / state helpers
 # ---------------------------------------------------------------------------

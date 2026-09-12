@@ -36,7 +36,7 @@ func _ready():
 
 	# -- 1. Shadow shader is a rounded-rectangle SDF (non-circular) --
 	var sf = load("res://scripts/ShadowFactory.gd").new()
-	var mat = sf.get_material()
+	var mat = sf.make_material(Vector2(203, 292))
 	var code = ""
 	if mat != null and mat.shader != null:
 		code = mat.shader.code

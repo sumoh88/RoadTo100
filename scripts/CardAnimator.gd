@@ -28,6 +28,7 @@ var _animation_layer = null
 var _tween = null
 var _busy = false
 var _queue = []
+var _active_clones = []  # Track clones for cancellation
 
 # Opponent seat mapping: player_id -> seat name
 const OPPONENT_SEATS = {
@@ -55,8 +56,6 @@ func _ready():
 			_animation_layer = _find_node_by_name(main, "CardAnimationLayer")
 	_tween = Tween.new()
 	add_child(_tween)
-	var ShuffleDeal = AudioManager.get_node("SFXPlayer/ShuffleDeal")
-	if GlobalsUtilities.gameStarted: AudioManager.play_sfx(ShuffleDeal)
 
 
 func _find_node_by_name(parent, name):
@@ -68,6 +67,26 @@ func _find_node_by_name(parent, name):
 
 func is_animating():
 	return _busy
+
+
+func cancel():
+	"""Cancel any in-progress animation and clean up all active clones.
+	Called when a new game starts to prevent old-game animations from
+	interfering with the new game's deal or play animations."""
+	_busy = false
+	_queue.clear()
+
+	# Kill the tween so no pending interpolation continues.
+	if _tween != null and is_instance_valid(_tween):
+		_tween.queue_free()
+		_tween = Tween.new()
+		add_child(_tween)
+
+	# Free all active clones from the animation layer.
+	for c in _active_clones:
+		if is_instance_valid(c):
+			c.queue_free()
+	_active_clones.clear()
 
 
 # ---------------------------------------------------------------------------
@@ -154,6 +173,7 @@ func _animate_card_played(event):
 	card_node.visible = false
 
 	_animation_layer.add_child(clone)
+	_active_clones.append(clone)
 
 	# Determine target position in animation layer coords
 	var target_pos = _get_dest_pos(destination)
@@ -169,6 +189,7 @@ func _animate_card_played(event):
 	_tween.start()
 	yield(_tween, "tween_all_completed")
 
+	_active_clones.erase(clone)
 	clone.queue_free()
 	yield(get_tree().create_timer(0.02), "timeout")
 	
@@ -220,6 +241,7 @@ func _animate_card_drawn(event):
 	clone.rect_position = start_pos
 	clone.mouse_filter = 2
 	_animation_layer.add_child(clone)
+	_active_clones.append(clone)
 
 	# Animate from pile to hand
 	_tween.interpolate_property(clone, "rect_position",
@@ -231,6 +253,7 @@ func _animate_card_drawn(event):
 	_tween.start()
 	yield(_tween, "tween_all_completed")
 
+	_active_clones.erase(clone)
 	clone.queue_free()
 
 	# Reveal the hidden card (if any)

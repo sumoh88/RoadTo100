@@ -11,11 +11,12 @@ var running = false
 var turn_count = 0
 var max_demo_turns = 1000
 var step_delay_ms = 1000
+var _game_gen = -1  # Generation ID at game start — invalidates stale timers
 
 # F7: +11 Gold chain (mirrors RoadTo100Rules.GOLD_CHAIN) — decides whether a
 # +11 play activates a Safe Round (23-78) vs the Advantage Round (89).
 const GOLD_CHAIN = {12: 23, 23: 34, 34: 45, 45: 56, 56: 67, 67: 78, 78: 89}
-const SAFE_ROUND_CHOICES = ["Incremento", "Gold", "Imbroglio"]
+const SAFE_ROUND_CHOICES = ["Incremento", "Imbroglio", "Gold"]
 
 # Stats
 var stats = {"play_card":0,"change_card":0,"reset_hand":0,"advantage_turns":0}
@@ -64,6 +65,8 @@ func start_demo():
 	stats = {"play_card":0,"change_card":0,"reset_hand":0,"advantage_turns":0}
 
 	_gc.start_game(4)
+	# Capture the generation AFTER start_game increments it.
+	_game_gen = _gc.get_game_generation()
 	_schedule_next_step()
 
 
@@ -87,6 +90,11 @@ func stop_demo():
 
 func _on_timer_timeout():
 	if not running or _gc == null:
+		return
+
+	# Generation check — if the game was restarted, this timer callback
+	# belongs to the old game and must NOT act on the new game's state.
+	if _game_gen != -1 and _gc.get_game_generation() != _game_gen:
 		return
 
 	var state = _gc.get_state()

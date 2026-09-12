@@ -63,7 +63,8 @@
 | LocalGameEngine | `engine/LocalGameEngine.gd` | ✅ Completato (C) |
 | **UI/Presenter** | | |
 | CardFace | `scenes/CardFace.tscn` + `scripts/CardFace.gd` | ✅ Scaffold |
-| BoardPresenter | `scripts/BoardPresenter.gd` | ✅ Scaffold |
+| BoardPresenter | `scripts/BoardPresenter.gd` | ✅ Piatto/mazzo/scarti/avversari + ombre pile, ventaglio CPU, jitter pile, stack scarti dinamico |
+| ShadowFactory | `scripts/ShadowFactory.gd` | ✅ Ombre morbide sagomate (SDF): 1/pila + 1/carta coperta CPU |
 | HandPresenter | `scripts/HandPresenter.gd` | ✅ Scaffold |
 | TurnPresenter | `scripts/TurnPresenter.gd` | ✅ Scaffold |
 | CardAnimator | `scripts/CardAnimator.gd` | ✅ Multi-player, giocata+pesca, 0.7s/0.6s |
@@ -168,16 +169,18 @@ Queste decisioni NON devono essere rimesse in discussione:
 | Suite | File | Cosa verifica | Stato |
 |---|---|---|---|
 | **Domain** | `tests/domain_test.gd` + `.tscn` | Deck 60 carte, card_id univoci, Deck/Hand/Player/GameState operazioni | ✅ 60 card, 0 FAIL |
-| **Rules** | `tests/rules_test.gd` + `.tscn` | 60 test: Gold chain, GdV lifecycle, 89/+11, deck reconstitution, reset hand, Safe Round activation (5), blocked type (10), GS/GdV end-to-end F7 (14), F8 vittoria GdV 97+10=107 | ✅ 191 assert, 0 FAIL |
-| **Provider** | `tests/provider_test.gd` + `.tscn` | start_game 2/3/4p, snapshot (incl. `blocked_type`), card_id, event order, plateau visual stack (4 sequenze), Safe Round blocked_type flow, F8 cap Piatto a 100 in snapshot/stack visivo | ✅ 97 assert, 0 FAIL |
-| **Presenter** | `tests/presenter_test.gd` + `.tscn` | Texture resolution, fallback, CardFace, Board/Hand/Turn presenter, button signals, selection, no rules, no auto-start | ✅ 84 assert, 0 FAIL |
-| **Board** | `tests/board_test.gd` + `.tscn` | Plateau visual stack, gold/non-gold separation, opponent centering, rotation setup, chronological order | ✅ 44 assert, 0 FAIL |
-| **GameController** | `tests/game_controller_test.gd` + `.tscn` | Stati, card selection, bottoni, popup (incl. GS pre-azione, HandResetPopup GdV-only), animazioni, input GUI reale, Jolly/Imbroglio choices | ✅ 197 assert, 0 FAIL |
+| **Rules** | `tests/rules_test.gd` + `.tscn` | 60 test: Gold chain, GdV lifecycle, 89/+11, deck reconstitution, reset hand, Safe Round activation (5), blocked type (10), GS/GdV end-to-end F7 (14), F8 vittoria GdV 97+10=107 | ✅ 197 assert, 0 FAIL (fix F7: RESET_HAND vietato in GS) |
+| **Provider** | `tests/provider_test.gd` + `.tscn` | start_game 2/3/4p, snapshot (incl. `blocked_type`), card_id, event order, plateau visual stack (4 sequenze), Safe Round blocked_type flow, F8 cap Piatto a 100 in snapshot/stack visivo | ✅ 93 assert, 0 FAIL |
+| **Presenter** | `tests/presenter_test.gd` + `.tscn` | Texture resolution, fallback, CardFace, Board/Hand/Turn presenter, button signals, selection, no rules, no auto-start | ✅ 86 assert, 0 FAIL |
+| **Board** | `tests/board_test.gd` + `.tscn` | Plateau visual stack, gold/non-gold separation, opponent centering, rotation setup, chronological order, jitter pile entro limiti | ✅ 41 assert, 0 FAIL |
+| **Shadow / Pile Presentation** | `tests/shadow_integration_test.gd` + `.tscn` | Ombra non circolare (SDF), 1 ombra/pila, jitter Piatto/Scarti entro limiti, ombre CPU 1-per-carta | ✅ 20 assert, 0 FAIL |
+| **Fan Geometry (CPU)** | `tests/fan_geometry_test.gd` + `.tscn` | Geometria ventaglio carte CPU (rotazione e convergenza dei bordi) | ✅ 7 assert, 0 FAIL |
+| **GameController** | `tests/game_controller_test.gd` + `.tscn` | Stati, card selection, bottoni, popup (incl. GS pre-azione, HandResetPopup GdV-only), animazioni, input GUI reale, Jolly/Imbroglio choices | ✅ 211 assert, 0 FAIL |
 | **CardAnimator** | `tests/card_animator_test.gd` + `.tscn` | FIFO, segnali start/finish, headless fallback, busy guard | ✅ 5 assert, 0 FAIL |
 | **CardAnimator MP** | `tests/card_animator_test2.gd` + `.tscn` | find_card per player, opponent, clone, dest, hide_drawn, event routing | ✅ 20 assert, 0 FAIL |
 | **Demo Integrazione** | `tests/demo_integration_test.gd` + `.tscn` | GameController + LocalGameEngine reale, 4 giocatori, azioni automatiche (incl. `blocked_type` GS) | ✅ 5/5 partite complete × 3 run consecutive, nessun hang |
 | **Demo Verifica** | `tests/demo_verification_test.gd` + `.tscn` | Eventi per tutti e 4 i giocatori, struttura eventi | ✅ 9 assert, 0 FAIL |
-| **Manual Game (1H+3C)** | `tests/manual_game_test.gd` + `.tscn` | ManualGame: CPU auto, pausa turno umano, esclusione reciproca, overlay non blocca input | ✅ 25 assert, 0 FAIL |
+| **Manual Game (1H+3C)** | `tests/manual_game_test.gd` + `.tscn` | ManualGame: CPU auto, pausa turno umano, esclusione reciproca, overlay non blocca input | ✅ 26 assert, 0 FAIL |
 | **Manual Game Smoke** | `tests/manual_game_smoke.tscn` | Verifica wiring reale: pulsante → ManualGame → CPU avanza | ✅ PASS |
 
 ---
@@ -387,6 +390,12 @@ Dettagli completi di F1–F8 in `PROJECT_STATE.md` sezione "Passaggio F".
 ### Modalità manuale 1 umano + 3 CPU — ✅ Implementata (21 agosto 2026)
 
 Implementata con `scripts/ManualGame.gd`: pulsante "Inizia Partita" in `Main.tscn`, CPU automatiche (stesso pattern di DebugDemo), automazione si ferma al turno umano e riparte dopo. ManualGame e DebugDemo si escludono a vicenda. Bug fix: `OverlayLayer.mouse_filter=IGNORE` (non blocca più l'input); esclusione reciproca (solo un'automazione alla volta). Test: manual_game_test 25/0, manual_game_smoke PASS.
+
+### ✅ Ombre/pile grafiche e caricamento audio su Android (11 settembre 2026)
+
+- **Resa grafica ombre/pile** (solo presentazione): `scripts/ShadowFactory.gd` (ombre morbide sagomate a SDF, una per pila + una per carta CPU) e `scripts/BoardPresenter.gd` (ventaglio carte CPU, jitter pile Piatto/Scarti ±7px/~±2.5°, stack scarti dinamico). Nessun impatto su regole/input/animazioni. Test: `shadow_integration_test`, `fan_geometry_test`.
+- **Caricamento musicale via elenco esplicito**: `AudioManager._load_random_song()` sceglie la canzone a caso da un array `song_folders` (attualmente solo `"CardTrickLoop"`) invece del listing di directory — necessario perché su Android le risorse `res://` sono impacchettate nell'APK e l'enumerazione non è affidabile.
+- **Android**: preset di export "Android" in `export_presets.cfg`, cartella `android/`, APK `RT100.apk` funzionante; la musica carica correttamente grazie all'elenco esplicito.
 
 ---
 

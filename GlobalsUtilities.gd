@@ -48,7 +48,7 @@ func setCustomStyle(currNode, type, image):
 	currNode.add_stylebox_override("pressed", styleP)
 
 	styleH.texture = load("res://imgs/btnChange.png")
-	currNode.add_stylebox_override("hover", styleH)
+	currNode.add_stylebox_override("hover", styleD)
 	
 	currNode.add_stylebox_override("focus", styleF)
 	

@@ -182,19 +182,37 @@ func get_available_actions(game):
 	if advantage_turn and not is_advantage_player and sr_type == "safe":
 		blocked_type = str(game.metadata.get("blocked_type", ""))
 
-	# During Special Round: non-activator players with no playable cards
-	# get RESET_HAND; Cambio Carta remains available in all cases.
-	if advantage_turn and not is_advantage_player and not current_player.hand.cards.empty():
+	# During GdV: ALL players with no playable cards get RESET_HAND + CHANGE_CARD.
+	# Player can choose freely between resetting hand or changing individual cards.
+	var is_gdv = advantage_turn and sr_type == "advantage"
+	if is_gdv and not current_player.hand.cards.empty():
 		var has_playable = false
 		for c in current_player.hand.cards:
 			if _card_playable_sr(c, advantage_turn, sr_type, blocked_type):
 				has_playable = true
 				break
 		if not has_playable:
-			# reset_hand is ONLY allowed during GdV (advantage type), not GS (safe type)
-			var sr_type_val = str(game.metadata.get("special_round_type", "advantage"))
-			if sr_type_val == "advantage" and !game.metadata.get("_reset_hand_used_this_turn", false):
+			# No playable cards during GdV — offer both reset_hand and change_card
+			var reset_used = game.metadata.get("_reset_hand_used_this_turn", false)
+
+			if not reset_used:
 				actions.append({"action_type": RESET_HAND_ACTION})
+
+			# Always offer change_card as alternative (even after reset if still no playable cards)
+			for card in current_player.hand.cards:
+				actions.append({"action_type": CHANGE_CARD_ACTION, "card": card})
+
+			return actions
+
+	# During Safe Round: non-activators with no playable cards get RESET_HAND or CHANGE_CARD
+	if advantage_turn and not is_advantage_player and sr_type == "safe" and not current_player.hand.cards.empty():
+		var has_playable = false
+		for c in current_player.hand.cards:
+			if _card_playable_sr(c, advantage_turn, sr_type, blocked_type):
+				has_playable = true
+				break
+		if not has_playable:
+			# Safe Round: offer change_card for all cards
 			for card in current_player.hand.cards:
 				actions.append({"action_type": CHANGE_CARD_ACTION, "card": card})
 			return actions
@@ -237,9 +255,11 @@ func get_available_actions(game):
 			actions.append({"action_type": PLAY_CARD_ACTION, "card": card})
 		elif card.value != null:
 			actions.append({"action_type": PLAY_CARD_ACTION, "card": card})
-	# CHANGE_CARD is always available for every card in hand
-	for card in current_player.hand.cards:
-		actions.append({"action_type": CHANGE_CARD_ACTION, "card": card})
+
+	# CHANGE_CARD: disabled during GdV (use reset_hand/refusal flow instead)
+	if not is_gdv:
+		for card in current_player.hand.cards:
+			actions.append({"action_type": CHANGE_CARD_ACTION, "card": card})
 
 	return actions
 
@@ -274,6 +294,9 @@ func validate_action(game, action_dict):
 		return false
 
 	if action_dict["action_type"] == CHANGE_CARD_ACTION:
+		var is_gdv = advantage_turn and str(game.metadata.get("special_round_type", "")) == "advantage"
+		if is_gdv:
+			return false
 		return card != null and typeof(card) == TYPE_OBJECT and current_player.has_card(card)
 
 	var sr_type = str(game.metadata.get("special_round_type", "advantage"))

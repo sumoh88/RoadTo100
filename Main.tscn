@@ -358,6 +358,7 @@ texture = ExtResource( 4 )
 expand = true
 
 [node name="PlateauValueCard" type="TextureRect" parent="GameArea/BoardArea/PlateauZone/PermanentCardsLayer"]
+visible = false
 margin_right = 203.0
 margin_bottom = 292.0
 mouse_filter = 2
@@ -365,6 +366,7 @@ texture = ExtResource( 2 )
 expand = true
 
 [node name="ValueLabel" type="Label" parent="GameArea/BoardArea/PlateauZone"]
+visible = false
 anchor_right = 1.0
 anchor_bottom = 1.0
 margin_top = -12.0
@@ -372,7 +374,7 @@ margin_right = -3.0
 margin_bottom = 63.0
 custom_colors/font_color = Color( 1, 1, 1, 1 )
 custom_fonts/font = SubResource( 4 )
-text = "100"
+text = "0"
 align = 1
 valign = 1
 autowrap = true
@@ -624,7 +626,7 @@ anchor_bottom = 0.5
 margin_left = -262.0
 margin_top = -364.0
 margin_right = 262.0
-margin_bottom = 359.0
+margin_bottom = 364.0
 size_flags_horizontal = 5
 size_flags_vertical = 5
 custom_styles/bg = SubResource( 33 )

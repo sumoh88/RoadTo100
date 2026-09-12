@@ -64,6 +64,19 @@ var _last_error = ""
 # Card selection
 var _selected_card_id = ""
 
+# Deal animation tracking
+var _deal_active = false
+var _deal_tween = null
+var _deal_clones = []
+
+# Game generation ID — incremented on each start_game() to invalidate
+# stale async operations (deal yields, CardAnimator callbacks, timers).
+var _game_generation = 0
+
+# True when we're waiting for a CardAnimator to finish. Used to ignore
+# stale animation_finished callbacks from cancelled/old animations.
+var _expecting_animation_finish = false
+
 # Pending action (for popup-driven actions)
 var _pending_action_type = ""
 var _pending_card_id = ""
@@ -71,7 +84,7 @@ var _pending_valid_values = []
 var _pending_blocked_type = false  # F3: true when waiting for Safe Round blocked_type choice
 
 # F3: Safe Round card type choices
-const SAFE_ROUND_CHOICES = ["Incremento", "Gold", "Imbroglio"]
+const SAFE_ROUND_CHOICES = ["Incremento", "Imbroglio", "Gold"]
 
 # F7: +11 Gold chain (mirrors RoadTo100Rules.GOLD_CHAIN) — used only to
 # decide whether a +11 play will activate a Safe Round (23-78) vs the
@@ -95,10 +108,28 @@ func set_provider(p):
 	_provider = p
 
 
+func get_game_generation():
+	return _game_generation
+
+
 func start_game(player_count):
 	if _provider == null:
 		print("[GC] ERROR: No provider set")
 		return
+
+	# Increment generation — invalidates all prior async operations.
+	_game_generation += 1
+
+	# Cancel any in-progress deal animation from the previous game.
+	cancel_deal_animation()
+
+	# Cancel any in-progress CardAnimator from the previous game.
+	if _card_animator != null and _card_animator.has_method("cancel"):
+		_card_animator.cancel()
+
+	# Reset animation expectation so stale callbacks are ignored.
+	_expecting_animation_finish = false
+
 	_state = State.WAITING_FOR_STATE
 	_last_snapshot = null
 	_last_events = []
@@ -106,6 +137,8 @@ func start_game(player_count):
 	_selected_card_id = ""
 	_provider.start_game(player_count)
 
+	var ShuffleDeal = AudioManager.get_node("SFXPlayer/ShuffleDeal")
+	AudioManager.play_sfx(ShuffleDeal)
 	# Switch to dynamic game music (Piatto starts at 0, no special round)
 	var am = _get_audio_manager()
 	if am != null and am.has_method("set_game_music"):
@@ -530,6 +563,8 @@ func _on_hand_reset_no():
 	_update_choice_blocker()
 	if _state != State.WAITING_FOR_CHOICE:
 		return
+
+	# Player can now choose change_card instead (it's already in available_actions)
 	_state = State.READY_FOR_INPUT
 
 
@@ -554,16 +589,304 @@ func re_popup_hand_reset():
 # ---------------------------------------------------------------------------
 
 func _on_game_started(snapshot):
+	# Cancel any in-progress deal animation from a previous game.
+	cancel_deal_animation()
+
 	_last_snapshot = snapshot
 	_clear_selection()
-	_apply_snapshot(snapshot)
 	if snapshot.get("winner", null) != null:
+		_apply_snapshot(snapshot)
 		_state = State.GAME_OVER
 		GlobalsUtilities.gameStarted = false
 	else:
+		_animate_initial_deal(snapshot)
+
+
+func cancel_deal_animation():
+	"""Abort an in-progress deal and clean up all temporary nodes."""
+	if not _deal_active:
+		return
+	_deal_active = false
+
+	# Remove the tween (queue_free is sufficient in Godot 3.4).
+	if _deal_tween != null and is_instance_valid(_deal_tween):
+		_deal_tween.queue_free()
+	_deal_tween = null
+
+	# Remove all clones from the animation layer.
+	for c in _deal_clones:
+		if is_instance_valid(c):
+			c.queue_free()
+	_deal_clones.clear()
+
+
+# ---------------------------------------------------------------------------
+# Initial dealing animation — progressive card reveal per player, starting
+# from the current player. Hands begin empty and grow to 3 cards each.
+# ---------------------------------------------------------------------------
+
+const _DEAL_ANIM_DURATION = 0.15
+const _OPPONENT_SEATS = {
+	"player_2": "LeftSeat",
+	"player_3": "TopSeat",
+	"player_4": "RightSeat",
+}
+
+func _animate_initial_deal(snapshot):
+	var anim_layer = _find_animation_layer()
+	var players = snapshot.get("players", [])
+
+	if anim_layer == null:
+		# Headless fallback: apply immediately.
+		_apply_snapshot(snapshot)
 		_state = State.READY_FOR_INPUT
+		_check_reset_hand(snapshot)
+		_update_choice_blocker()
+		return
+
+	# Capture generation at deal start — used to detect if a new game
+	# invalidated this deal mid-animation (after yields).
+	var my_gen = _game_generation
+
+	# Re-randomize draw pile jitter for the new game.
+	if _board != null and _board.has_method("randomize_draw_pile"):
+		_board.randomize_draw_pile()
+
+	# Apply snapshot so all card nodes exist in their final positions.
+	_apply_snapshot(snapshot)
+
+	# Show plate back during deal animation.
+	if _board != null and _board.has_method("show_plate_back"):
+		_board.show_plate_back()
+
+	# Immediately hide all hand cards — they'll be revealed progressively.
+	_hide_all_hand_cards()
+
+	_state = State.ANIMATING
+
+	var deal_order = _build_deal_order_from_current(snapshot, players)
+	var draw_pos = _get_deal_draw_pile_pos()
+	var cardback_tex = load("res://imgs/cardback.png")
+	var tween = Tween.new()
+	add_child(tween)
+
+	# Track deal state for cancellation.
+	_deal_active = true
+	_deal_tween = tween
+	_deal_clones = []
+
+	for ev in deal_order:
+		# Abort if a new game started and cancelled this deal.
+		if not _deal_active or _game_generation != my_gen:
+			return
+
+		var pid = ev["player_id"]
+		var card_idx = ev["card_index"]
+		var target_pos = _get_hand_card_global_pos(pid, card_idx)
+
+		var clone = TextureRect.new()
+		clone.texture = cardback_tex
+		clone.expand = true
+		clone.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		clone.rect_min_size = Vector2(80, 112)
+		clone.rect_size = Vector2(80, 112)
+		clone.rect_position = draw_pos
+		clone.mouse_filter = 2
+		anim_layer.add_child(clone)
+		_deal_clones.append(clone)
+
+		tween.interpolate_property(clone, "rect_position",
+			draw_pos, target_pos, _DEAL_ANIM_DURATION,
+			Tween.TRANS_QUAD, Tween.EASE_OUT)
+		tween.start()
+		yield(tween, "tween_all_completed")
+		clone.queue_free()
+
+		# Abort check after yield — a new game may have started.
+		if not _deal_active or _game_generation != my_gen:
+			return
+
+		# Reveal the actual card in the player's hand.
+		_reveal_hand_card(pid, card_idx)
+
+	tween.queue_free()
+	_deal_tween = null
+	_deal_clones.clear()
+
+	# Only set READY_FOR_INPUT if this deal wasn't superseded.
+	if _game_generation != my_gen:
+		return
+
+	# Hide plate back — game is ready to start.
+	if _board != null and _board.has_method("hide_plate_back"):
+		_board.hide_plate_back()
+
+	_state = State.READY_FOR_INPUT
 	_check_reset_hand(snapshot)
 	_update_choice_blocker()
+
+
+func _build_deal_order_from_current(snapshot, players):
+	"""Build deal sequence: current player gets 3 cards, then next player, etc."""
+	var cur_idx = snapshot.get("current_player_index", 0)
+	var n = players.size()
+	var events = []
+	for i in range(n):
+		var pidx = (cur_idx + i) % n
+		var pid = players[pidx].get("id", "")
+		var hand_size = players[pidx].get("hand", []).size()
+		for ci in range(hand_size):
+			events.append({"player_id": pid, "card_index": ci})
+	return events
+
+
+func _hide_all_hand_cards():
+	var main = _node_up("Main")
+	if main == null: return
+	var ga = _child(main, "GameArea")
+	if ga == null: return
+
+	# Local player
+	var la = _child(ga, "LocalPlayerArea")
+	if la != null:
+		var ph = _child(la, "PlayerHand")
+		if ph != null:
+			var cl = _child(ph, "CardsLayer")
+			if cl != null:
+				for c in cl.get_children():
+					c.visible = false
+
+	# Opponents — hide both cards AND their shadows (OPS nodes)
+	var ol = _child(ga, "OpponentsLayer")
+	if ol != null:
+		for seat_name in _OPPONENT_SEATS.values():
+			var seat = _child(ol, seat_name)
+			if seat != null:
+				var cl = _child(seat, "CardsLayer")
+				if cl != null:
+					for c in cl.get_children():
+						c.visible = false
+
+
+func _reveal_hand_card(player_id, card_idx):
+	var main = _node_up("Main")
+	if main == null: return
+	var ga = _child(main, "GameArea")
+	if ga == null: return
+
+	if player_id == "player_1":
+		var la = _child(ga, "LocalPlayerArea")
+		if la != null:
+			var ph = _child(la, "PlayerHand")
+			if ph != null:
+				var cl = _child(ph, "CardsLayer")
+				if cl != null:
+					var children = cl.get_children()
+					if card_idx < children.size():
+						children[card_idx].visible = true
+	else:
+		var seat_name = _OPPONENT_SEATS.get(player_id, "")
+		if seat_name == "": return
+		var ol = _child(ga, "OpponentsLayer")
+		if ol == null: return
+		var seat = _child(ol, seat_name)
+		if seat == null: return
+		var cl = _child(seat, "CardsLayer")
+		if cl == null: return
+
+		# Find the card index among non-OPS nodes and reveal it + its shadow.
+		var card_nodes = []
+		for c in cl.get_children():
+			if not c.name.begins_with("OPS"):
+				card_nodes.append(c)
+		if card_idx < card_nodes.size():
+			card_nodes[card_idx].visible = true
+			# Reveal the corresponding shadow (OPS<idx>_<seat_idx>)
+			var shadow_name_prefix = "OPS" + str(card_idx) + "_"
+			for c in cl.get_children():
+				if c.name.begins_with(shadow_name_prefix):
+					c.visible = true
+					break
+
+
+func _get_hand_card_global_pos(player_id, card_idx):
+	var main = _node_up("Main")
+	if main == null: return Vector2(960, 400)
+	var ga = _child(main, "GameArea")
+	if ga == null: return Vector2(960, 400)
+
+	if player_id == "player_1":
+		var la = _child(ga, "LocalPlayerArea")
+		if la != null:
+			var ph = _child(la, "PlayerHand")
+			if ph != null:
+				var cl = _child(ph, "CardsLayer")
+				if cl != null:
+					var children = cl.get_children()
+					if card_idx < children.size():
+						return children[card_idx].rect_global_position
+	else:
+		var seat_name = _OPPONENT_SEATS.get(player_id, "")
+		if seat_name == "": return Vector2(960, 400)
+		var ol = _child(ga, "OpponentsLayer")
+		if ol == null: return Vector2(960, 400)
+		var seat = _child(ol, seat_name)
+		if seat == null: return Vector2(960, 400)
+		var cl = _child(seat, "CardsLayer")
+		if cl == null: return Vector2(960, 400)
+		var card_nodes = []
+		for c in cl.get_children():
+			if not c.name.begins_with("OPS"):
+				card_nodes.append(c)
+		if card_idx < card_nodes.size():
+			return card_nodes[card_idx].rect_global_position
+
+	return Vector2(960, 400)
+
+
+func _find_animation_layer():
+	var main = _node_up("Main")
+	if main == null: return null
+	for c in main.get_children():
+		if c.name == "CardAnimationLayer":
+			return c
+	return null
+
+
+func _get_deal_draw_pile_pos():
+	var main = _node_up("Main")
+	if main == null: return Vector2(340, 130)
+	var ga = _child(main, "GameArea")
+	if ga == null: return Vector2(340, 130)
+	var ba = _child(ga, "BoardArea")
+	if ba == null: return Vector2(340, 130)
+	var dp = _child(ba, "DrawPile")
+	if dp == null: return Vector2(340, 130)
+	return dp.rect_global_position + dp.rect_size / 2
+
+
+func _get_player_hand_pos(player_id):
+	var main = _node_up("Main")
+	if main == null: return Vector2(960, 400)
+	var ga = _child(main, "GameArea")
+	if ga == null: return Vector2(960, 400)
+
+	if player_id == "player_1":
+		var la = _child(ga, "LocalPlayerArea")
+		if la != null:
+			var ph = _child(la, "PlayerHand")
+			if ph != null:
+				return ph.rect_global_position + ph.rect_size / 2
+	else:
+		var seat_name = _OPPONENT_SEATS.get(player_id, "")
+		if seat_name != "":
+			var ol = _child(ga, "OpponentsLayer")
+			if ol != null:
+				var seat = _child(ol, seat_name)
+				if seat != null:
+					return seat.rect_global_position + seat.rect_size / 2
+
+	return Vector2(960, 400)
 
 
 func _on_action_completed(result):
@@ -576,6 +899,7 @@ func _on_action_completed(result):
 	var should_animate = _card_animator != null and _card_animator.has_method("play_events") and _last_events.size() > 0
 	if should_animate:
 		_state = State.ANIMATING
+		_expecting_animation_finish = true
 		_card_animator.play_events(_last_events, _last_snapshot)
 
 		# During animation, update board and hand but NOT the turn indicator.
@@ -757,6 +1081,14 @@ func _on_safe_round_choice_chosen(choice):
 
 
 func _on_animation_finished():
+	# Track whether we're currently expecting an animation to complete.
+	# If not (e.g., new game started and cancelled the animator), ignore
+	# stale callbacks from the old game.
+	if not _expecting_animation_finish:
+		return
+
+	_expecting_animation_finish = false
+
 	# Now that animation is complete, update the turn indicator to show the next player.
 	if _turn != null and _turn.has_method("apply_snapshot"):
 		_turn.apply_snapshot(_last_snapshot)

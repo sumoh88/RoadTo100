@@ -12,13 +12,14 @@ var timer = null
 var running = false
 var max_turns = 1000
 var step_delay_ms = 600
+var _game_gen = -1  # Generation ID at game start — invalidates stale timers
 
 var BGsQnty = 4
 
 # F7: +11 Gold chain (mirrors RoadTo100Rules.GOLD_CHAIN) — decides whether a
 # +11 play activates a Safe Round (23-78) vs the Advantage Round (89).
 const GOLD_CHAIN = {12: 23, 23: 34, 34: 45, 45: 56, 56: 67, 67: 78, 78: 89}
-const SAFE_ROUND_CHOICES = ["Incremento", "Gold", "Imbroglio"]
+const SAFE_ROUND_CHOICES = ["Incremento", "Imbroglio", "Gold"]
 
 var stats = {"play_card":0,"change_card":0,"reset_hand":0,"advantage_turns":0}
 
@@ -67,8 +68,10 @@ func start_game():
 #		return
 	var bgImage = "res://imgs/tableBG"+str((randi() % BGsQnty) + 1)+".png"
 	var main = get_tree().get_root().find_node("Main",true, false)
-	var bgImagePath = main.get_node("Background/BackgroundImage")
-	bgImagePath.texture = load(bgImage)
+	if main != null:
+		var bgImagePath = main.get_node_or_null("Background/BackgroundImage")
+		if bgImagePath != null:
+			bgImagePath.texture = load(bgImage)
 	randomize()
 	if _gc == null:
 		print("[ManualGame] ERROR: No GameController reference.")
@@ -83,6 +86,10 @@ func start_game():
 	stats = {"play_card":0,"change_card":0,"reset_hand":0,"advantage_turns":0}
 
 	_gc.start_game(4)
+	# Capture the generation AFTER start_game increments it, so that any
+	# timer scheduled from a previous game (with the old generation) will
+	# be detected as stale in _on_timer_timeout.
+	_game_gen = _gc.get_game_generation()
 	_schedule_next_step()
 
 
@@ -92,6 +99,9 @@ func _stop_sibling_automation():
 		return
 	for c in p.get_children():
 		if c == self:
+			continue
+		# Skip non-logic nodes (Tween, Timer, Control, etc.)
+		if c is Tween or c is Timer or c is Control:
 			continue
 		if c.has_method("stop_demo"):
 			c.stop_demo()
@@ -116,6 +126,13 @@ func _schedule_next_step():
 
 func _on_timer_timeout():
 	if not running or _gc == null:
+		return
+
+	# Generation check — if the game was restarted (e.g. "Nuova partita"),
+	# this timer callback belongs to the old game and must NOT act on the
+	# new game's state. Silently reschedule; the new game's timer will
+	# take over with the updated _game_gen.
+	if _game_gen != -1 and _gc.get_game_generation() != _game_gen:
 		return
 
 	var state = _gc.get_state()

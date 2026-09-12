@@ -90,7 +90,7 @@ var currValue = 0
 # =========================
 export(float) var master_volume: float = 1.0
 export(float) var music_volume: float = 0.01
-export(float) var sfx_volume: float = 0.4
+export(float) var sfx_volume: float = 0.15
 export(float) var sfx2d_volume: float = 0.5
 export(float) var stemsVolume: float = 0.7
 
@@ -139,36 +139,20 @@ func _process(delta):
 #  CARICAMENTO CANZONI — rileva sottocartelle, sceglie casuale
 # =========================
 func _load_random_song():
-#	var dir = Directory.new()
-#	var err = dir.open(SOUND_DIR)
-#	if err != OK:
-#		printerr("[AudioManager] Impossibile aprire ", SOUND_DIR, " (error ", err, ")")
-#		return
-#
-#	var song_folders: Array = []
-#
-#	dir.list_dir_begin(true, true)
-#	var item_name: String = dir.get_next()
-#
-#	while item_name != "":
-#		if dir.current_is_dir():
-#			var folder_path: String = SOUND_DIR + item_name
-#
-#			if dir.file_exists(folder_path + "/beat.mp3"):
-#				song_folders.append(item_name)
-#
-#		item_name = dir.get_next()
-#
-#	dir.list_dir_end()
-#
-#	if song_folders.size() == 0:
-#		printerr("[AudioManager] Nessuna canzone trovata in ", SOUND_DIR)
-#		return
-#
-#	var chosen: String = song_folders[randi() % song_folders.size()]
-#	print("[AudioManager] Canzone selezionata: ", chosen)
+	var song_folders = [
+		"CardTrickLoop",
+		# "NomeSecondaCanzone",
+		# "NomeTerzaCanzone",
+	]
 
-	var chosen = "CardTrickLoop"
+	if song_folders.size() == 0:
+		printerr("[AudioManager] Nessuna canzone configurata")
+		return
+
+	var chosen = song_folders[randi() % song_folders.size()]
+
+	print("[AudioManager] Canzone selezionata: ", chosen)
+
 	_current_song_paths = {
 		"beat": load(SOUND_DIR + chosen + "/beat.mp3"),
 		"piano": load(SOUND_DIR + chosen + "/piano.mp3"),
@@ -176,7 +160,6 @@ func _load_random_song():
 		"violin": load(SOUND_DIR + chosen + "/violin.mp3"),
 		"trumpet": load(SOUND_DIR + chosen + "/trumpet.mp3"),
 	}
-
 
 # =========================
 #  AVVIO STEM — tutti insieme, in loop, sincronizzati
@@ -234,7 +217,6 @@ func set_game_music(piatto: int, sr_active: bool):
 	targets["cello"] = stemsVolume if _plate_value >= THRESHOLD_CELLO else 0.0
 	targets["violin"] = stemsVolume if _plate_value >= THRESHOLD_VIOLIN else 0.0
 	targets["trumpet"] = stemsVolume if _special_round_active else 0.0
-
 	for stem_name in targets.keys():
 		_fade_to(stem_name, targets[stem_name])
 
@@ -375,45 +357,10 @@ func play_sfx(stream: AudioStreamPlayer, cooldown: float = default_sfx_cooldown)
 			return
 
 	sfx_cooldowns[key] = now
+	sfx_player.volume_db = linear2db(clamp(sfx_volume, 0.0, 1.0))
 	sfx_player.pitch_scale = stream.pitch_scale
 	sfx_player.stream = stream.stream
 	sfx_player.play()
-
-
-func play_sfx2d(audio: AudioStreamPlayer2D, cooldown: float = default_sfx2d_cooldown):
-	if audio == null or audio.stream == null:
-		return
-
-	if audio.playing:
-		return
-	var key: String = str(audio.get_instance_id())
-	var now: float = OS.get_ticks_msec() * 0.001
-
-	if sfx2d_cooldowns.has(key):
-		if now - sfx2d_cooldowns[key] < cooldown:
-			return
-
-	sfx2d_cooldowns[key] = now
-	audio.play()
-
-
-# =========================
-#  SFX per nome (usa i nodi SFXPlayer/Select, ecc.)
-# =========================
-func play_sfx_by_name(name: String, cooldown: float = default_sfx_cooldown):
-	var key: String = name
-	var now: float = OS.get_ticks_msec() * 0.001
-
-	if sfx_cooldowns.has(key):
-		if now - sfx_cooldowns[key] < cooldown:
-			return
-
-	sfx_cooldowns[key] = now
-
-	var sfx_node = get_node_or_null("SFXPlayer/" + name) as AudioStreamPlayer2D
-	if sfx_node != null and sfx_node.is_inside_tree():
-		sfx_node.play()
-
 
 # =========================
 #  IMPOSTA VOLUMI (API)

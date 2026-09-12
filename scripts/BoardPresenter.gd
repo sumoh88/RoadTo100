@@ -16,6 +16,7 @@ var _shadow_factory = null
 var _value_label = null
 var _value_layer = null   # static ValueLayer — hidden, replaced by dynamic plate labels
 var _draw_pile_count = null
+var _draw_pile_cardback = null
 var _discard_top = null
 var _discard_pile = null
 
@@ -84,16 +85,12 @@ func _ready():
 				"CountLabel"
 			)
 
-			# Draw pile stays tidy: a single minimal overall tilt only (no
-			# per-card random offset), so it reads as an ordered stack.
+			# Draw pile: store reference and apply initial jitter.
 			var cb = _ch(draw_pile, "CardBack")
 
 			if cb != null:
-				cb.rect_pivot_offset = Vector2(
-					101.5,
-					146.0
-				)
-				cb.rect_rotation = 1.5
+				_draw_pile_cardback = cb
+				randomize_draw_pile()
 
 		var dp = _ch(brd, "DiscardPile")
 		_discard_pile = dp
@@ -472,6 +469,40 @@ func _update_sr_badges(snapshot):
 			sr_active and
 			pid == sr_player
 		)
+
+
+# ---------------------------------------------------------------------------
+# Draw pile jitter — call on each new game to re-randomize position/rotation.
+# ---------------------------------------------------------------------------
+
+func randomize_draw_pile():
+	if _draw_pile_cardback == null:
+		return
+	var cb = _draw_pile_cardback
+	cb.rect_pivot_offset = Vector2(101.5, 146.0)
+	cb.rect_rotation = rand_range(-1.0, 1.0)
+	cb.rect_position = Vector2(
+		rand_range(-2.0, 2.0),
+		rand_range(-2.0, 2.0)
+	)
+
+
+func show_plate_back():
+	"""Show the plate cardback (cardbackplate.png) instead of the value."""
+	if _permanent_back != null:
+		_permanent_back.visible = true
+	for c in _permanent_layer.get_children():
+		if c.name.begins_with("PL"):
+			c.visible = false
+
+
+func hide_plate_back():
+	"""Hide the plate cardback and show the value (plate.png)."""
+	if _permanent_back != null:
+		_permanent_back.visible = false
+	for c in _permanent_layer.get_children():
+		if c.name.begins_with("PL"):
+			c.visible = true
 
 
 func apply_snapshot(s):

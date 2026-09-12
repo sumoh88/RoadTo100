@@ -1,6 +1,6 @@
 # RoadTo100 — Stato Progetto
 
-> Aggiornato al: 3 settembre 2026
+> Aggiornato al: 11 settembre 2026
 > Scopo: documento di avvio per future sessioni di sviluppo.
 
 ---
@@ -27,6 +27,9 @@ Il progetto è composto da due codebase separati:
 | **GlobalsUtilities (singleton)** | ✅ **Stato condiviso** — plateValue, sr_active, selected_value, gameStarted, soglie musica |
 | **spe100.png** | ✅ Piatto ≥ 100 usa texture speciale senza numero sovrapposto |
 | **Valore Jolly/Imbroglio sugli Scarti** | ✅ `GlobalsUtilities.selected_value` + `ResolvedValueLabel` — visibile per tutti i giocatori (inclusa CPU) |
+| **Ombre morbide e pile appoggiate a mano** | ✅ `ShadowFactory.gd` (ombre sagomate, SDF rettangolare) + ventaglio carte CPU + jitter pile Piatto/Scarti (±7px, rotazione ~±2.5°) + stack scarti dinamico |
+| **Compatibilità Android / APK** | ✅ Preset di export "Android" (`export_presets.cfg`), cartella `android/`, APK `RT100.apk` funzionante |
+| **Caricamento musicale su Android** | ✅ Canzone casuale scelta da **elenco esplicito** (necessario perché il listing su `res://` non funziona in APK) — attualmente solo `CardTrickLoop` |
 
 ---
 
@@ -74,10 +77,11 @@ Torna al Menu:
 - **5 stem musicali** (tutti `AudioStreamPlayer`, figli di `MusicPlayer`):
   - `Beat`, `Piano`, `Cello`, `Violin`, `Trumpet`
 - **SFXPlayer**: AudioStreamPlayer con effetti posizionali (Select, ShuffleDeal, Draw, PlayCard, Victory)
-- **Cartelle canzoni**: `res://sound/<nome_canzone>/` — rileva automaticamente le sottocartelle con `beat.mp3`
+- **Cartelle canzoni**: `res://sound/<nome_canzone>/`, ciascuna con i 5 file stem (`beat/piano/cello/violin/trumpet.mp3`). La canzone da caricare NON viene rilevata a runtime ma scelta da un **elenco esplicito** in `_load_random_song()`.
 
 ### Comportamento
-1. **Avvio** (`_ready()`): rileva una canzone casuale da `res://sound/`, carica i 5 stem, avvia tutti in loop simultaneamente.
+1. **Avvio** (`_ready()`): sceglie una canzone casuale dall'elenco esplicito `song_folders` (attualmente `["CardTrickLoop"]`), carica i 5 stem con `load()`, avvia tutti in loop simultaneamente.
+   - **Nota Android**: il caricamento usa un elenco esplicito invece del listing di directory perché l'enumerazione su `res://` non è affidabile quando le risorse sono impacchettate nell'APK. Per aggiungere una canzone basta: creare la cartella `sound/<Nome>/` con i 5 mp3 e aggiungere `<Nome>` all'array `song_folders`.
 2. **Menu**: `set_menu_music()` → tutti e 5 gli stem a `stemsVolume` (0.7).
 3. **Partita**: `set_game_music(piatto, sr_active)` → dinamica per soglie del Piatto.
 4. **Ogni frame** (`_process()`): legge `GlobalsUtilities.plateValue` e `GlobalsUtilities.sr_active` e aggiorna i volumi con fade (0.7s).
@@ -170,11 +174,11 @@ Tutti e tre i giocatori CPU utilizzano il sistema `RoadTo100AI` con configurazio
 
 | Giocatore | Personalità | Strategia | Pesi chiave diversi da default |
 |---|---|---|---|
-| **P2** | Bilanciata | Ottimizzazione bilanciata tra progresso e rischio | Default (W_INCREMENT_HIGH=3, W_BOUNCE_PENALTY=-50) |
-| **P3** | Aggressiva | Preferisce incrementi alti, accetta più rischio rimbalzo | W_INCREMENT_HIGH=8, W_BOUNCE_PENALTY=-20, W_JOLLY_FLEXIBILITY=25 |
-| **P4** | Tattica/Prudente | Preferisce controllo Piatto, evita rimbalzi, usa Imbroglio strategicamente | W_INCREMENT_HIGH=2, W_BOUNCE_PENALTY=-80, W_IMBROGLIO_STRATEGIC=50 |
+| **P2** | Bilanciata | Ottimizzazione bilanciata tra progresso e rischio | Default (W_INCREMENT_HIGH=3, W_PLATEAU_DANGER=25) |
+| **P3** | Aggressiva | Preferisce incrementi alti, accetta più rischio sul Piatto | W_INCREMENT_HIGH=8, W_PLATEAU_DANGER=6, W_JOLLY_FLEXIBILITY=25, W_PLUS11_HOLD_BACK=-50 |
+| **P4** | Tattica/Prudente | Preferisce controllo Piatto, usa il rimbalzo in modo difensivo, Imbroglio per il controllo | W_INCREMENT_HIGH=2, W_PLATEAU_DANGER=40, W_IMBROGLIO_STRATEGIC=50, W_PLUS11_HOLD_BACK=-100 |
 
-Il sistema di scoring è comune; solo i pesi (costanti) variano. Questo consente di aggiungere nuove personalità in futuro modificando solo la configurazione, non il codice base dell'AI.
+Il sistema di scoring è comune; solo i pesi variano. **Nota**: non esiste più `W_BOUNCE_PENALTY` (penalità piatta sul rimbalzo). Al suo posto il modello usa `W_PLATEAU_DANGER`: penalità/bonus per ogni punto oltre 92 lasciati al giocatore successivo (zona di rischio), calcolata sul Piatto finale reale post-azione. Questo consente di aggiungere nuove personalità modificando solo la configurazione, non il codice base dell'AI.
 
 ## Componenti completati
 
@@ -274,12 +278,14 @@ Il sistema di scoring è comune; solo i pesi (costanti) variano. Questo consente
 | Suite | File | Assert | Esito |
 |---|---|---|---|
 | Domain | `tests/domain_test.gd` | 55+ | ✅ All PASS (60 carte, 4 +11, 6 Imbroglio) |
-| Rules | `tests/rules_test.gd` | 191 | ✅ 0 FAIL (62 test) |
-| Provider | `tests/provider_test.gd` | 97 | ✅ 0 FAIL |
-| Presenter | `tests/presenter_test.gd` | 84 | ✅ 0 FAIL |
-| Board | `tests/board_test.gd` | 44 | ✅ 0 FAIL |
+| Rules | `tests/rules_test.gd` | 197 | ✅ 0 FAIL (fix F7: in GS non si offre RESET_HAND, solo GdV) |
+| Provider | `tests/provider_test.gd` | 93 | ✅ 0 FAIL |
+| Presenter | `tests/presenter_test.gd` | 86 | ✅ 0 FAIL |
+| Board | `tests/board_test.gd` | 41 | ✅ 0 FAIL (pile entro limiti jitter ±7px/~±2.5°) |
+| Shadow / Pile Presentation | `tests/shadow_integration_test.gd/.tscn` | 20 | ✅ 0 FAIL (ombra non circolare, 1/pila, jitter pile, ombre CPU) |
+| Fan Geometry (CPU) | `tests/fan_geometry_test.gd/.tscn` | 7 | ✅ 0 FAIL (ventaglio carte CPU) |
 | GameController | `tests/game_controller_test.gd` | 211 | ✅ 0 FAIL (incl. GdV blocking, popup re-open) |
-| Card Selection | `tests/card_selection_test.gd` | 40+ | ✅ 0 FAIL (fix HUDLayer.mouse_filter) |
+| Card Selection | `tests/card_selection_test.gd` | 27 | ✅ 0 FAIL (fix HUDLayer.mouse_filter) |
 | CardAnimator | `tests/card_animator_test.gd` | 5 | ✅ 0 FAIL |
 | CardAnimator Multi-Player | `tests/card_animator_test2.gd` | 20 | ✅ 0 FAIL |
 | Demo Integrazione | `tests/demo_integration_test.gd` | 5 | ✅ 5/5 partite complete, nessun hang |
@@ -714,10 +720,10 @@ Score-based: ogni azione disponibile viene valutata con un punteggio euristico, 
 | Valutazione Piatto/distanza | Score proporzionale all'avanzamento verso 100 (`W_ADVANCE = 100 × valore / 10`) |
 | Scelta Jolly strategica | Valuta ogni valore 1–10, sceglie quello che massimizza progresso senza rimbalzo; vince se possibile |
 | Scelta Imbroglio strategica | Scegli il valore positivo più alto per massimizzare il Piatto (vincolato a max 99) |
-| Hold-back +11 | `W_PLUS11_HOLD_BACK = -150` — conserva la +11 salvo vittoria, Gold chain, o GdV |
+| Hold-back +11 | `W_PLUS11_HOLD_BACK = -75` — conserva la +11 salvo vittoria, Gold chain, o GdV |
 | Gold chain | `W_PLUS11_GOLD_CHAIN = 70` — priorità alta per +11 dopo Gold |
 | GdV | Bonus per attivatore +11 e incrementi alti durante Giro di Vantaggio |
-| Bounce avoidance | Penalizza `-50` le azioni che supererebbero 100 causando rimbalzo |
+| Gestione rischio Piatto | `W_PLATEAU_DANGER` (default 25) — bonus/penalità per i punti >92 lasciati al giocatore successivo; valuta il Piatto finale reale (post-bounce) invece di una penalità piatta sul rimbalzo |
 | Gold/GS | `W_GOLD_ACTIVATE_SR = 60` — valore strategico dell'attivazione Safe Round |
 | Cambio Carta | `W_CHANGE_CARD = -10` — ultima risorsa |
 
@@ -735,14 +741,18 @@ Score-based: ogni azione disponibile viene valutata con un punteggio euristico, 
 #### Pesi euristiche (costanti configurabili)
 
 ```python
+# Pesi default attuali (engine/RoadTo100AI.gd)
 W_IMMEDIATE_WIN = 10000      # Vittoria immediata
 W_ADVANCE = 100              # Progresso verso 100
-W_BOUNCE_PENALTY = -50       # Rimbalzo
+W_PLATEAU_DANGER = 25        # Rischio: penalità/bonus per punto >92 lasciato al prossimo (replaced W_BOUNCE_PENALTY)
+W_INCREMENT_HIGH = 3         # Bonus incrementi alti (8-10)
+W_INCREMENT_MED = 2          # Incrementi medi (5-7)
+W_INCREMENT_LOW = 1          # Incrementi bassi (1-4)
 W_JOLLY_FLEXIBILITY = 15     # Flessibilità Jolly
 W_GOLD_ACTIVATE_SR = 60      # Attivazione GS
 W_PLUS11_GOLD_CHAIN = 70     # Gold chain
 W_PLUS11_NORMAL = 40         # +11 normale
-W_PLUS11_HOLD_BACK = -150    # Hold-back +11
+W_PLUS11_HOLD_BACK = -75     # Hold-back +11
 W_IMBROGLIO_STRATEGIC = 25   # Imbroglio
 W_GDV_BONUS = 30             # Bonus GdV
 W_CHANGE_CARD = -10          # Cambio carta
@@ -769,3 +779,43 @@ TIE_BREAKER_JITTER = 5       # Random jitter per anti-predictability
 1. **Multiplayer** (`RemoteGameAdapter`): architettura definita, implementazione futura.
 2. **AI personalità multiple**: varianti aggressive/difensive bilanciando i pesi esistenti.
 3. **Migliorie UI/UX**: texture definitive, effetti sonori, animazioni più ricche.
+
+---
+
+## ULTIMA SESSIONE (11 settembre 2026) — Ombre/pile grafiche e caricamento audio su Android
+
+### Resa grafica: ombre morbide e pile "appoggiate a mano"
+
+Implementata la resa visiva di ombre e pile sul tavolo, **solo presentazione** (nessuna modifica a regole, input o animazioni).
+
+- **`scripts/ShadowFactory.gd`** (nuovo) — helper puramente visivi per le ombre:
+  - Ombra **sagomata** a rettangolo arrotondato con bordi morbidi (SDF signed-distance in shader `canvas_item` su un `ColorRect`), leggermente più grande dell'elemento, offset verso basso/destra.
+  - Una sola ombra sotto l'intera pila per **Mazzo / Piatto / Scarti**; una per ogni **carta coperta CPU**. Nessuna ombra sulla mano P1.
+  - Nota tecnica: usato un shader (e non `ImageTexture` procedurale né `z_index`) perché in questo build Godot 3.4.4 `Image.create()` e la scrittura di `z_index` su `ColorRect` non funzionano; l'ordine di rendering è gestito con l'ordinamento dei fratelli (`move_child`).
+- **`scripts/BoardPresenter.gd`**:
+  - `_setup_pile_shadows()` — ombra unica per Mazzo/Piatto/Scarti in `_ready()`.
+  - **Ventaglio CPU** (P2/P3/P4): carte coperte disposte a ventaglio ordinato (centrale dritta, laterali ruotate in verso opposto).
+  - **Jitter pile** (`_pile_jit`, tabella deterministica): ogni carta di **Piatto** (`PL/SV`) e degli **Scarti** riceve offset ±7px e rotazione ~±2.5° stabile (base allo 0,0). Mazzo con sola rotazione complessiva minima (1.5°), senza jitter per carta.
+  - **Stack Scarti dinamico** (`_update_discard`): renderizza le ultime carte scartate come pila con jitter dietro `TopCard`.
+
+### Caricamento musicale via elenco esplicito (necessario per Android)
+
+- **`AudioManager.gd` → `_load_random_song()`**: la canzone NON viene più rilevata a runtime dalle sottocartelle, ma scelta **casualmente da un elenco esplicito** `song_folders`. Attualmente l'elenco contiene solo `"CardTrickLoop"` (unica cartella presente in `res://sound/`).
+- **Motivo**: sull'APK le risorse `res://` sono impacchettate e il listing di directory non è affidabile → si usa un elenco esplicito + `load()`.
+- Per aggiungere una canzone: creare `res://sound/<Nome>/` con i 5 mp3 e aggiungere `<Nome>` all'array.
+
+### Stato Android
+
+- Preset di export **"Android"** in `export_presets.cfg` (output `./RT100.apk`) + cartella `android/`; APK funzionante (commit "Aggiunta compatibilità Android e APK funzionante").
+- La musica carica correttamente su Android grazie all'elenco esplicito.
+
+### Test di verifica
+
+| Suite | Esito |
+|---|---|
+| `tests/shadow_integration_test.gd/.tscn` | ✅ 20/0 — ombra non circolare (SDF), 1 ombra/pila, jitter Piatto/Scarti entro limiti, ombre CPU 1-per-carta |
+| `tests/fan_geometry_test.gd/.tscn` | ✅ 7/7 — geometria ventaglio CPU |
+| `tests/board_test.gd` | ✅ 41/0 (verifica jitter pile entro limiti) |
+| `tests/game_controller_test.gd` | ✅ 211/0 (partite reali con nuovo rendering) |
+| `tests/provider_test.gd` | ✅ 93/0 (snapshot incl. `discard_stack`) |
+| `tests/manual_game_smoke.tscn` | ✅ SMOKE PASS |
