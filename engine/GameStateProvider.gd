@@ -21,8 +21,9 @@ signal action_rejected(error_message)
 signal state_updated(snapshot)
 signal connection_lost()
 
-func start_game(player_count):
-	"""Initialize a new game. Override in subclass."""
+func start_game(player_count, rng=null):
+	"""Initialize a new game. Override in subclass.
+	rng: optional RandomNumberGenerator for deterministic (tutorial) setups."""
 	pass
 
 func send_action(action_dict):

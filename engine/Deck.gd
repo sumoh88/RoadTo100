@@ -7,6 +7,10 @@ class_name Deck
 
 var cards = []  # Array of CardData
 
+# Optional deterministic RNG (e.g. for tutorial demos). When set, shuffle()
+# draws from this RNG instead of the global randi(). Normal games leave it null.
+var rng = null
+
 func _init(p_cards = []):
 	cards = p_cards.duplicate()
 
@@ -36,10 +40,12 @@ func draw_many(count):
 		drawn.append(draw())
 	return drawn
 
-# Fisher-Yates shuffle (matching Python random.shuffle semantics)
+# Fisher-Yates shuffle (matching Python random.shuffle semantics).
+# Uses the optional `rng` when present so tutorial demos are reproducible.
 func shuffle():
 	for i in range(cards.size() - 1, 0, -1):
-		var j = randi() % (i + 1)
+		var r = rng.randi() if rng != null else randi()
+		var j = r % (i + 1)
 		var temp = cards[i]
 		cards[i] = cards[j]
 		cards[j] = temp

@@ -251,11 +251,124 @@ class TestCard89NotPlayableDuringGdv(unittest.TestCase):
             if played is c89:
                 self.fail("89 card should NOT be playable during GdV")
 
-        # 89 should still be changeable
-        change_89 = [a for a in actions
-                     if a.action_type == CHANGE_CARD_ACTION
-                     and a.parameters.get("card") is c89]
-        self.assertTrue(change_89, "89 card should be changeable during GdV")
+        # change_card is disabled during GdV when a playable card exists (increment 1).
+        # The player can still play the increment instead of changing 89.
+        has_change = any(
+            a.action_type == CHANGE_CARD_ACTION for a in actions
+        )
+        self.assertFalse(has_change, "change_card must be disabled during GdV when a playable card exists")
+
+
+class TestChangeCardDuringGdv(unittest.TestCase):
+    """change_card availability during a normal GdV (special_round_type == 'advantage').
+
+    - If the player has at least one available play_card, change_card is DISABLED.
+    - If the player has no available play_card, change_card is ENABLED.
+    """
+
+    def test_change_card_disabled_with_playable_cards(self) -> None:
+        """GdV + playable Orange card → change_card disabled."""
+        rules = RoadTo100RuleSet()
+        p = Player("p1", "P1", Hand([increment_card(5), gold_card(34)]))
+        game = make_game(
+            players=[p],
+            deck_cards=[increment_card(1)],
+            metadata={
+                "piatto": 89,
+                "plateau_cards": [],
+                "special_round_active": True,
+                "special_round_player_id": "p2",
+                "turn_phase": "start",
+                "target_score": TARGET_SCORE,
+            },
+        )
+
+        actions = rules.get_available_actions(game)
+        has_play = any(a.action_type == PLAY_CARD_ACTION for a in actions)
+        change_actions = [a for a in actions if a.action_type == CHANGE_CARD_ACTION]
+
+        self.assertTrue(has_play, "playable Orange card must be playable during GdV")
+        self.assertEqual(
+            len(change_actions), 0,
+            "change_card must be disabled when a playable card exists during GdV",
+        )
+
+    def test_change_card_enabled_without_playable_cards(self) -> None:
+        """GdV + no playable cards → change_card enabled for every card in hand."""
+        rules = RoadTo100RuleSet()
+        gold = gold_card(34)
+        imb = imbroglio_card()
+        p = Player("p1", "P1", Hand([gold, imb]))
+        game = make_game(
+            players=[p],
+            deck_cards=[increment_card(1)],
+            metadata={
+                "piatto": 89,
+                "plateau_cards": [],
+                "special_round_active": True,
+                "special_round_player_id": "p2",
+                "turn_phase": "start",
+                "target_score": TARGET_SCORE,
+            },
+        )
+
+        actions = rules.get_available_actions(game)
+        has_play = any(a.action_type == PLAY_CARD_ACTION for a in actions)
+        change_cards = [a.parameters.get("card") for a in actions
+                        if a.action_type == CHANGE_CARD_ACTION]
+
+        self.assertFalse(has_play, "no card should be playable during GdV here")
+        self.assertIn(gold, change_cards, "change_card must be available when no playable cards exist")
+        self.assertIn(imb, change_cards, "change_card must be available for all cards when no playable cards exist")
+
+    def test_validate_action_rejects_change_card_with_playable(self) -> None:
+        """validate_action rejects change_card during GdV when a playable card exists."""
+        rules = RoadTo100RuleSet()
+        inc = increment_card(5)
+        gold = gold_card(34)
+        p = Player("p1", "P1", Hand([inc, gold]))
+        game = make_game(
+            players=[p],
+            deck_cards=[increment_card(1)],
+            metadata={
+                "piatto": 89,
+                "plateau_cards": [],
+                "special_round_active": True,
+                "special_round_player_id": "p2",
+                "turn_phase": "start",
+                "target_score": TARGET_SCORE,
+            },
+        )
+
+        action = RoadTo100Action(action_type=CHANGE_CARD_ACTION, parameters={"card": gold})
+        self.assertFalse(
+            rules.validate_action(game, action),
+            "validate_action must reject change_card when a playable card exists during GdV",
+        )
+
+    def test_validate_action_allows_change_card_without_playable(self) -> None:
+        """validate_action accepts change_card during GdV when there is no playable card."""
+        rules = RoadTo100RuleSet()
+        gold = gold_card(34)
+        p = Player("p1", "P1", Hand([gold]))
+        game = make_game(
+            players=[p],
+            deck_cards=[increment_card(1)],
+            metadata={
+                "piatto": 89,
+                "plateau_cards": [],
+                "special_round_active": True,
+                "special_round_player_id": "p2",
+                "turn_phase": "start",
+                "target_score": TARGET_SCORE,
+            },
+        )
+
+        action = RoadTo100Action(action_type=CHANGE_CARD_ACTION, parameters={"card": gold})
+        self.assertTrue(
+            rules.validate_action(game, action),
+            "validate_action must accept change_card when no playable card exists during GdV",
+        )
 
 
 class TestPlus11DuringGdv(unittest.TestCase):

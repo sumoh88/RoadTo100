@@ -1,10 +1,16 @@
 extends Node
 
 onready var sr_active = false
+onready var music_play = true
+onready var sfx_play = true
+onready var fullscreen = true
 onready var selected_value = ""
 onready var gameStarted = false
 onready var demoStarted = false
+onready var tutorialStarted = false
 onready var plateValue = 0
+onready var language = ["Italiano", "English"]
+onready var currLanguage = language[0]
 
 var splash_shown = false
 

@@ -17,7 +17,7 @@ var send_action_called = false
 var last_send_action_dict = null
 
 
-func start_game(player_count):
+func start_game(player_count, rng=null):
 	start_game_called = true
 	last_start_game_count = player_count
 	if auto_emit_game_started:

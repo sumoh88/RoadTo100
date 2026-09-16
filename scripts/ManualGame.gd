@@ -63,6 +63,46 @@ func _ready():
 	if _gc != null and _gc.has_signal("action_applied"):
 		_gc.connect("action_applied", self, "_on_gc_action_applied")
 
+
+
+
+func find_reset_hand_seed():
+	print("\n========== RESET HAND TEST ==========")
+
+	var scenario = {
+		"player_count": 4,
+		"current_player_index": 0,
+
+		"hands": {
+			"player_1": ["89", "Imbroglio", "Imbroglio"],
+			"player_2": ["+1", "+2", "+3"],
+			"player_3": ["+4", "+5", "+6"],
+			"player_4": ["+7", "+8", "+9"]
+		},
+
+		# L'ultimo elemento viene pescato per primo.
+		"draw_pile": [
+			"+7",
+			"+7",
+			"+7",
+			"+7",
+			"Imbroglio"
+		],
+
+		"meta": {
+			"piatto": 0,
+			"allow89": true
+		}
+	}
+
+	_gc.start_scenario(scenario)
+
+	print("[RESET TEST] Scenario avviato.")
+	print("[RESET TEST] P1 dovrebbe avere 89, Imbroglio, Imbroglio.")
+
+
+
+
 func start_game():
 #	if running:
 #		return
@@ -72,7 +112,11 @@ func start_game():
 		var bgImagePath = main.get_node_or_null("Background/BackgroundImage")
 		if bgImagePath != null:
 			bgImagePath.texture = load(bgImage)
+	
+	
 	randomize()
+	
+	
 	if _gc == null:
 		print("[ManualGame] ERROR: No GameController reference.")
 		return

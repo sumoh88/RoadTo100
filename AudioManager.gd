@@ -330,21 +330,59 @@ func stop_music():
 # =========================
 #  AGGIorna VOLUMI (Master, Music, SFX)
 # =========================
+
+func set_music_enabled(enabled: bool):
+	var music_bus: int = AudioServer.get_bus_index("Music")
+	if music_bus < 0:
+		return
+
+	AudioServer.set_bus_mute(music_bus, enabled)
+
+
+func set_sfx_enabled(enabled: bool):
+	var music_bus: int = AudioServer.get_bus_index("SFX")
+	if music_bus < 0:
+		return
+
+	AudioServer.set_bus_mute(music_bus, enabled)
+
 func _update_volumes():
+	# =========================
+	# MASTER
+	# =========================
 	var master_bus: int = AudioServer.get_bus_index("Master")
 	if master_bus >= 0:
-		AudioServer.set_bus_volume_db(
-			master_bus,
-			linear2db(clamp(master_volume, 0.0, 1.0))
-		)
+		if master_volume <= 0.0001:
+			AudioServer.set_bus_volume_db(master_bus, -80.0)
+		else:
+			AudioServer.set_bus_volume_db(
+				master_bus,
+				linear2db(clamp(master_volume, 0.0, 1.0))
+			)
 
-	if music_player != null and music_player.is_inside_tree():
-		music_player.volume_db = linear2db(clamp(music_volume, 0.0, 1.0))
+	# =========================
+	# MUSIC BUS
+	# =========================
+	var music_bus: int = AudioServer.get_bus_index("Music")
+	if music_bus >= 0:
+		if music_volume <= 0.0001:
+			AudioServer.set_bus_volume_db(music_bus, -80.0)
+		else:
+			AudioServer.set_bus_volume_db(
+				music_bus,
+				linear2db(clamp(music_volume, 0.0, 1.0))
+			)
 
+	# =========================
+	# SFX
+	# =========================
 	if sfx_player != null and sfx_player.is_inside_tree():
-		sfx_player.volume_db = linear2db(clamp(sfx_volume, 0.0, 1.0))
-
-
+		if sfx_volume <= 0.0001:
+			sfx_player.volume_db = -80.0
+		else:
+			sfx_player.volume_db = linear2db(
+				clamp(sfx_volume, 0.0, 1.0)
+			)
 # =========================
 #  SFX (CON COoldOWn — preservato)
 # =========================

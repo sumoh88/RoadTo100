@@ -77,7 +77,7 @@ config/icon="res://icon.png"
 
 [audio]
 
-default_bus_layout="res://default_env.tres"
+default_bus_layout="res://audio_bus_layout.tres"
 
 [autoload]
 
@@ -88,7 +88,6 @@ AudioManager="*res://AudioManager.tscn"
 
 window/size/width=1920
 window/size/height=1080
-window/size/resizable=false
 window/size/fullscreen=true
 window/size/test_width=1920
 window/size/test_height=1080

@@ -215,13 +215,14 @@ class RoadTo100RuleSet(RuleSet):
             return actions
 
         # Card play actions
+        play_actions: List[Action] = []
         for card in current_player.hand.cards:
             if special_round_active and not card_playable(card):
                 continue
 
             if self._is_jolly_card(card):
                 for chosen_value in range(1, 11):
-                    actions.append(
+                    play_actions.append(
                         RoadTo100Action(
                             action_type=PLAY_CARD_ACTION,
                             parameters={"card": card, "selected_value": chosen_value},
@@ -234,7 +235,7 @@ class RoadTo100RuleSet(RuleSet):
                         continue
                     candidate = plateau_value + chosen_value
                     if 0 <= candidate <= TARGET_SCORE - 1:
-                        actions.append(
+                        play_actions.append(
                             RoadTo100Action(
                                 action_type=PLAY_CARD_ACTION,
                                 parameters={"card": card, "selected_value": chosen_value},
@@ -242,19 +243,25 @@ class RoadTo100RuleSet(RuleSet):
                         )
             elif self._is_special_89_card(card):
                 if game.metadata.get("allow89", False):
-                    actions.append(RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": card}))
+                    play_actions.append(RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": card}))
             elif self._is_plus11_card(card):
-                actions.append(RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": card}))
+                play_actions.append(RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": card}))
             elif self._is_gold_card(card):
-                actions.append(RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": card}))
+                play_actions.append(RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": card}))
             elif card.value is not None:
-                actions.append(RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": card}))
+                play_actions.append(RoadTo100Action(action_type=PLAY_CARD_ACTION, parameters={"card": card}))
 
-        # CHANGE_CARD is always available for every card in hand
-        for card in current_player.hand.cards:
-            actions.append(
-                RoadTo100Action(action_type=CHANGE_CARD_ACTION, parameters={"card": card})
-            )
+        actions.extend(play_actions)
+
+        # CHANGE_CARD availability rule:
+        # - Outside GdV (normal / GS): always available for every card in hand.
+        # - During GdV (advantage): only available when there is no playable play_card.
+        is_gdv = special_round_active and sr_type == "advantage"
+        if not is_gdv or not play_actions:
+            for card in current_player.hand.cards:
+                actions.append(
+                    RoadTo100Action(action_type=CHANGE_CARD_ACTION, parameters={"card": card})
+                )
 
         return actions
 
@@ -292,7 +299,19 @@ class RoadTo100RuleSet(RuleSet):
             return False
 
         if action.action_type == CHANGE_CARD_ACTION:
-            return isinstance(card, Card) and current_player.has_card(card)
+            if not (isinstance(card, Card) and current_player.has_card(card)):
+                return False
+            # During GdV, change_card is only valid when there is no playable card.
+            # Reuse get_available_actions() so the playability logic is never duplicated.
+            sr_type = str(game.metadata.get("special_round_type", "advantage"))
+            if bool(game.metadata.get("special_round_active", False)) and sr_type == "advantage":
+                has_playable_card = any(
+                    a.action_type == PLAY_CARD_ACTION
+                    for a in self.get_available_actions(game)
+                )
+                if has_playable_card:
+                    return False
+            return True
 
         sr_type = str(game.metadata.get("special_round_type", "advantage"))
 

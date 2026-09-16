@@ -112,7 +112,7 @@ func get_game_generation():
 	return _game_generation
 
 
-func start_game(player_count):
+func start_game(player_count, rng=null):
 	if _provider == null:
 		print("[GC] ERROR: No provider set")
 		return
@@ -135,7 +135,7 @@ func start_game(player_count):
 	_last_events = []
 	_last_error = ""
 	_selected_card_id = ""
-	_provider.start_game(player_count)
+	_provider.start_game(player_count, rng)
 
 	var ShuffleDeal = AudioManager.get_node("SFXPlayer/ShuffleDeal")
 	AudioManager.play_sfx(ShuffleDeal)
@@ -144,6 +144,26 @@ func start_game(player_count):
 	if am != null and am.has_method("set_game_music"):
 		var valueLabelInt = int(valueLabel.text)
 		am.set_game_music(valueLabelInt, false)
+
+
+# Start a deterministic tutorial scenario (fixed starting state). Prepares the
+# board for a scripted demo; belongs to the demo system, not normal gameplay.
+func start_scenario(spec):
+	if _provider == null:
+		print("[GC] ERROR: No provider set")
+		return
+
+	_game_generation += 1
+	cancel_deal_animation()
+	if _card_animator != null and _card_animator.has_method("cancel"):
+		_card_animator.cancel()
+	_expecting_animation_finish = false
+
+	_state = State.WAITING_FOR_STATE
+	_last_snapshot = null
+	_last_events = []
+	_selected_card_id = ""
+	_provider.start_scenario(spec)
 
 
 func get_state():
@@ -529,8 +549,8 @@ func _check_reset_hand(snapshot):
 		return
 	# Only for non-advantage player
 	var adv_pid = snapshot.get("special_round_player_id", null)
-	if cur_pid == adv_pid:
-		return
+#	if cur_pid == adv_pid:
+#		return
 	# Check available_actions: reset_hand present, no play_card
 	var acts = snapshot.get("available_actions", [])
 	var has_reset = false
@@ -561,12 +581,12 @@ func _on_hand_reset_no():
 	if _hand_reset_popup != null:
 		_hand_reset_popup.hide()
 	_update_choice_blocker()
+
 	if _state != State.WAITING_FOR_CHOICE:
 		return
 
-	# Player can now choose change_card instead (it's already in available_actions)
+	_clear_selection()
 	_state = State.READY_FOR_INPUT
-
 
 func _on_hand_reset_popup_hide():
 	"""Prevent HandResetPopup from closing on outside click while waiting for choice.

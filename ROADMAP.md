@@ -169,19 +169,21 @@ Queste decisioni NON devono essere rimesse in discussione:
 | Suite | File | Cosa verifica | Stato |
 |---|---|---|---|
 | **Domain** | `tests/domain_test.gd` + `.tscn` | Deck 60 carte, card_id univoci, Deck/Hand/Player/GameState operazioni | ✅ 60 card, 0 FAIL |
-| **Rules** | `tests/rules_test.gd` + `.tscn` | 60 test: Gold chain, GdV lifecycle, 89/+11, deck reconstitution, reset hand, Safe Round activation (5), blocked type (10), GS/GdV end-to-end F7 (14), F8 vittoria GdV 97+10=107 | ✅ 197 assert, 0 FAIL (fix F7: RESET_HAND vietato in GS) |
+| **Rules** | `tests/rules_test.gd` + `.tscn` | Gold chain, GdV lifecycle, 89/+11, deck reconstitution, reset hand, Safe Round activation (5), blocked type (10), GS/GdV end-to-end F7 (14), F8 vittoria GdV 97+10=107, GdV reset_hand/change_card simultanei (4) | ✅ 214 assert, 0 FAIL (fix F7: RESET_HAND vietato in GS) |
 | **Provider** | `tests/provider_test.gd` + `.tscn` | start_game 2/3/4p, snapshot (incl. `blocked_type`), card_id, event order, plateau visual stack (4 sequenze), Safe Round blocked_type flow, F8 cap Piatto a 100 in snapshot/stack visivo | ✅ 93 assert, 0 FAIL |
 | **Presenter** | `tests/presenter_test.gd` + `.tscn` | Texture resolution, fallback, CardFace, Board/Hand/Turn presenter, button signals, selection, no rules, no auto-start | ✅ 86 assert, 0 FAIL |
 | **Board** | `tests/board_test.gd` + `.tscn` | Plateau visual stack, gold/non-gold separation, opponent centering, rotation setup, chronological order, jitter pile entro limiti | ✅ 41 assert, 0 FAIL |
 | **Shadow / Pile Presentation** | `tests/shadow_integration_test.gd` + `.tscn` | Ombra non circolare (SDF), 1 ombra/pila, jitter Piatto/Scarti entro limiti, ombre CPU 1-per-carta | ✅ 20 assert, 0 FAIL |
 | **Fan Geometry (CPU)** | `tests/fan_geometry_test.gd` + `.tscn` | Geometria ventaglio carte CPU (rotazione e convergenza dei bordi) | ✅ 7 assert, 0 FAIL |
-| **GameController** | `tests/game_controller_test.gd` + `.tscn` | Stati, card selection, bottoni, popup (incl. GS pre-azione, HandResetPopup GdV-only), animazioni, input GUI reale, Jolly/Imbroglio choices | ✅ 211 assert, 0 FAIL |
+| **GameController** | `tests/game_controller_test.gd` + `.tscn` | Stati, card selection, bottoni, popup (incl. GS pre-azione, HandResetPopup GdV-only), animazioni, input GUI reale, Jolly/Imbroglio choices, race condition "Nuova partita" (5 test Generation ID) | ✅ 238 assert, 0 FAIL |
 | **CardAnimator** | `tests/card_animator_test.gd` + `.tscn` | FIFO, segnali start/finish, headless fallback, busy guard | ✅ 5 assert, 0 FAIL |
 | **CardAnimator MP** | `tests/card_animator_test2.gd` + `.tscn` | find_card per player, opponent, clone, dest, hide_drawn, event routing | ✅ 20 assert, 0 FAIL |
-| **Demo Integrazione** | `tests/demo_integration_test.gd` + `.tscn` | GameController + LocalGameEngine reale, 4 giocatori, azioni automatiche (incl. `blocked_type` GS) | ✅ 5/5 partite complete × 3 run consecutive, nessun hang |
+| **Demo Integrazione** | `tests/demo_integration_test.gd` + `.tscn` | GameController + LocalGameEngine reale, 4 giocatori, azioni automatiche (incl. `blocked_type` GS) | ⚠️ flaky (partite casuali; occasionalmente >200 turni senza vincitore — preesistente) |
 | **Demo Verifica** | `tests/demo_verification_test.gd` + `.tscn` | Eventi per tutti e 4 i giocatori, struttura eventi | ✅ 9 assert, 0 FAIL |
 | **Manual Game (1H+3C)** | `tests/manual_game_test.gd` + `.tscn` | ManualGame: CPU auto, pausa turno umano, esclusione reciproca, overlay non blocca input | ✅ 26 assert, 0 FAIL |
 | **Manual Game Smoke** | `tests/manual_game_smoke.tscn` | Verifica wiring reale: pulsante → ManualGame → CPU avanza | ✅ PASS |
+| **Tutorial Mode (1A)** | `tests/tutorial_test.gd` + `.tscn` | Routing tutorial, input bloccato, navigazione, "Mostra" demo deterministica | ✅ 71 assert, 0 FAIL |
+| **Scripted Demo (1B)** | `tests/scripted_demo_test.gd` + `.tscn` | Stato iniziale, sequenze per step, rewind, popup reali, riproducibilità | ✅ 26 assert, 0 FAIL |
 
 ---
 
@@ -336,6 +338,29 @@ Bug risolti:
 
 ## Prossimo lavoro
 
+### ✅ SplashScreen, MainMenu ridisegnata e Modalità Tutorial (14 settembre 2026)
+
+Lavoro sul flusso di avvio e sulla modalità guidata "Come si gioca" (nessuna modifica alle regole; preparazione/rewind della demo nel sistema demo/engine).
+
+- **SplashScreen** (`SplashScreen.tscn`/`.gd`): animazione logo al primo avvio (fade-in 0.7s / display 1.5s / fade-out 0.7s), saltabile, poi → MainMenu.
+- **MainMenu ridisegnata** (`MainMenu.tscn`/`.gd`): pulsanti funzionali Gioca / Come si gioca / Esci; icone + font dedicati. Routing tutorial vs partita in `Main.gd._ready()` (flag in `GlobalsUtilities`).
+- **Modalità Tutorial — Fase 1A** (`scripts/TutorialController.gd`/`.tscn`): popup con overlay bloccante, navigazione Prosegui/Fine, "Mostra" con ritorno allo stesso step.
+- **Modalità Tutorial — Fase 1B (demo scriptate deterministiche)**: `LocalGameEngine.start_scenario(spec)` (stato fisso senza RNG, rewind), `GameController.start_scenario()`, scripted mode in `DebugDemo` (segmenti + pilotaggio popup reali). 7 step (0–6) con scenari preparati; demo identiche a ogni ripetizione.
+- **Test:** `tests/tutorial_test.gd` (71/0) + `tests/scripted_demo_test.gd` (26/0, ×10 run). Regressione: rules_test 214/0, provider_test 93/0, game_controller_test 238/0.
+
+**Nota:** `demo_integration_test` è flaky (preesistente, partite casuali >200 turni) — non correlato a questo lavoro; da sistemare separatamente.
+
+### ✅ Fix race condition, plate back e logica GdV reset_hand/change_card (13 settembre 2026)
+
+Tre modifiche indipendenti nel client Godot, tutte verificate con i test (nessuna modifica al framework Python congelato).
+
+- **Race condition "Nuova partita"**: sistema di Game Generation ID in `GameController.gd`/`CardAnimator.gd`/`ManualGame.gd`/`DebugDemo.gd` per invalidare le operazioni asincrone stalescate durante l'animazione di deal. `CardAnimator.cancel()` uccide tween, svuota la coda e libera i cloni.
+- **Plate back**: durante il deal iniziale si mostra `cardbackplate.png` al posto del plate con valore 0; alla fine del deal torna il plate normale (`show_plate_back()`/`hide_plate_back()` in `BoardPresenter.gd`).
+- **Logica GdV reset_hand/change_card (regressione corretta)**: quando un giocatore non ha carte giocabili durante il GdV, **entrambe** le azioni sono disponibili simultaneamente (nessun meccanismo di rifiuto). `reset_hand` una volta per turno; `change_card` sempre disponibile. Stesso comportamento per il giocatore in Vantaggio e per i normali.
+
+**File principali:** `engine/RoadTo100Rules.gd`, `scripts/GameController.gd`, `scripts/CardAnimator.gd`, `scripts/ManualGame.gd`, `scripts/DebugDemo.gd`, `scripts/BoardPresenter.gd`.
+**Test aggiunti:** 5 test race condition (game_controller_test) + 4 test GdV reset_hand/change_card (rules_test). Tutti verdi: rules_test 214/0, game_controller_test 238/0, Python 93 OK.
+
 ### ✅ Prima AI strategica di player_2 completata (28 agosto 2026)
 
 AI score-based implementata in entrambe le codebase con capacità:
@@ -383,9 +408,11 @@ Dettagli completi di F1–F8 in `PROJECT_STATE.md` sezione "Passaggio F".
 
 1. ~~**Fix selezione carte nel turno umano**~~ — **RISOLTO** (HUDLayer.mouse_filter=IGNORE, test card_selection_test)
 2. ~~**AI per player_2**~~ — **IMPLEMENTATA** (`games/roadto100/ai.py` + `engine/RoadTo100AI.gd`). Score-based strategic AI integrata in ManualGame.
-3. **Migliorie UI/UX** — Texture carte definitive, effetti sonori, schermata di vittoria, animazioni più ricche.
+3. ~~**SplashScreen + MainMenu ridisegnata + Modalità Tutorial (1A+1B)**~~ — **COMPLETATO** (14 settembre 2026). Demo scriptate deterministiche; test tutorial_test 71/0, scripted_demo_test 26/0.
 4. **Multiplayer** — `RemoteGameAdapter` + networking. Architettura definita, implementazione futura.
-5. **AI personalità multiple** — Varianti difficulty (aggressive/defensive) bilanciando i pesi esistenti.
+5. **Migliorie UI/UX** — Texture carte definitive, effetti sonori, schermata di vittoria, animazioni più ricche; cablare i pulsanti Online/Opzioni/Shop/Statistiche (icone già presenti).
+6. **AI personalità multiple** — Varianti difficulty (aggressive/defensive) bilanciando i pesi esistenti.
+7. **Stabilizzare `demo_integration_test`** — test flaky (partite casuali >200 turni senza vincitore); rendere deterministico o alzare `max_turns_per_game`.
 
 ### Modalità manuale 1 umano + 3 CPU — ✅ Implementata (21 agosto 2026)
 
@@ -409,4 +436,4 @@ Tutte le suite di test sono verdi. Eseguire i test dopo ogni modifica:
 /home/sumaka/bin/Godot3 --path /media/sumaka/Giochi/GodotProjects/roadTo100 tests/<suite>.tscn --no-window
 ```
 
-Suite disponibili: `game_controller_test`, `presenter_test`, `board_test`, `provider_test`, `rules_test`, `domain_test`, `card_animator_test`, `card_animator_test2`, `demo_integration_test`, `demo_verification_test`, `manual_game_test`, `manual_game_smoke`, `card_selection_test`, `plus11_gold_transformation_test`.
+Suite disponibili: `game_controller_test`, `presenter_test`, `board_test`, `provider_test`, `rules_test`, `domain_test`, `card_animator_test`, `card_animator_test2`, `demo_integration_test`, `demo_verification_test`, `manual_game_test`, `manual_game_smoke`, `card_selection_test`, `plus11_gold_transformation_test`, `tutorial_test`, `scripted_demo_test`.

@@ -358,14 +358,15 @@ func _update_discard(discard_stack):
 
 		_discard_pile.add_child(dc)
 
-	# Top card: subtle stable tilt so the pile reads
-	# as hand-placed yet neat.
+	# Top card: apply the same jitter system as the under-cards.
 	_discard_top.rect_pivot_offset = Vector2(
 		101.5,
 		146.0
 	)
 
-	_discard_top.rect_rotation = 0.8
+	var top_jit = _pile_jit(n)
+	_discard_top.rect_position = top_jit["pos"]
+	_discard_top.rect_rotation = top_jit["rot"]
 
 	# Keep TopCard on top of the under-cards.
 	_discard_pile.move_child(

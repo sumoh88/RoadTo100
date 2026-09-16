@@ -126,8 +126,13 @@ func _draw_or_reshuffle(game):
 # RuleSet interface
 # ---------------------------------------------------------------------------
 
-func initialize_game(game):
-	"""Initialize the game state for a new match. (mirrors initialize_game)"""
+func initialize_game(game, rng=null):
+	"""Initialize the game state for a new match. (mirrors initialize_game)
+
+	rng: optional RandomNumberGenerator (tutorial demos). When provided the
+	starting player is fixed to Player 1 so the demo always shows from that
+	perspective; the deck shuffle uses game.deck.rng (set by the engine).
+	When null, behaviour is unchanged (random start via global randi())."""
 	game.phase = 1  # GameConstants.GamePhase.PLAYING
 	game.winner = null
 	game.turn_number = 0
@@ -148,7 +153,10 @@ func initialize_game(game):
 
 	if game.players.size() > 0:
 		game.deck.shuffle()
-		game.current_player_index = randi() % game.players.size()
+		if rng != null:
+			game.current_player_index = 0  # tutorial: always start from Player 1
+		else:
+			game.current_player_index = randi() % game.players.size()
 		game.set_current_player(game.players[game.current_player_index])
 		for i in range(3):  # INITIAL_HAND_SIZE
 			for player in game.players:
@@ -286,18 +294,31 @@ func validate_action(game, action_dict):
 	if action_dict["action_type"] == RESET_HAND_ACTION:
 		if current_player.hand.cards.empty():
 			return true
-		# During GdV (advantage only): valid for non-activator players, but only once per turn
+
 		var sr_type = str(game.metadata.get("special_round_type", "advantage"))
-		if advantage_turn and not is_advantage_player and sr_type == "advantage":
-			# Check if reset_hand was already used this turn
+
+		# Durante il GdV, qualunque giocatore può usare reset_hand
+		# se non ha ancora usato reset_hand in questo turno.
+		if advantage_turn and sr_type == "advantage":
 			return !game.metadata.get("_reset_hand_used_this_turn", false)
+
 		return false
 
 	if action_dict["action_type"] == CHANGE_CARD_ACTION:
-		var is_gdv = advantage_turn and str(game.metadata.get("special_round_type", "")) == "advantage"
-		if is_gdv:
+		if card == null or typeof(card) != TYPE_OBJECT or not current_player.has_card(card):
 			return false
-		return card != null and typeof(card) == TYPE_OBJECT and current_player.has_card(card)
+		# During GdV, change_card is only valid when there is no playable card.
+		# Reuse get_available_actions() so the playability logic is never duplicated.
+		var sr_type = str(game.metadata.get("special_round_type", "advantage"))
+		if advantage_turn and sr_type == "advantage":
+			var has_playable_card = false
+			for a in get_available_actions(game):
+				if a["action_type"] == PLAY_CARD_ACTION:
+					has_playable_card = true
+					break
+			if has_playable_card:
+				return false
+		return true
 
 	var sr_type = str(game.metadata.get("special_round_type", "advantage"))
 

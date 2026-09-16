@@ -468,7 +468,7 @@ class _FakeProvider:
 	var last_action = {}
 	var _gc = null
 
-	func start_game(_count):
+	func start_game(_count, _rng=null):
 		pass
 
 	func send_action(a):

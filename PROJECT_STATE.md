@@ -1,6 +1,6 @@
 # RoadTo100 — Stato Progetto
 
-> Aggiornato al: 11 settembre 2026
+> Aggiornato al: 14 settembre 2026
 > Scopo: documento di avvio per future sessioni di sviluppo.
 
 ---
@@ -22,7 +22,7 @@ Il progetto è composto da due codebase separati:
 | **AI player_4 (tattica/prudente)** | ✅ RoadTo100AI con pesi tattici (preferisce controllo, evita rimbalzi) |
 | **Ordine giocatori corretto** | ✅ P1→P2(Left)→P3(Top)→P4(Right) — turni logici e UI allineati |
 | **Single-player core gameplay** | ✅ **Completato e funzionante** |
-| **MainMenu** | ✅ **Implementata** — scena principale (`run/main_scene`), pulsante GIOCA → Main.tscn |
+| **MainMenu** | ✅ **Implementata e ridisegnata** — scena principale (`run/main_scene`); pulsanti Gioca / Come si gioca (tutorial) / Esci |
 | **AudioManager (singleton)** | ✅ **Musica dinamica funzionante** — 5 stem (Beat/Piano/Cello/Violin/Trumpet), autoloader globale |
 | **GlobalsUtilities (singleton)** | ✅ **Stato condiviso** — plateValue, sr_active, selected_value, gameStarted, soglie musica |
 | **spe100.png** | ✅ Piatto ≥ 100 usa texture speciale senza numero sovrapposto |
@@ -30,19 +30,28 @@ Il progetto è composto da due codebase separati:
 | **Ombre morbide e pile appoggiate a mano** | ✅ `ShadowFactory.gd` (ombre sagomate, SDF rettangolare) + ventaglio carte CPU + jitter pile Piatto/Scarti (±7px, rotazione ~±2.5°) + stack scarti dinamico |
 | **Compatibilità Android / APK** | ✅ Preset di export "Android" (`export_presets.cfg`), cartella `android/`, APK `RT100.apk` funzionante |
 | **Caricamento musicale su Android** | ✅ Canzone casuale scelta da **elenco esplicito** (necessario perché il listing su `res://` non funziona in APK) — attualmente solo `CardTrickLoop` |
+| **SplashScreen** | ✅ Animazione logo al primo avvio (fade-in 0.7s / display 1.5s / fade-out 0.7s), saltabile con un tasto, poi → MainMenu |
+| **Modalità Tutorial (1A + 1B)** | ✅ Modalità guidata "Come si gioca": popup con overlay bloccante, navigazione Prosegui/Fine, demo deterministica per step (scripted scenario, rewind, popup reali di scelta) |
 
 ---
 
 ## Flusso Menu → Partita
 
 ```
-App avvio → MainMenu.tscn (run/main_scene)
+App avvio → SplashScreen.tscn (solo al primo avvio, se !GlobalsUtilities.splash_shown)
+  ├─ Logo: fade-in 0.7s → display 1.5s → fade-out 0.7s (saltabile con un tasto)
+  └─ → MainMenu.tscn (run/main_scene)
+
+MainMenu.tscn
   ├─ _ready() → AudioManager.set_menu_music() (tutti e 5 stem a stemsVolume=0.7)
-  └─ [GIOCA] pulsante
-       └─ get_tree().change_scene("res://Main.tscn")
-            ├─ GlobalsUtilities.gameStarted = true
-            └─ Main.gd._ready() → $StartGameButton.emit_signal("pressed")
-                 └─ ManualGame.start_game(4) → partita 1 umano + 3 CPU
+  ├─ [Gioca] pulsante
+  │    └─ GlobalsUtilities.gameStarted=true, tutorialStarted=false → change_scene(Main.tscn)
+  │         └─ Main.gd._ready() → $StartGameButton.emit_signal("pressed")
+  │              └─ ManualGame.start_game(4) → partita 1 umano + 3 CPU
+  ├─ [Come si gioca] pulsante
+  │    └─ GlobalsUtilities.tutorialStarted=true → change_scene(Main.tscn)
+  │         └─ Main.gd._ready() → TutorialController.start_tutorial() → modalità tutorial
+  └─ [Esci] pulsante → get_tree().quit()
 
 Durante la partita:
   ├─ BoardPresenter.apply_snapshot() aggiorna:
@@ -63,9 +72,10 @@ Torna al Menu:
 ```
 
 ### Note sul flusso
-- `Main.gd._ready()` **auto-inizia** la partita quando la scena viene caricata dal menu (emette il segnale del pulsante StartGameButton).
+- `Main.tscn` è la scena di destinazione sia per la partita sia per il tutorial. `Main.gd._ready()` decide il ramo in base ai flag: se `tutorialStarted` → avvia `TutorialController.start_tutorial()`; altrimenti emette il segnale del pulsante StartGameButton (partita).
+- `SplashScreen.tscn` appare solo al primo avvio (`GlobalsUtilities.splash_shown == false`); imposta il flag a `true` e non torna più.
 - `AudioManager` è un **singleton autoloader** (`[autoload] AudioManager="*res://AudioManager.tscn"` in `project.godot`): sempre disponibile globalmente come `AudioManager`.
-- `GlobalsUtilities` è un **singleton autoloader** per lo stato condiviso tra scene.
+- `GlobalsUtilities` è un **singleton autoloader** per lo stato condiviso tra scene (`gameStarted`, `demoStarted`, `tutorialStarted`, `splash_shown`, `plateValue`, `sr_active`, `selected_value`).
 
 ---
 
@@ -225,10 +235,13 @@ Il sistema di scoring è comune; solo i pesi variano. **Nota**: non esiste più 
 | StartGameButton | In `Main.tscn` | ✅ "Inizia Partita" → ManualGame.start_game(4), auto-emesso da Main.gd._ready() |
 | BackMenuButton | In `Main.tscn` | ✅ "Torna al Menu" → Main.gd._on_BackMenuButton_pressed() → MainMenu.tscn |
 | **Singleton / Autoloaders** | | |
-| MainMenu | `MainMenu.tscn` + `MainMenu.gd` | ✅ Scena principale, pulsante GIOCA → Main.tscn |
+| MainMenu | `MainMenu.tscn` + `MainMenu.gd` | ✅ Menu ridisegnata: Gioca / Come si gioca (tutorial) / Esci + gate splash |
+| SplashScreen | `SplashScreen.tscn` + `SplashScreen.gd` | ✅ Animazione logo al primo avvio (saltabile) → MainMenu |
 | AudioManager | `AudioManager.tscn` + `AudioManager.gd` | ✅ Singleton musica dinamica (5 stem) + SFX |
-| GlobalsUtilities | `GlobalsUtilities.gd` | ✅ Singleton stato condiviso (plateValue, sr_active, selected_value, soglie) |
-| Main.gd | `Main.gd` | ✅ Auto-start partita, BackMenuButton handler |
+| GlobalsUtilities | `GlobalsUtilities.gd` | ✅ Singleton stato condiviso (plateValue, sr_active, selected_value, gameStarted, demoStarted, tutorialStarted, splash_shown, soglie) |
+| Main.gd | `Main.gd` | ✅ Routing partita/tutorial in `_ready()`, BackMenuButton handler |
+| **Tutorial** | | |
+| TutorialController | `scripts/TutorialController.gd` + `.tscn` | ✅ Modalità guidata "Come si gioca" (popup, navigazione, input bloccato, demo) |
 
 ### Architettura finale
 
@@ -241,9 +254,9 @@ Il sistema di scoring è comune; solo i pesi variano. **Nota**: non esiste più 
                            │
 ┌──────────────────────────▼──────────────────────────────────┐
 │              UI Layer (MainMenu.tscn → Main.tscn)            │
-│  MainMenu: GIOCA → Main.tscn                                │
+│  MainMenu: Gioca / Come si gioca (tutorial) / Esci          │
 │  Main: BoardPresenter  HandPresenter  TurnPresenter          │
-│        CardAnimator  CardFace  popup  BackMenuButton         │
+│        CardAnimator  CardFace  popup  TutorialController     │
 │  Non conoscono le regole                                     │
 └─────────────────────┬───────────────────────────────────────┘
                       │ snapshot / events / segnali
@@ -278,17 +291,17 @@ Il sistema di scoring è comune; solo i pesi variano. **Nota**: non esiste più 
 | Suite | File | Assert | Esito |
 |---|---|---|---|
 | Domain | `tests/domain_test.gd` | 55+ | ✅ All PASS (60 carte, 4 +11, 6 Imbroglio) |
-| Rules | `tests/rules_test.gd` | 197 | ✅ 0 FAIL (fix F7: in GS non si offre RESET_HAND, solo GdV) |
+| Rules | `tests/rules_test.gd` | 214 | ✅ 0 FAIL (fix F7: in GS non si offre RESET_HAND, solo GdV) |
 | Provider | `tests/provider_test.gd` | 93 | ✅ 0 FAIL |
 | Presenter | `tests/presenter_test.gd` | 86 | ✅ 0 FAIL |
 | Board | `tests/board_test.gd` | 41 | ✅ 0 FAIL (pile entro limiti jitter ±7px/~±2.5°) |
 | Shadow / Pile Presentation | `tests/shadow_integration_test.gd/.tscn` | 20 | ✅ 0 FAIL (ombra non circolare, 1/pila, jitter pile, ombre CPU) |
 | Fan Geometry (CPU) | `tests/fan_geometry_test.gd/.tscn` | 7 | ✅ 0 FAIL (ventaglio carte CPU) |
-| GameController | `tests/game_controller_test.gd` | 211 | ✅ 0 FAIL (incl. GdV blocking, popup re-open) |
+| GameController | `tests/game_controller_test.gd` | 238 | ✅ 0 FAIL (incl. GdV blocking, popup re-open, race condition) |
 | Card Selection | `tests/card_selection_test.gd` | 27 | ✅ 0 FAIL (fix HUDLayer.mouse_filter) |
 | CardAnimator | `tests/card_animator_test.gd` | 5 | ✅ 0 FAIL |
 | CardAnimator Multi-Player | `tests/card_animator_test2.gd` | 20 | ✅ 0 FAIL |
-| Demo Integrazione | `tests/demo_integration_test.gd` | 5 | ✅ 5/5 partite complete, nessun hang |
+| Demo Integrazione | `tests/demo_integration_test.gd` | 5 | ⚠️ flaky (partite casuali; occasionalmente >200 turni senza vincitore — preesistente) |
 | Demo Verifica Eventi | `tests/demo_verification_test.gd` | 9 | ✅ 0 FAIL |
 | Manual Game (1H+3C) | `tests/manual_game_test.gd` | 26 | ✅ 0 FAIL |
 | Manual Game Smoke | `tests/manual_game_smoke.tscn` | — | ✅ PASS |
@@ -296,6 +309,8 @@ Il sistema di scoring è comune; solo i pesi variano. **Nota**: non esiste più 
 | AI Decisioni Base | `tests/ai_test.gd` | 3 | ✅ 0 FAIL (preferenza alta, Gold, Gold chain) |
 | AI Avanzate | `tests/ai_advanced_test.gd` | 7 | ✅ 0 FAIL (vittoria, Jolly strategico, bounce, Imbroglio, hold-back +11) |
 | Reset Hand Rule | `tests/reset_hand_rule_test.gd` | 3 | ✅ 0 FAIL (GS vietato, GdV una volta) |
+| Tutorial Mode (1A) | `tests/tutorial_test.gd` | 71 | ✅ 0 FAIL (routing, input bloccato, navigazione, demo deterministica) |
+| Scripted Demo (1B) | `tests/scripted_demo_test.gd` | 26 | ✅ 0 FAIL (stato iniziale, sequenze step, rewind, popup reali, riproducibilità) |
 
 **Test Python:** 93 test totali — 87 in `test_roadto100_rules.py` + 6 in `test_roadto100_ai.py` — tutti OK.
 
@@ -819,3 +834,193 @@ Implementata la resa visiva di ombre e pile sul tavolo, **solo presentazione** (
 | `tests/game_controller_test.gd` | ✅ 211/0 (partite reali con nuovo rendering) |
 | `tests/provider_test.gd` | ✅ 93/0 (snapshot incl. `discard_stack`) |
 | `tests/manual_game_smoke.tscn` | ✅ SMOKE PASS |
+
+---
+
+## ULTIMA SESSIONE (13 settembre 2026) — Fix race condition, plate back, logica GdV reset_hand/change_card
+
+Tre modifiche indipendenti, tutte verificate con i test. Nessuna modifica al framework Python congelato; solo client Godot + regole GdV.
+
+### 1. Race condition "Nuova partita" durante animazione deal
+
+**Problema:** premendo "Nuova partita" durante l'animazione di deal, la logica dell'antica partita poteva ancora completare operazioni asincrone (yield di animazione, timer CPU) e corrompere lo stato della nuova partita.
+
+**Soluzione — sistema di Game Generation ID:**
+- `GameController.gd`: contatore `_game_generation`; `get_game_generation()`; `start_game()` incrementa il contatore, cancella `CardAnimator`, resetta flag asincroni.
+- `_animate_initial_deal()`: dopo ogni `yield`, verifica che la generazione non sia cambiata → se cambiato, interrompe e ritorna.
+- `_on_animation_finished()`: usa flag `_expecting_animation_finish` (non più `is_animating()`, perché il CardAnimator reale setta `_busy=false` PRIMA di emettere il segnale).
+- `CardAnimator.gd`: nuovo metodo `cancel()` — uccide la tween, svuota la coda, libera i cloni (`_active_clones`).
+- `ManualGame.gd` e `DebugDemo.gd`: variabile `_game_gen` impostata all'avvio; `_on_timer_timeout()` verifica la generazione corrente → se cambiate, ritorna (timer stalescatti ignorati).
+
+### 2. Plate back durante l'animazione di deal
+
+**Modifica:** durante il deal iniziale si mostra `cardbackplate.png` al posto del `plate.png` con valore 0; alla fine del deal (inizio primo turno) si torna al plate normale.
+- `BoardPresenter.gd`: nuovi metodi `show_plate_back()` / `hide_plate_back()`.
+- `GameController._animate_initial_deal()`: chiama `show_plate_back()` all'inizio, `hide_plate_back()` alla fine.
+
+### 3. Logica GdV: reset_hand + change_card (regressione corretta)
+
+**Problema originale (deadlock P4):** durante il GdV, un giocatore con mano `[gold_34, imbroglio_3, imbroglio_4]` e nessuna carta arancione/rossa giocabile si bloccava: `available_actions` vuoto → nessun'azione possibile.
+
+**Evoluzione della specifica (3 versioni, la 3 è quella finale):**
+1. ~~reset_hand per tutti; change_card solo dopo rifiuto~~ — implementata poi rifiutata dall'utente.
+2. ~~change_card disponibile normalmente durante GdV~~ — rifiutata.
+3. **FINALE:** quando un giocatore non ha carte giocabili, **ENTRO** `reset_hand` E `change_card` sono disponibili **simultaneamente**. Nessun meccanismo di rifiuto. Il giocatore sceglie liberamente.
+
+**Logica finale implementata in `RoadTo100Rules.gd`:**
+```gdscript
+# Durante GdV: TUTTI i giocatori senza carte giocabili ricevono RESET_HAND + CHANGE_CARD.
+var is_gdv = advantage_turn and sr_type == "advantage"
+if is_gdv and not current_player.hand.cards.empty():
+    var has_playable = false
+    for c in current_player.hand.cards:
+        if _card_playable_sr(c, advantage_turn, sr_type, blocked_type):
+            has_playable = true
+            break
+    if not has_playable:
+        var reset_used = game.metadata.get("_reset_hand_used_this_turn", false)
+        if not reset_used:
+            actions.append({"action_type": RESET_HAND_ACTION})
+        # change_card sempre disponibile come alternativa per ogni carta in mano
+        for card in current_player.hand.cards:
+            actions.append({"action_type": CHANGE_CARD_ACTION, "card": card})
+        return actions
+```
+
+- `reset_hand` disponibile **una volta per turno** (flag `_reset_hand_used_this_turn`).
+- `change_card` sempre disponibile per tutte le carte in mano.
+- Dopo un `reset_hand` che non produce carte giocabili, `change_card` resta disponibile.
+- Stesso comportamento per il giocatore in Vantaggio e per i giocatori normali.
+- `advance_turn()` resetta SOLO il flag `_reset_hand_used_this_turn`.
+
+**Nota:** `LocalGameEngine.set_reset_hand_refused()` e lo stub nel mock provider sono stati mantenuti ma **non più usati** dalla logica (nessun meccanismo di rifiuto nella versione finale). Sono residui della versione 2, inoffensivi.
+
+### File principali modificati
+
+| File | Ruolo |
+|---|---|
+| `engine/RoadTo100Rules.gd` | Logica GdV: reset_hand + change_card simultanei quando nessuna carta giocabile |
+| `scripts/GameController.gd` | Generation ID, `_expecting_animation_finish`, plate back, reset_hand/change_card flow |
+| `scripts/CardAnimator.gd` | Metodo `cancel()` per invalidare animazioni stalescate |
+| `scripts/ManualGame.gd` | `_game_gen` + check generazione nel timer |
+| `scripts/DebugDemo.gd` | `_game_gen` + check generazione nel timer |
+| `scripts/BoardPresenter.gd` | `show_plate_back()` / `hide_plate_back()` |
+| `engine/LocalGameEngine.gd` | `set_reset_hand_refused()` (residuo, inattivo) |
+| `tests/rules_test.gd` | Test GdV reset_hand/change_card aggiornati + 4 nuovi test |
+| `tests/game_controller_test.gd` | 5 nuovi test race condition (generation ID) |
+| `tests/mock_provider.gd` | Stub `set_reset_hand_refused()` (inattivo) |
+
+### Test eseguiti e risultati (verificati il 13 settembre 2026)
+
+| Suite | Assert | Esito |
+|---|---|---|
+| rules_test | **214** | ✅ 0 FAIL |
+| game_controller_test | **238** | ✅ 0 FAIL (incl. 5 nuovi test race condition) |
+| Python (rules + AI) | 93 test | ✅ OK |
+
+### Test aggiunti nella sessione
+
+- **game_controller_test.gd** — 5 test race condition: "New game during deal", "Generation increments", "Deal gen check", "CA cancel on restart", "Stale anim ignored", "ManualGame gen check".
+- **rules_test.gd** — 4 nuovi test GdV:
+  - `_test_gdv_no_playable_both_available` — reset_hand + change_card entrambi offerti
+  - `_test_gdv_reset_still_no_playable_change_available` — dopo reset, change_card resta disponibile
+  - `_test_gdv_advantage_player_same_behavior` — stesso comportamento per il giocatore in Vantaggio
+  - `_test_gdv_has_playable_normal_actions` — con carte giocabili, azioni normali (no reset/change)
+
+### Problemi aperti / punti da verificare
+
+- **Residuo inattivo:** `set_reset_hand_refused()` in LocalGameEngine e mock è codice morto dalla versione 3 della logica. Può essere rimosso in una pulizia futura (non bloccante).
+- **Warning preesistente:** `ObjectDB instances leaked at exit` nei test game_controller_test — già noto, non correlato alle modifiche di questa sessione, non blocca i test (exit code 0).
+
+### Prossimo passo consigliato
+
+1. **Multiplayer** (`RemoteGameAdapter`): architettura definita, implementazione futura.
+2. **AI personalità multiple**: varianti aggressive/difensive bilanciando i pesi esistenti (già implementate P3 aggressiva / P4 tattica — vedi sezione AI).
+3. **Migliorie UI/UX**: texture definitive, effetti sonori, animazioni più ricche, schermata di vittoria.
+4. **Pulizia codice**: rimuovere `set_reset_hand_refused()` inattivo se si conferma che il meccanismo di rifiuto non tornerà.
+
+---
+
+## ULTIMA SESSIONE (14 settembre 2026) — SplashScreen, MainMenu ridisegnata e Modalità Tutorial
+
+Lavoro sul flusso di avvio e sulla modalità guidata "Come si gioca". Nessuna modifica alle regole di gioco: la logica resta in `RoadTo100Rules.gd`; preparazione stato e rewind della demo appartengono al sistema demo/engine, non alle regole.
+
+### 1. SplashScreen (nuova)
+
+- **File:** `SplashScreen.tscn` + `SplashScreen.gd`.
+- Mostrata **solo al primo avvio** (`GlobalsUtilities.splash_shown == false`); poi il flag è `true` e non torna.
+- Animazione logo: fade-in 0.7s → display 1.5s → fade-out 0.7s (tween su `modulate:a`). **Saltabile** premendo un tasto (`is_any_key_pressed()`).
+- Alla fine → `MainMenu.tscn` (via `call_deferred("change_scene", ...)`).
+
+### 2. MainMenu ridisegnata
+
+- **File:** `MainMenu.tscn` + `MainMenu.gd`; icone/font nuovi in `imgs/` e `fonts/` (`playIcon`, `tutorialIcon`, `onlineIcon`, `optionIcon`, `shopIcon`, `statsIcon`, `popupTutorial.png`, `btnFont.tres`, `popupFont.tres`).
+- **Pulsanti funzionali (connessi):**
+  - **Gioca** → `_on_Play_pressed()`: `gameStarted=true`, `tutorialStarted=false` → `Main.tscn`.
+  - **Come si gioca** → `_on_Tutorial_pressed()`: `tutorialStarted=true` → `Main.tscn` (apre il tutorial).
+  - **Esci** → `_on_ExitGame_pressed()`: `get_tree().quit()`.
+- **Nota:** le icone Online/Opzioni/Shop/Statistiche sono presenti come asset ma i relativi pulsanti **non sono ancora cablati** (placeholder per funzioni future).
+
+### 3. Routing in Main.gd
+
+- `Main.tscn` è la scena di destinazione sia per la partita sia per il tutorial.
+- `Main.gd._ready()`: se `GlobalsUtilities.tutorialStarted` → ottiene/crea `TutorialController` e chiama `start_tutorial()`; altrimenti emette `StartGameButton.pressed` (partita 1 umano + 3 CPU).
+
+### 4. Modalità Tutorial — Fase 1A (framework popup)
+
+- **File:** `scripts/TutorialController.gd` + `scripts/TutorialController.tscn`.
+- **Responsabilità:** possiede il **contenuto** del tutorial (array `steps`), la UI del popup (struttura/aspect nel `.tscn`, stile tipo choice_value con immagine a sinistra), il **blocco dell'input** (overlay full-screen trasparente che assorbe i click), e le demo "Mostra".
+- **Comportamento:**
+  - `start_tutorial()` → attiva la modalità, blocca l'input, mostra il primo step.
+  - Navigazione: **Prosegui** avanza; sull'ultimo step diventa **Fine** (emette `tutorial_finished`, la scena naviga al menu).
+  - "Mostra" nasconde il popup e lancia la demo; a fine demo **ritorna sempre allo stesso step/popup**.
+- **Test:** `tests/tutorial_test.gd` + `.tscn`.
+
+### 5. Modalità Tutorial — Fase 1B (demo scriptate deterministiche) — **questa sessione**
+
+Ogni pressione di "Mostra" esegue **solo lo step corrente**, con una demo **completamente deterministica** (identica a ogni ripetizione), P1 sempre il giocatore mostrato, popup reali di scelta aperti durante la demo, e rewind che ripristina esattamente lo stato preparato.
+
+- **Preparazione scenario (`LocalGameEngine.start_scenario(spec)`):** costruisce uno stato di gioco completamente specificato (mani fisse, mazzo pesca con l'ultima carta = prossima pesca, Piatto e metadata overrides) **senza RNG**. Ri-chiamarlo con la stessa spec = **rewind**.
+- **`GameController.start_scenario()`:** wrapper che incrementa la generation (invalida async), azzera animazioni/flag e delega al provider.
+- **`DebugDemo` (scripted mode):** `start_scripted_demo(scenario)` percorre i segmenti; per ogni azione pilota il flusso UI reale (`_on_card_selected` → `_on_play_pressed` → `_on_value_chosen` / `_on_safe_round_choice_chosen`) così che i popup reali si aprano. Tra un segmento e l'altro applica il rewind (`_next_segment()`).
+- **Content (`TutorialController._build_steps()`):** 7 step (0–6). Step 0 = demo breve seeded esistente; step 1–6 usano scenari scriptati:
+  - **Step 1 (Incrementi):** P1 con +4/+7/Jolly → demo 1 gioca +7 (Piatto 7), rewind, demo 2 gioca Jolly=5 con popup reale (Piatto 5).
+  - **Step 2 (Imbroglio):** gioca Imbroglio, popup reale, valore −7 (15→8).
+  - **Step 3 (Gold):** gioca Gold 34 → Piatto 34 + attivazione Giro Sicuro con scelta reale del tipo bloccato.
+  - **Step 4 (89/GdV):** gioca 89 → Piatto 89 + Giro di Vantaggio; un CPU mostra la restrizione (solo Incrementi/+11).
+  - **Step 5 (+11):** tre casi con rewind tra loro: 1) +11 in GdV → vittoria; 2) +11 su Piatto normale; 3) +11 dopo Gold → trasformazione nella Gold successiva.
+  - **Step 6 (Consigli/combo):** sequenza didattica costruita per mostrare combo verso 100 e vittoria esatta con Jolly.
+- **Test:** `tests/scripted_demo_test.gd` + `.tscn` (stato iniziale, sequenza per step, rewind, popup reali, riproducibilità).
+
+### File nuovi/modificati (solo UI/engine/demo, non regole)
+
+| File | Ruolo |
+|---|---|
+| `SplashScreen.tscn` / `SplashScreen.gd` | Animazione logo al primo avvio |
+| `MainMenu.tscn` / `MainMenu.gd` | Menu ridisegnato (Gioca/Come si gioca/Esci), gate splash |
+| `Main.gd` | Routing tutorial vs partita in `_ready()` |
+| `GlobalsUtilities.gd` | Nuovi flag: `splash_shown`, `demoStarted`, `tutorialStarted` |
+| `scripts/TutorialController.gd` / `.tscn` | Framework popup + contenuto + demo (Fase 1A+1B) |
+| `engine/LocalGameEngine.gd` | `start_scenario(spec)` — preparazione stato deterministica (rewind) |
+| `scripts/GameController.gd` | `start_scenario()`; `start_game(player_count, rng=null)` per demo deterministiche |
+| `scripts/DebugDemo.gd` | Scripted mode: segmenti, rewind, pilotaggio popup reali |
+| `tests/tutorial_test.gd` / `.tscn` | Test modalità tutorial (Fase 1A) |
+| `tests/scripted_demo_test.gd` / `.tscn` | Test demo scriptate (Fase 1B) |
+
+### Test eseguiti e risultati (14 settembre 2026)
+
+| Suite | Assert | Esito |
+|---|---|---|
+| `tests/tutorial_test.gd` | **71** | ✅ 0 FAIL |
+| `tests/scripted_demo_test.gd` | **26** | ✅ 0 FAIL (verificato ×10 run) |
+| rules_test | 214 | ✅ 0 FAIL |
+| provider_test | 93 | ✅ 0 FAIL |
+| game_controller_test | 238 | ✅ 0 FAIL |
+| demo_verification_test | 9 | ✅ 0 FAIL |
+
+### Problemi aperti / note
+
+- **`demo_integration_test` flaky (preesistente, non da questo lavoro):** esegue partite *casuali* e richiede un vincitore entro 200 turni a partita; con il meccanismo di rimbalzo una partita può occasionalmente superarli. Verificato: codice HEAD e working-tree hanno la stessa frequenza di fallimento (~2/4). Non correlato alle modifiche della sessione (questo test non usa DebugDemo né `start_scenario`). Da sistemare separatamente (es. determinismo o `max_turns_per_game` più alto) se si vuole verde stabile.
+- **Tutorial 1C NON implementato:** l'utente ha chiesto di non procedere senza conferma esplicita.
+- **Pulsanti Online/Opzioni/Shop/Statistiche** presenti come icone ma non cablati (funzionalità future).
+

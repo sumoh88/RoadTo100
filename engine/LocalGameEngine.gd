@@ -27,8 +27,12 @@ var rules = null
 # Public API
 # ---------------------------------------------------------------------------
 
-func start_game(player_count):
-	"""Initialize a new game with the given number of players."""
+func start_game(player_count, rng=null):
+	"""Initialize a new game with the given number of players.
+
+	rng: optional RandomNumberGenerator (tutorial demos only). When provided it
+	is attached to the deck and passed to rules so the whole setup is
+	deterministic. Normal games pass null (default) — unchanged behaviour."""
 	var CardDatabase = _CardDatabase.new()
 
 	# Create players
@@ -44,11 +48,127 @@ func start_game(player_count):
 	for c in deck_cards:
 		game_state.deck.add_card(c)
 
+	# Tutorial determinism: route the deck shuffle through the provided RNG.
+	if rng != null:
+		game_state.deck.rng = rng
+
 	# Initialize rules
 	rules = _RoadTo100Rules.new()
-	rules.initialize_game(game_state)
+	rules.initialize_game(game_state, rng)
 
 	emit_signal("game_started", _build_snapshot())
+
+
+func start_scenario(spec):
+	"""Build a deterministic, fully-specified game state for TUTORIAL demos.
+
+	This is scenario PREPARATION (belongs to the demo system, not the rules).
+	The game logic (rules) still governs every action played afterwards — only
+	the starting state is fixed so a demo always replays identically.
+
+	spec = {
+	  "player_count": int (default 4),
+	  "current_player_index": int (default 0 -> Player 1),
+	  "hands": {"player_1": ["+7","Jolly",...], ...},   # card descriptors
+	  "draw_pile": [descriptors; LAST element is drawn first],
+	  "meta": {metadata overrides, e.g. "piatto", "allow89",
+			  "special_round_active", "blocked_type", "plateau":[...]}
+	}
+	Calling start_scenario(spec) again with the same spec restores identical
+	state (this is the demo REWIND).
+	"""
+	var n = int(spec.get("player_count", 4))
+	var players = []
+	for i in range(n):
+		players.append(_PlayerData.new("player_" + str(i + 1), "Player " + str(i + 1)))
+
+	game_state = _GameState.new()
+	game_state.add_players(players)
+
+	# Seed a full deck so rules.initialize_game has cards to deal; the hands and
+	# draw pile are replaced with the scenario below.
+	var cdb_seed = _CardDatabase.new()
+	for c in cdb_seed.build_deck():
+		game_state.deck.add_card(c)
+
+	rules = _RoadTo100Rules.new()
+	rules.initialize_game(game_state)  # baseline metadata + deal (overwritten next)
+
+	# Assign scenario hands. Duplicate descriptors get unique ids deterministically.
+	var used_ids = {}
+	var hands = spec.get("hands", {})
+	for p in game_state.players:
+		p.clear_hand()
+		var descs = hands.get(p.player_id, [])
+		for d in descs:
+			var cd = _make_scenario_card(d)
+			if cd != null:
+				cd.card_id = _unique_scenario_card_id(cd, used_ids)
+				p.receive_card(cd)
+
+	# Replace the draw pile (LAST element is the next card to be drawn).
+	game_state.deck.clear()
+	var draw_pile = spec.get("draw_pile", [])
+	for d in draw_pile:
+		var cd = _make_scenario_card(d)
+		if cd != null:
+			cd.card_id = _unique_scenario_card_id(cd, used_ids)
+			game_state.deck.add_card(cd)
+
+	# Fixed current player (Player 1 for the tutorial).
+	var cpi = int(spec.get("current_player_index", 0))
+	game_state.current_player_index = cpi
+	if game_state.players.size() > cpi:
+		game_state.set_current_player(game_state.players[cpi])
+
+	# Metadata overrides.
+	var meta = spec.get("meta", {})
+	if meta.has("plateau"):
+		var pcards = []
+		for d in meta["plateau"]:
+			var cd = _make_scenario_card(d)
+			if cd != null:
+				cd.card_id = _unique_scenario_card_id(cd, used_ids)
+			pcards.append(cd)
+		game_state.metadata["plateau_cards"] = pcards
+	for k in meta.keys():
+		if k == "plateau":
+			continue
+		game_state.metadata[k] = meta[k]
+	print("[SCENARIO] special_round_active = ", game_state.metadata.get("special_round_active"))
+	print("[SCENARIO] special_round_player_id = ", game_state.metadata.get("special_round_player_id"))
+	print("[SCENARIO] _activator_has_played_next = ", game_state.metadata.get("_activator_has_played_next"))
+	print("[SCENARIO] current_player_index = ", game_state.current_player_index)
+	emit_signal("game_started", _build_snapshot())
+
+
+# Build a CardData from a high-level descriptor string.
+func _make_scenario_card(desc):
+	var cdb = _CardDatabase.new()
+	var s = str(desc)
+	if s == "Jolly":
+		return cdb.make_jolly_card(0)
+	elif s == "Imbroglio":
+		return cdb.make_imbroglio_card(0)
+	elif s == "89":
+		return cdb.make_89_card(0)
+	elif s == "+11":
+		return cdb.make_plus11_card(0)
+	elif s.begins_with("Gold"):
+		return cdb.make_gold_card(int(s.substr(4)))
+	elif s.begins_with("+"):
+		return cdb.make_increment_card(int(s.substr(1)), 0)
+	return null
+
+
+# Ensure unique card_id within a scenario by suffixing a counter on clashes.
+func _unique_scenario_card_id(cd, used_ids):
+	var base = cd.card_id
+	if not used_ids.has(base):
+		used_ids[base] = 0
+		return base
+	used_ids[base] += 1
+	return base + "_" + str(used_ids[base])
 
 
 func send_action(action_dict):
@@ -441,11 +561,36 @@ func _generate_events(before, rules_action, card):
 	# CHANGE_CARD: card_changed, then card_drawn
 	# -----------------------------------------------------------------------
 	if at == CHANGE_CARD_ACTION:
-		events.append({"type": "card_changed", "player_id": cp_id, "card_id": card_id})
+		events.append({
+			"type": "card_changed",
+			"player_id": cp_id,
+			"card_id": card_id
+		})
+
+		var before_ids = before.get("current_hand_ids", [])
 		var after_ids = _get_hand_card_ids(cp)
+
+		# Normally the drawn card has a new card_id and can be identified
+		# by comparing the hand before/after the action.
+		var drawn_id = ""
+
 		for cid in after_ids:
-			if not cid in before.get("current_hand_ids", []):
-				events.append({"type": "card_drawn", "player_id": cp_id, "card_id": cid})
+			if not cid in before_ids:
+				drawn_id = cid
+				break
+
+		# If the changed card was shuffled back into the deck and immediately
+		# drawn again, its card_id is identical to the card that was changed.
+		if drawn_id == "" and card_id != "" and card_id in after_ids:
+			drawn_id = card_id
+
+		if drawn_id != "":
+			events.append({
+				"type": "card_drawn",
+				"player_id": cp_id,
+				"card_id": drawn_id
+			})
+
 		return events
 
 	# -----------------------------------------------------------------------
