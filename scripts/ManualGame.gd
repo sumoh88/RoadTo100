@@ -211,19 +211,19 @@ func _on_timer_timeout():
 		for c in players[cur_player_idx].get("hand", []):
 			cur_hand.append(str(c.get("card_id", "")))
 
-	print("[CPU DEBUG] player=" + cur_player_id)
-	print("[CPU DEBUG] state=" + str(state))
-	print("[CPU DEBUG] hand=[" + PoolStringArray(cur_hand).join(", ") + "]")
+	# print("[CPU DEBUG] player=" + cur_player_id)
+	# print("[CPU DEBUG] state=" + str(state))
+	# print("[CPU DEBUG] hand=[" + PoolStringArray(cur_hand).join(", ") + "]")
 
 	# CPU turn — check if we can act
 	# Only act when READY_FOR_INPUT(1) or CARD_SELECTED(2) — same as DebugDemo
 	if state != 1 and state != 2:
-		print("[CPU DEBUG] not ready for input, state=" + str(state))
+		# print("[CPU DEBUG] not ready for input, state=" + str(state))
 
 		# WAITING_FOR_CHOICE (3): a popup is open; the GC opens it, and for CPU
 		# we resolve it via _handle_cpu_choice (value choices / reset hand).
 		if state == 3:
-			print("[CPU DEBUG] WAITING_FOR_CHOICE -> _handle_cpu_choice")
+			# print("[CPU DEBUG] WAITING_FOR_CHOICE -> _handle_cpu_choice")
 			_handle_cpu_choice(snapshot, lid)
 			return
 
@@ -233,10 +233,10 @@ func _on_timer_timeout():
 	# CPU performs action — all CPU players use AI (no random behavior)
 	var acts = snapshot.get("available_actions", [])
 
-	print("[CPU DEBUG] available_actions=" + str(acts))
+	# print("[CPU DEBUG] available_actions=" + str(acts))
 
 	if acts.empty():
-		print("[CPU DEBUG] STUCK CANDIDATE: available_actions is EMPTY")
+		# print("[CPU DEBUG] STUCK CANDIDATE: available_actions is EMPTY")
 		_schedule_next_step()
 		return
 
@@ -254,10 +254,10 @@ func _on_timer_timeout():
 		# Fallback: random selection (should never happen in normal play)
 		action = _choose_action(acts)
 
-	print("[CPU DEBUG] chosen_action=" + str(action))
+	# print("[CPU DEBUG] chosen_action=" + str(action))
 
 	if action == null:
-		print("[CPU DEBUG] STUCK CANDIDATE: AI returned NULL")
+		# print("[CPU DEBUG] STUCK CANDIDATE: AI returned NULL")
 		_schedule_next_step()
 		return
 
@@ -284,11 +284,11 @@ func _on_timer_timeout():
 			if _play_activates_safe_round(snapshot, cid):
 				action_dict["blocked_type"] = SAFE_ROUND_CHOICES[randi() % SAFE_ROUND_CHOICES.size()]
 
-		print("[CPU DEBUG] perform_action=" + str(action_dict))
+		# print("[CPU DEBUG] perform_action=" + str(action_dict))
 		_gc.perform_action(action_dict)
 
 	elif at == "reset_hand":
-		print("[CPU DEBUG] perform_action=reset_hand")
+		# print("[CPU DEBUG] perform_action=reset_hand")
 		_gc.perform_action({"action_type": "reset_hand"})
 
 	_schedule_next_step()

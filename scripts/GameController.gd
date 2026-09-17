@@ -11,6 +11,8 @@ onready var main = get_tree().current_scene
 onready var valueLabel = main.get_node("GameArea/BoardArea/PlateauZone/ValueLabel")
 onready var ResolvedValueLabel = main.get_node("GameArea/BoardArea/DiscardPile/TopCard/ResolvedValueLabel")
 signal action_applied(result)
+
+var _tutorial_initial_deal = false
 #
 # States (in order of progression):
 #   WAITING_FOR_STATE  — initial, no game loaded
@@ -248,7 +250,6 @@ func _find_presenters():
 			_card_animator = c
 			if _card_animator != null and _card_animator.has_signal("animation_finished"):
 				_card_animator.connect("animation_finished", self, "_on_animation_finished")
-
 
 func _find_popups():
 	var main = _node_up("Main")
@@ -614,13 +615,25 @@ func _on_game_started(snapshot):
 
 	_last_snapshot = snapshot
 	_clear_selection()
+
 	if snapshot.get("winner", null) != null:
 		_apply_snapshot(snapshot)
 		_state = State.GAME_OVER
 		GlobalsUtilities.gameStarted = false
-	else:
-		_animate_initial_deal(snapshot)
+		return
 
+	if GlobalsUtilities.tutorialStarted and not _tutorial_initial_deal:
+		_apply_snapshot(snapshot)
+		_state = State.READY_FOR_INPUT
+		_check_reset_hand(snapshot)
+		_update_choice_blocker()
+		return
+
+	_tutorial_initial_deal = false
+	_animate_initial_deal(snapshot)
+
+func play_tutorial_initial_deal():
+	_tutorial_initial_deal = true
 
 func cancel_deal_animation():
 	"""Abort an in-progress deal and clean up all temporary nodes."""

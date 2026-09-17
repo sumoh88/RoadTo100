@@ -145,12 +145,12 @@ func start_scripted_demo(scenario):
 
 	stop_demo()
 	_stop_sibling_automation()
-
+	
 	_segments = scenario.get("segments", [])
 	_seg_index = 0
 	_script_index = 0
 	_scripted_ticks = 0
-
+	
 	print("[Demo] Scripted demo — segments: " + str(_segments.size()))
 	running = true
 	turn_count = 0
@@ -173,9 +173,15 @@ func _stop_sibling_automation():
 	var p = get_parent()
 	if p == null:
 		return
+
 	for c in p.get_children():
 		if c == self:
 			continue
+
+		if c is Tween:
+			c.stop_all()
+			continue
+
 		if c.has_method("stop"):
 			c.stop()
 
@@ -310,11 +316,18 @@ func _on_scripted_tick():
 	var state = _gc.get_state()
 	var cur_pid = _current_player_id()
 	var is_local = (cur_pid == "player_1")
-	var cid = _resolve_hand_card_id(str(step.get("card", "")))
+	var cid = ""
+
+	if str(step.get("action", "")) == "change_card":
+		cid = str(step.get("card_id", ""))
+	else:
+		cid = _resolve_hand_card_id(str(step.get("card", "")))
+
+	print("____________________ cid: |", cid, "|")
 
 	if cid == "":
-		# Cannot resolve the scripted card — skip to avoid an infinite loop.
-		print("[Demo] WARN: could not resolve scripted card '" + str(step.get("card", "")) + "'")
+		var requested = step.get("card_id", step.get("card", ""))
+		print("[Demo] WARN: could not resolve scripted card '" + str(requested) + "'")
 		_script_index += 1
 		_schedule_next_step()
 		return
@@ -338,13 +351,19 @@ func _on_scripted_tick():
 
 	if state == _gc.State.READY_FOR_INPUT or state == _gc.State.CARD_SELECTED:
 		if is_local:
-			# Local (P1): select then play. For choice cards this opens the real
-			# popup (resolved on the next tick); for a plain card it completes now.
 			_gc._on_card_selected(cid)
-			_gc._on_play_pressed()
+
+			var action = str(step.get("action", ""))
+
+			if action == "play":
+				_gc._on_play_pressed()
+			elif action == "change_card":
+				# Qui devi richiamare il metodo del GameController
+				# che normalmente viene usato dal pulsante "Cambia carta".
+				_gc._on_change_pressed()
 		else:
-			# CPU player: perform the scripted action directly.
 			_perform_cpu_action(step, cid)
+
 		_schedule_next_step()
 		return
 

@@ -5,6 +5,7 @@ extends Control
 # var a = 2
 # var b = "text"
 func _ready():
+	GlobalsUtilities.tutorialStarted = false
 	if not GlobalsUtilities.splash_shown:
 		print("WEFIOWRMIFIMEMFOWEPC")
 		GlobalsUtilities.splash_shown = true
@@ -18,7 +19,6 @@ func _ready():
 	
 func _on_Play_pressed():
 	GlobalsUtilities.demoStarted = false
-	GlobalsUtilities.tutorialStarted = false
 	GlobalsUtilities.gameStarted = true
 	get_tree().change_scene("res://Main.tscn")
 # Called every frame. 'delta' is the elapsed time since the previous frame.

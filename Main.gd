@@ -8,17 +8,18 @@ extends Control
 #	pass
 func _ready():
 	if GlobalsUtilities.tutorialStarted:
-		GlobalsUtilities.tutorialStarted = false
 		var tc = _ensure_tutorial_controller()
 		if tc != null and tc.has_method("start_tutorial"):
 			if tc.has_signal("tutorial_finished"):
 				tc.connect("tutorial_finished", self, "_on_tutorial_finished")
 			tc.start_tutorial()
 	elif GlobalsUtilities.gameStarted:
-		GlobalsUtilities.gameStarted = false
+		GlobalsUtilities.gameStarted = true
+		GlobalsUtilities.demoStarted = false
 		$StartGameButton.emit_signal("pressed")
 	elif GlobalsUtilities.demoStarted:
 		GlobalsUtilities.gameStarted = false
+		GlobalsUtilities.demoStarted = true
 		$DemoButton.emit_signal("pressed")
 
 # Returns the TutorialController node. Uses the scene-instanced one from
@@ -43,5 +44,7 @@ func _on_tutorial_finished():
 
 
 func _on_BackMenuButton_pressed():
+	var ShuffleDeal = AudioManager.get_node("SFXPlayer/ShuffleDeal")
+	AudioManager.stop_sfx(ShuffleDeal)
 	get_tree().change_scene("res://MainMenu.tscn")
 	GlobalsUtilities.gameStarted = false

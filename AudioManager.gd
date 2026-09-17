@@ -400,6 +400,11 @@ func play_sfx(stream: AudioStreamPlayer, cooldown: float = default_sfx_cooldown)
 	sfx_player.stream = stream.stream
 	sfx_player.play()
 
+
+func stop_sfx(stream: AudioStreamPlayer):
+	sfx_player.stream = stream.stream
+	sfx_player.stop()
+
 # =========================
 #  IMPOSTA VOLUMI (API)
 # =========================

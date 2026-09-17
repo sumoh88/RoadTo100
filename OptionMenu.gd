@@ -12,7 +12,7 @@ func _ready():
 	$Audio/CheckMusic.pressed = GlobalsUtilities.music_play
 	$Audio/CheckSFX.pressed = GlobalsUtilities.sfx_play
 	$Utility/CheckFullScreen.pressed = GlobalsUtilities.fullscreen
-
+#	CheckBox.icon
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 #func _process(delta):
 #	pass

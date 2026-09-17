@@ -36,7 +36,8 @@ func _ready():
 			if _cancel_button != null:
 				_cancel_button.connect("pressed", self, "_on_cancel")
 	var ol = _child(m, "OverlayLayer")
-	if ol != null: _game_over_popup = _child(ol, "GameOverPopup")
+	if not GlobalsUtilities.tutorialStarted:
+		if ol != null: _game_over_popup = _child(ol, "GameOverPopup")
 
 
 func _node_up(name):
@@ -110,7 +111,7 @@ func apply_snapshot(s):
 	if _play_button != null: _play_button.disabled = !hp
 	if _change_button != null: _change_button.disabled = !hc
 	if _game_over_popup != null and w != null and !_game_over_popup.visible: _game_over_popup.popup()
-
+	
 
 func diagnose():
 	print("Turn: turn=" + str(_turn_label != null) + " instr=" + str(_instruction_label != null) + " adv=" + str(_advantage_label != null) + " play=" + str(_play_button != null) + " go=" + str(_game_over_popup != null))

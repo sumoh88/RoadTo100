@@ -1,6 +1,6 @@
 [gd_resource type="DynamicFont" load_steps=2 format=2]
 
-[sub_resource type="DynamicFontData" id=10]
+[sub_resource type="DynamicFontData" id=29]
 font_path = "res://fonts/Dyuthi.ttf"
 
 [resource]
@@ -12,4 +12,4 @@ use_filter = true
 extra_spacing_top = 5
 extra_spacing_bottom = -10
 extra_spacing_char = -1
-font_data = SubResource( 10 )
+font_data = SubResource( 29 )

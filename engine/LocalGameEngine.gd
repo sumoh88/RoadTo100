@@ -55,7 +55,13 @@ func start_game(player_count, rng=null):
 	# Initialize rules
 	rules = _RoadTo100Rules.new()
 	rules.initialize_game(game_state, rng)
+	if GlobalsUtilities.tutorialStarted:
+		var p1 = game_state.players[0]
+		p1.clear_hand()
 
+		p1.receive_card(_make_scenario_card("+7"))
+		p1.receive_card(_make_scenario_card("Imbroglio"))
+		p1.receive_card(_make_scenario_card("+7"))
 	emit_signal("game_started", _build_snapshot())
 
 
@@ -186,7 +192,29 @@ func send_action(action_dict):
 	var card_id = action_dict.get("card_id", "")
 	var card = null
 	if card_id != "":
+		var current_player = game_state.players[game_state.current_player_index]
+
 		card = _resolve_card(card_id)
+		print("[CHANGE DEBUG] requested id = ", card_id)
+
+		if card == null:
+			print("[CHANGE DEBUG] RESOLVE FAILED")
+		else:
+			print(
+				"[CHANGE DEBUG] RESOLVE OK: ",
+				card.card_id,
+				" value=",
+				card.value
+			)
+
+		for c in current_player.hand.cards:
+			print(
+				"[CHANGE DEBUG] HAND: ",
+				c.card_id,
+				" value=",
+				c.value
+			)
+		
 		if card == null:
 			emit_signal("action_rejected", "Card not found: " + str(card_id))
 			return
