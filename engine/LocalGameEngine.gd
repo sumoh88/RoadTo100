@@ -392,7 +392,7 @@ func _build_snapshot():
 	return snapshot
 
 
-func _build_plateau_visual_stack(game_state):
+func _build_plateau_visual_stack(curr_game_state):
 	"""Build the visual plateau stack from the chronological card history.
 
 	Returns an array of items alternating between:
@@ -403,10 +403,10 @@ func _build_plateau_visual_stack(game_state):
 	Gold/89 cards are shown as card faces. Non-Gold cards played after a Gold
 	update the top carta Piatto's value.
 	"""
-	var raw_cards = game_state.metadata.get("plateau_cards", [])
+	var raw_cards = curr_game_state.metadata.get("plateau_cards", [])
 	# F8: never display a plate value above 100 (also guards against the
 	# running approximation overshooting, e.g. Jolly counted as +5).
-	var current_piatto = min(int(game_state.metadata.get("piatto", 0)), 100)
+	var current_piatto = min(int(curr_game_state.metadata.get("piatto", 0)), 100)
 
 	# Step 1: Classify each card and compute running piatto
 	var segments = []  # [{card, piatto_after, is_gold}]
@@ -683,12 +683,13 @@ func _generate_events(before, rules_action, card):
 func _generate_turn_events(before, rules_action, card):
 	"""Generate turn-phase events by comparing before/after advance_turn."""
 	var events = []
-
-	var old_index = before.get("current_player_index", 0)
+	rules_action = rules_action
+	card = card
+	# var old_index = before.get("current_player_index", 0)
 	var old_pid = before.get("current_player_id", "")
 	var new_cp = game_state.current_player()
 	var new_pid = new_cp.player_id if new_cp != null else ""
-	var new_index = game_state.current_player_index
+	# var new_index = game_state.current_player_index
 
 	# Turn changed
 	if new_pid != old_pid or game_state.turn_number > 0:
