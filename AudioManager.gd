@@ -132,7 +132,7 @@ func _ready():
 	# Stato iniziale = menu: tutti e 5 al 100%
 	set_menu_music()
 
-func _process(delta):
+func _process(_delta):
 	set_plate_value(GlobalsUtilities.plateValue)
 	set_special_round_active(GlobalsUtilities.sr_active)
 

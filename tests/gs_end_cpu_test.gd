@@ -62,9 +62,9 @@ func run():
 		var gs_active = snapshot.get("special_round_active", false)
 		var gs_type = str(snapshot.get("special_round_type", ""))
 
-		// Detect Giro Sicuro ending
+		#Detect Giro Sicuro ending
 		if last_player_id == "player_1" and !gs_active and turn_num > 0:
-			// Check if GS just ended by looking at previous state
+			#Check if GS just ended by looking at previous state
 			pass
 
 		if gs_active:
@@ -72,7 +72,7 @@ func run():
 		else:
 			print("[Step " + str(step) + "] player=" + cur_pid + " normal play")
 
-		// Detect stuck condition: same player repeated multiple times
+		#Detect stuck condition: same player repeated multiple times
 		if last_player_id == cur_pid and cur_pid != "":
 			same_player_count += 1
 			if same_player_count > 4:
@@ -85,10 +85,10 @@ func run():
 		last_player_id = cur_pid
 		turn_num += 1
 
+		print("  Steps: " + str(step))
 	assert_true(!stuck_detected, "No stuck players detected")
 
 	print("\n--- Summary ---")
-	print("  Steps: " + str(step))
 	print("  Stuck detected: " + str(stuck_detected))
 	print("  Assertions passed: " + str(pass_count))
 	print("  Assertions failed: " + str(fail_count))

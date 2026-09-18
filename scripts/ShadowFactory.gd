@@ -15,19 +15,19 @@ uniform float blur_px = 5.0;
 uniform float shadow_alpha = 0.40;
 
 void fragment() {
-	// Coordinate in pixel, con (0,0) al centro del rettangolo.
+	#Coordinate in pixel, con (0,0) al centro del rettangolo.
 	vec2 p = (UV - vec2(0.5)) * rect_size_px;
 
-	// Lascia spazio ai bordi per la sfumatura.
+	#Lascia spazio ai bordi per la sfumatura.
 	vec2 half_size = rect_size_px * 0.5 - vec2(blur_px);
 
-	// Evita radius maggiori della dimensione disponibile.
+	#Evita radius maggiori della dimensione disponibile.
 	float r = min(
 		radius_px,
 		min(half_size.x, half_size.y)
 	);
 
-	// Signed Distance Function di un rettangolo arrotondato.
+	#Signed Distance Function di un rettangolo arrotondato.
 	vec2 q = abs(p) - half_size + vec2(r);
 
 	float sd =
@@ -35,7 +35,7 @@ void fragment() {
 		min(max(q.x, q.y), 0.0) -
 		r;
 
-	// Ombra piena all'interno, sfumata verso l'esterno.
+	#Ombra piena all'interno, sfumata verso l'esterno.
 	float alpha =
 		(1.0 - smoothstep(-blur_px, blur_px, sd))
 		* shadow_alpha;

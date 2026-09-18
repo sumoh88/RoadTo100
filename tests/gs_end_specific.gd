@@ -69,7 +69,7 @@ func run():
 
 		var gs_active = snapshot.get("special_round_active", false)
 
-		// Detect Giro Sicuro ending
+		#Detect Giro Sicuro ending
 		if snap_before != null and snap_before.get("special_round_active", false) and !gs_active:
 			gs_ended_turn = step
 			gs_ended_next_player = cur_pid
@@ -85,7 +85,7 @@ func run():
 			else:
 				print("  -> SAME player still! Possible stuck.")
 
-		// Detect stuck condition (same player repeated many times)
+		#Detect stuck condition (same player repeated many times)
 		if last_player == cur_pid and cur_pid != "":
 			stuck_count += 1
 			if stuck_count > 5:

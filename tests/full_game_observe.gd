@@ -59,13 +59,13 @@ func run():
 		var gs_type = str(snapshot.get("special_round_type", ""))
 		var state = gc.get_state()
 
-		// Detect Giro Sicuro transitions
+		#Detect Giro Sicuro transitions
 		if last_gs_active and !gs_active:
 			print("[Step " + str(step) + "] *** GIRO SICURO ENDED! Next player: " + cur_pid + " ***")
 		if gs_active and !last_gs_active:
 			print("[Step " + str(step) + "] *** GIRO SICURO STARTED (" + gs_type + ")! Player: " + cur_pid + " ***")
 
-		// Track stuck condition
+		#Track stuck condition
 		if last_player == cur_pid and cur_pid != "":
 			stuck_count += 1
 			if stuck_count > 5:
@@ -76,10 +76,9 @@ func run():
 
 		last_player = cur_pid
 		last_gs_active = gs_active
-		print("[Step " + str(step) + "] P=" + cur_pid + " S=" + str(state) + (gs_active ? " GS("+gs_type+")" : ""))
-
+		print("  Steps: " + str(step))
+		print("[Step " + str(step) + "] P=" + cur_pid + " S=" + str(state) + (" GS(" + gs_type + ")" if gs_active else ""))
 	print("\n--- Summary ---")
-	print("  Steps: " + str(step))
 	print("  Assertions passed: " + str(pass_count))
 	print("  Assertions failed: " + str(fail_count))
 
