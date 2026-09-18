@@ -126,6 +126,7 @@ var _linear_volumes := {
 #  READY — rileva, sceglie, carica, avvia TUTTI gli stem
 # =========================
 func _ready():
+	GlobalsUtilities.LoadSavedData()
 	_load_random_song()
 	_start_all_stems()
 	# Stato iniziale = menu: tutti e 5 al 100%
@@ -383,6 +384,7 @@ func _update_volumes():
 			sfx_player.volume_db = linear2db(
 				clamp(sfx_volume, 0.0, 1.0)
 			)
+	print("AUDIOMANAGER OVERRIDE: music=", music_volume, " sfx=", sfx_volume)
 # =========================
 #  SFX (CON COoldOWn — preservato)
 # =========================

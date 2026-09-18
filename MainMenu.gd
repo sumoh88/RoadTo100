@@ -7,13 +7,12 @@ extends Control
 func _ready():
 	GlobalsUtilities.tutorialStarted = false
 	if not GlobalsUtilities.splash_shown:
-		print("WEFIOWRMIFIMEMFOWEPC")
 		GlobalsUtilities.splash_shown = true
 		get_tree().change_scene("res://SplashScreen.tscn")
 		return
 	AudioManager.set_menu_music()
 	var optionMenu = load("res://OptionMenu.tscn").instance()
-	var langNode = optionMenu.get_node("Language/HBoxContainer/currLanguage")
+	var langNode = optionMenu.get_node("VBoxContainer/Language/HBoxContainer/currLanguage")
 	langNode.text = GlobalsUtilities.currLanguage
 	print("__________________ LANG: ", langNode.text)
 	

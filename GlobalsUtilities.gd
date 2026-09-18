@@ -10,7 +10,7 @@ onready var demoStarted = false
 onready var tutorialStarted = false
 onready var plateValue = 0
 onready var language = ["Italiano", "English"]
-onready var currLanguage = language[0]
+onready var currLanguage = "Italiano"
 
 var splash_shown = false
 
@@ -19,6 +19,17 @@ const THRESHOLD_CELLO: int = 60
 const THRESHOLD_VIOLIN: int = 89
 
 var font_data = load("res://fonts/Dyuthi.ttf")
+
+onready var options = load("res://OptionMenu.tscn").instance()
+onready var languageNode = options.get_node("VBoxContainer/Language/HBoxContainer/currLanguage")
+onready var fullscreenNode = options.get_node("VBoxContainer/Utility/FullscreenLabel/CheckFullScreen")
+onready var musicNode = options.get_node("VBoxContainer/Audio/MusicLabel/CheckMusic")
+onready var SFXNode = options.get_node("VBoxContainer/Audio/SFXLabel/CheckSFX")
+onready var config = ConfigFile.new()
+var exe_dir = OS.get_executable_path().get_base_dir()
+
+var config_path
+
 
 
 func setCustomFont(currNode, size, spacing = 0, spacingTop = 12):
@@ -79,3 +90,35 @@ func setBtnStyle(currNode):
 	
 	currNode.add_stylebox_override("focus", styleF)
 	
+	
+	
+
+
+func SaveData():
+	print("SAVE")
+	config.save(GlobalsUtilities.config_path)
+
+func LoadSavedData():
+	print("G LOAD IF ", OS.get_name())
+	
+	if OS.get_name() == "Android":
+		config_path = "user://RT100.cfg"
+	else:
+		config_path = OS.get_executable_path().get_base_dir().plus_file("RT100.cfg")
+	var data = config.load(config_path)
+	if data == OK:
+		var lang = config.get_value("LANGUAGE", "language", currLanguage)
+		var fs_value = config.get_value("SCREEN", "fullscreen", fullscreen)
+		var music_volume = config.get_value("AUDIO", "music_volume", 0.6)
+		var sfx_volume = config.get_value("AUDIO", "sfx_volume", 0.4)
+		OS.window_fullscreen = fs_value
+		options._on_set_language(0, lang)
+		options._on_CheckFullScreen_toggled(fs_value)
+		options._on_CheckMusic_value_changed(music_volume * 10)
+		options._on_CheckSFX_value_changed(sfx_volume * 10)
+	else:
+		print("G LOAD ELSE")
+		options._on_set_language(0, currLanguage)
+		options._on_CheckFullScreen_toggled(fullscreen)
+		AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Music"), linear2db(0.6))
+		AudioServer.set_bus_volume_db(AudioServer.get_bus_index("SFX"), linear2db(0.4))
