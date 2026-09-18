@@ -46,7 +46,6 @@ func run():
 	for step in range(50):
 		yield(get_tree().create_timer(0.15), "timeout")
 
-		var state_before = gc.get_state()
 		var snap_before = gc.get_last_snapshot()
 
 		mg._on_timer_timeout()

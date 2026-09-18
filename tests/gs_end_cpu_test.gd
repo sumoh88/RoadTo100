@@ -34,8 +34,6 @@ func run():
 
 	var last_player_id = ""
 	var same_player_count = 0
-	var gs_ended = false
-	var gs_ended_at_turn = 0
 	var turn_num = 0
 
 	for step in range(40):

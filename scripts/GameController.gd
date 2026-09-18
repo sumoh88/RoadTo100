@@ -226,7 +226,7 @@ func _ready():
 		ResolvedValueLabel.text = ""
 
 func _find_presenters():
-	var main = _node_up("Main")
+#	var main = _node_up("Main")
 	if main == null:
 		return
 	for c in main.get_children():
@@ -252,7 +252,7 @@ func _find_presenters():
 				_card_animator.connect("animation_finished", self, "_on_animation_finished")
 
 func _find_popups():
-	var main = _node_up("Main")
+#	var main = _node_up("Main")
 	if main == null:
 		return
 	var ol = _child(main, "OverlayLayer")
@@ -549,7 +549,7 @@ func _check_reset_hand(snapshot):
 	if cur_pid != snapshot.get("local_player_id", "player_1"):
 		return
 	# Only for non-advantage player
-	var adv_pid = snapshot.get("special_round_player_id", null)
+#	var adv_pid = snapshot.get("special_round_player_id", null)
 #	if cur_pid == adv_pid:
 #		return
 	# Check available_actions: reset_hand present, no play_card
@@ -774,7 +774,7 @@ func _build_deal_order_from_current(snapshot, players):
 
 
 func _hide_all_hand_cards():
-	var main = _node_up("Main")
+#	var main = _node_up("Main")
 	if main == null: return
 	var ga = _child(main, "GameArea")
 	if ga == null: return
@@ -802,7 +802,7 @@ func _hide_all_hand_cards():
 
 
 func _reveal_hand_card(player_id, card_idx):
-	var main = _node_up("Main")
+#	var main = _node_up("Main")
 	if main == null: return
 	var ga = _child(main, "GameArea")
 	if ga == null: return
@@ -843,7 +843,7 @@ func _reveal_hand_card(player_id, card_idx):
 
 
 func _get_hand_card_global_pos(player_id, card_idx):
-	var main = _node_up("Main")
+#	var main = _node_up("Main")
 	if main == null: return Vector2(960, 400)
 	var ga = _child(main, "GameArea")
 	if ga == null: return Vector2(960, 400)
@@ -878,7 +878,7 @@ func _get_hand_card_global_pos(player_id, card_idx):
 
 
 func _find_animation_layer():
-	var main = _node_up("Main")
+#	var main = _node_up("Main")
 	if main == null: return null
 	for c in main.get_children():
 		if c.name == "CardAnimationLayer":
@@ -887,7 +887,7 @@ func _find_animation_layer():
 
 
 func _get_deal_draw_pile_pos():
-	var main = _node_up("Main")
+#	var main = _node_up("Main")
 	if main == null: return Vector2(340, 130)
 	var ga = _child(main, "GameArea")
 	if ga == null: return Vector2(340, 130)
@@ -899,7 +899,7 @@ func _get_deal_draw_pile_pos():
 
 
 func _get_player_hand_pos(player_id):
-	var main = _node_up("Main")
+#	var main = _node_up("Main")
 	if main == null: return Vector2(960, 400)
 	var ga = _child(main, "GameArea")
 	if ga == null: return Vector2(960, 400)
