@@ -194,7 +194,26 @@ func _animate_card_played(event):
 	yield(get_tree().create_timer(0.02), "timeout")
 	
 	var PlayCard = AudioManager.get_node("SFXPlayer/PlayCard")
+
+
+	if card_id.begins_with("gold"):
+		PlayCard.stream = load("res://sound/playGoldCard.wav")
+	elif card_id.begins_with("card89"):
+		PlayCard.stream = load("res://sound/play89Card.wav")
+	elif card_id.begins_with("plus11"):
+		PlayCard.stream = load("res://sound/play11Card.wav")
+	elif card_id.begins_with("imbroglio"):
+		PlayCard.stream = load("res://sound/playImbroglioCard.wav")
+	else:
+		PlayCard.stream = load("res://sound/playCard.wav")
 	AudioManager.play_sfx(PlayCard)
+	if GlobalsUtilities.plateValue >= 100:
+		# Victory jingle starts only after the last card sound has finished; it plays
+		# on the dedicated Victory player, which the shared SFX player and the Game
+		# Over popup never cut.
+		var sfx = AudioManager.sfx_player
+		sfx.connect("finished", self, "_on_last_card_sound_finished")
+
 	_process_next()
 
 # ---------------------------------------------------------------------------
@@ -440,6 +459,21 @@ func _get_main_node():
 		if c.name == "Main":
 			return c
 	return null
+
+
+func _on_last_card_sound_finished():
+	# One-shot listener: fires when the last (winning) card sound ends, then plays
+	# the victory jingle on the dedicated Victory player (the Game Over popup does
+	# not stop audio, so the jingle is never cut by it).
+	var sfx = AudioManager.sfx_player
+	if sfx == null:
+		return
+	sfx.disconnect("finished", self, "_on_last_card_sound_finished")
+	var victory = AudioManager.get_node("SFXPlayer/Victory")
+	if victory != null:
+		victory.volume_db = sfx.volume_db
+		victory.stream = load("res://sound/victoryJingle.wav")
+		victory.play()
 
 
 # ---------------------------------------------------------------------------

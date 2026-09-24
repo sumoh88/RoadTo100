@@ -85,6 +85,9 @@ var _pending_card_id = ""
 var _pending_valid_values = []
 var _pending_blocked_type = false  # F3: true when waiting for Safe Round blocked_type choice
 
+# Stats/achievements: guards so a finished game is recorded exactly once.
+var _stats_recorded_this_game = false
+
 # F3: Safe Round card type choices
 const SAFE_ROUND_CHOICES = ["Incremento", "Imbroglio", "Gold"]
 
@@ -137,6 +140,8 @@ func start_game(player_count, rng=null):
 	_last_events = []
 	_last_error = ""
 	_selected_card_id = ""
+	_stats_recorded_this_game = false
+	GlobalsUtilities.reset_game_tracking()
 	_provider.start_game(player_count, rng)
 
 	var ShuffleDeal = AudioManager.get_node("SFXPlayer/ShuffleDeal")
@@ -165,6 +170,8 @@ func start_scenario(spec):
 	_last_snapshot = null
 	_last_events = []
 	_selected_card_id = ""
+	_stats_recorded_this_game = false
+	GlobalsUtilities.reset_game_tracking()
 	_provider.start_scenario(spec)
 
 
@@ -927,6 +934,11 @@ func _on_action_completed(result):
 	_last_events = result.get("events", [])
 	emit_signal("action_applied", result)
 
+	# Stats/achievements: process this action's events (special rounds, local card
+	# plays). Skipped for demo/tutorial so only real games are recorded.
+	if not GlobalsUtilities.demoStarted and not GlobalsUtilities.tutorialStarted:
+		GlobalsUtilities.apply_action_result(_last_snapshot, _last_events)
+
 	# Start animation BEFORE applying snapshot so CardAnimator can clone
 	# the card texture from the pre-action hand state (before the card is removed).
 	var should_animate = _card_animator != null and _card_animator.has_method("play_events") and _last_events.size() > 0
@@ -948,8 +960,8 @@ func _on_action_completed(result):
 		if _card_animator != null and _card_animator.has_method("hide_drawn_cards"):
 			_card_animator.hide_drawn_cards(_last_events)
 	else:
-		_apply_snapshot(_last_snapshot)
 		_finish_post_action()
+		_apply_snapshot(_last_snapshot)
 
 
 # ---------------------------------------------------------------------------
@@ -1133,6 +1145,9 @@ func _finish_post_action():
 	if _last_snapshot != null and _last_snapshot.get("winner", null) != null:
 		_clear_selection()
 		_state = State.GAME_OVER
+		_record_game_over_once()
+		GlobalsUtilities._load_stats_from_config()
+		_turn.apply_snapshot(_last_snapshot)
 		# Return to menu music when game ends
 		var am = _get_audio_manager()
 		if am != null and am.has_method("set_menu_music"):
@@ -1146,6 +1161,35 @@ func _finish_post_action():
 		_state = State.CARD_SELECTED
 	_check_reset_hand(_last_snapshot)
 	_update_choice_blocker()
+
+
+
+
+func _record_game_over_once():
+	if _stats_recorded_this_game:
+		return
+
+	_stats_recorded_this_game = true
+
+	if GlobalsUtilities.demoStarted or GlobalsUtilities.tutorialStarted:
+		return
+
+	if _last_snapshot == null:
+		return
+
+	print("### PRIMA record: ", GlobalsUtilities.stats["games_played"])
+
+	GlobalsUtilities.record_game_over(_last_snapshot)
+
+	print("### DOPO record: ", GlobalsUtilities.stats["games_played"])
+
+	GlobalsUtilities.SaveData()
+
+	print("### DOPO SaveData: ", GlobalsUtilities.stats["games_played"])
+
+
+
+
 
 
 func _on_action_rejected(error_message):

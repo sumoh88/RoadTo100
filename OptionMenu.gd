@@ -4,11 +4,76 @@ extends Control
 #onready var fullscreenNode = $VBoxContainer/Utility/FullscreenLabel/CheckFullScreen
 #onready var musicNode = $VBoxContainer/Audio/MusicLabel/CheckMusic
 #onready var SFXNode = $VBoxContainer/Audio/SFXLabel/CheckSFX
-
-
+onready var delete_data_dialog = $DeleteSaveButton/ConfirmationDialog
+onready var delete_data_bg = $DeleteSaveButton/DeleteDataBG
 
 func _ready():
+	var utilityNode = $VBoxContainer/Utility/
+	var audioNode = $VBoxContainer/Audio/
+	var SFXNode = $VBoxContainer/Audio/SFXLabel
 	LoadFromData()
+	if OS.get_name() == "Android":
+		utilityNode.visible = false
+		audioNode.rect_position.y = 65
+		SFXNode.rect_position.y = 65
+	delete_btn_init()
+		
+		
+func delete_btn_init():
+	var main = load("res://Main.tscn").instance()
+	var reset_popup = main.get_node("OverlayLayer/HandResetPopup")
+	var reset_popup_btns = $DeleteSaveButton
+	
+	var style = reset_popup.get_stylebox("panel")
+	var styleBtn = reset_popup_btns.get_stylebox("normal")
+	var styleBtnHover = reset_popup_btns.get_stylebox("hover")
+	var styleBtnPressed = reset_popup_btns.get_stylebox("pressed")
+	var btn = delete_data_dialog.get_node("get_ok")
+	
+
+	delete_data_dialog.add_stylebox_override("panel", style)
+	delete_data_dialog.window_title = ""
+	delete_data_dialog.dialog_text = "     Sei sicuro di voler cancellare tutti i dati salvati?     "
+	delete_data_dialog.get_ok().text = "     Sicuro     "
+	delete_data_dialog.get_cancel().text = "     Annulla     "
+	
+	delete_data_dialog.get_ok().add_stylebox_override("normal", styleBtn)
+	delete_data_dialog.get_cancel().add_stylebox_override("normal", styleBtn)
+	delete_data_dialog.get_ok().add_stylebox_override("hover", styleBtnHover)
+	delete_data_dialog.get_cancel().add_stylebox_override("hover", styleBtnHover)
+	delete_data_dialog.get_ok().add_stylebox_override("pressed", styleBtnPressed)
+	delete_data_dialog.get_cancel().add_stylebox_override("pressed", styleBtnPressed)
+	var dialog_text = delete_data_dialog.get_label()
+	dialog_text.align = Label.ALIGN_CENTER
+	dialog_text.valign = Label.ALIGN_CENTER
+	styleBtn.set_default_margin(MARGIN_TOP, 15)
+	styleBtn.set_default_margin(MARGIN_BOTTOM, 10)
+	styleBtnHover.set_default_margin(MARGIN_TOP, 15)
+	styleBtnHover.set_default_margin(MARGIN_BOTTOM, 10)
+	styleBtnPressed.set_default_margin(MARGIN_TOP, 15)
+	styleBtnPressed.set_default_margin(MARGIN_BOTTOM, 10)
+	delete_data_dialog.connect("confirmed", self, "_on_delete_data_confirmed")
+	delete_data_dialog.get_cancel().connect("pressed", self, "_on_delete_data_cancelled")
+	add_child(delete_data_dialog)
+	
+	
+
+
+func _on_delete_data_confirmed():
+	delete_data_bg.visible = false
+	GlobalsUtilities.DeleteSavedData()
+
+func _on_delete_data_cancelled():
+	delete_data_bg.visible = false
+
+
+func _on_DeleteSaveButton_pressed():
+	delete_data_bg.visible = true
+	delete_data_dialog.popup_centered()
+
+
+
+
 
 func LoadFromData():
 	var languageNode = $VBoxContainer/Language/HBoxContainer/currLanguage
@@ -40,7 +105,10 @@ func LoadFromData():
 		fullscreenNode.pressed = fullscreen
 		musicNode.value = music_volume *10
 		SFXNode.value = sfx_volume *10
+		GlobalsUtilities._write_stats_to_config()
 	
+
+
 
 
 
@@ -91,3 +159,5 @@ func _on_CheckSFX_value_changed(value):
 	print("sValue: ", value)
 	GlobalsUtilities.config.set_value("AUDIO", "sfx_volume", value/10)
 	AudioServer.set_bus_volume_db(bus, linear2db(value/10))
+
+

@@ -1,6 +1,6 @@
 # RoadTo100 — Stato Progetto
 
-> Aggiornato al: 14 settembre 2026
+> Aggiornato al: 24 settembre 2026
 > Scopo: documento di avvio per future sessioni di sviluppo.
 
 ---
@@ -32,6 +32,13 @@ Il progetto è composto da due codebase separati:
 | **Caricamento musicale su Android** | ✅ Canzone casuale scelta da **elenco esplicito** (necessario perché il listing su `res://` non funziona in APK) — attualmente solo `CardTrickLoop` |
 | **SplashScreen** | ✅ Animazione logo al primo avvio (fade-in 0.7s / display 1.5s / fade-out 0.7s), saltabile con un tasto, poi → MainMenu |
 | **Modalità Tutorial (1A + 1B)** | ✅ Modalità guidata "Come si gioca": popup con overlay bloccante, navigazione Prosegui/Fine, demo deterministica per step (scripted scenario, rewind, popup reali di scelta) |
+| **Opzioni** | ✅ Schermata `OptionMenu.tscn`/`.gd` raggiungibile da [Opzioni] della MainMenu: fullscreen ON/OFF, volumi Music/SFX, salvataggio/dispersione dati (`deleteData`). UI e funzionalità presenti; **la selezione lingua IT/EN è il prossimo lavoro principale** (vedi note) |
+| **Sistema Salvataggio** | ✅ `GlobalsUtilities.SaveData()` / `LoadSavedData()` con `ConfigFile` (`RT100.cfg`, `user://RT100.cfg` su Android). Load chiamata da `GlobalsUtilities._ready()` (avvio) e save dal ritorno al menu delle Opzioni. Persiste lingua, fullscreen, volumi **e statistiche/traguardi** |
+| **Statistiche** | ✅ Schermata `Stats.tscn` + `Stats.gd`: 7 righe (partite giocate/vinte %, corrente/miglior serie, vittoria più veloce, Giri di Vantaggio, Giri Sicuri); valori letti a runtime da `GlobalsUtilities.stats` via `_update_stats_display()` (nessun placeholder) |
+| **Traguardi** | ✅ Lista di **23 traguardi** (fonte unica = array `achievements` in `Stats.gd`). Modificata manualmente: **rimossi** `prima_vittoria` e `cinque_vittorie`; **aggiunti** `oro_puro` e `imbroglione`. 11 non-secret + 12 secret (descrizione visibile solo dopo unlock). Condizioni: carte primordiali, mani al turno, rimbalzo/GdV, vittoria; Giro Sicuro/Giro di Vantaggio = attivazione locale (contatore) + conclusione (traguardo) |
+| **Notifica sblocco traguardo** | ✅ Popup esistente `Main.tscn → OverlayLayer/UnlockPopup` (nessun nodo/scena nuovo): mostra nome+descrizione per ~4s, coda FIFO, **nessun reset del timer** su nuovo arrivo, gated da `demoStarted`/`tutorialStarted`, descrizione secret rivelata dopo unlock. Wire: signal `achievement_unlocked` emesso da `GlobalsUtilities.unlock_achievement()` |
+| **Contatori Giri Sicuro / Vantaggio** | ✅ `safe_rounds` / `advantage_rounds` incrementati a ogni **attivazione locale** (`record_special_round_started`, solo attivatore = player locale); giro con attivazione avversaria non conta; nessun secondo incremento alla conclusione (il traguardo si sblocca solo alla conclusione). GdV attivabile anche tramite trasformazione +11 → 89 |
+| **Schermata Game Over / post-partita** | ✅ `Main.tscn → OverlayLayer/GameOverPopup` (PopupPanel): etichetta risultato, partite giocate/vinte, serie corrente/miglior serie; font `fonts/gameOverFont.tres` |
 
 ---
 
@@ -51,6 +58,8 @@ MainMenu.tscn
   ├─ [Come si gioca] pulsante
   │    └─ GlobalsUtilities.tutorialStarted=true → change_scene(Main.tscn)
   │         └─ Main.gd._ready() → TutorialController.start_tutorial() → modalità tutorial
+  ├─ [Opzioni] pulsante → change_scene("res://OptionMenu.tscn")
+  │    └─ OptionMenu._ready() → LoadFromData(): carica lingua/fullscreen/volumi da config
   └─ [Esci] pulsante → get_tree().quit()
 
 Durante la partita:
@@ -75,8 +84,82 @@ Torna al Menu:
 - `Main.tscn` è la scena di destinazione sia per la partita sia per il tutorial. `Main.gd._ready()` decide il ramo in base ai flag: se `tutorialStarted` → avvia `TutorialController.start_tutorial()`; altrimenti emette il segnale del pulsante StartGameButton (partita).
 - `SplashScreen.tscn` appare solo al primo avvio (`GlobalsUtilities.splash_shown == false`); imposta il flag a `true` e non torna più.
 - `AudioManager` è un **singleton autoloader** (`[autoload] AudioManager="*res://AudioManager.tscn"` in `project.godot`): sempre disponibile globalmente come `AudioManager`.
-- `GlobalsUtilities` è un **singleton autoloader** per lo stato condiviso tra scene (`gameStarted`, `demoStarted`, `tutorialStarted`, `splash_shown`, `plateValue`, `sr_active`, `selected_value`).
+- `GlobalsUtilities` è un **singleton autoloader** per lo stato condiviso tra scene (`gameStarted`, `demoStarted`, `tutorialStarted`, `splash_shown`, `plateValue`, `sr_active`, `selected_value`, `language`, `currLanguage`).
 
+---
+
+## Opzioni e Salvataggio
+
+### Architettura
+- **Scena Opzioni**: `OptionMenu.tscn` + `OptionMenu.gd` (Control). Controlli: selezione lingua (IT/EN, pulsanti prev/next), toggle Fullscreen, slider volumi Music/SFX.
+- **Pulsante**: [Opzioni] in `MainMenu` → `_on_Options_pressed()` → `change_scene("res://OptionMenu.tscn")`.
+- **ConfigFile**: gestito in `GlobalsUtilities` (`config`, `exe_dir`, `config_path`). File: `RT100.cfg` accanto all'eseguibile (desktop) oppure `user://RT100.cfg` (Android).
+
+### Stato salvato (sezioni del config)
+- `LANGUAGE/language` — lingua corrente (default "Italiano")
+- `SCREEN/fullscreen` — modalità schermo intero (default true)
+- `AUDIO/music_volume`, `AUDIO/sfx_volume` — volumi 0.0–1.0 (default 0.6 / 0.4)
+- `STATS/*` — statistiche persistenti: `games_played`, `games_won`, `current_streak`, `best_streak`, `fastest_win_turns`, `advantage_rounds`, `safe_rounds`
+- `ACHIEVEMENTS/<id>` — flag booleani dei traguardi sbloccati (una voce per id, es. `giro_sicuro=true`)
+
+### Flusso
+1. **Avvio**: `GlobalsUtilities._ready()` → `LoadSavedData()` legge il config e applica lingua/fullscreen/volumi (se non esiste, usa i default).
+2. **Modifica Opzioni**: ogni controllo di `OptionMenu` scrive in `config` (`set_value`) e applica l'effetto subito (OS.fullscreen, bus volume).
+3. **Salvataggio**: `_on_BackMenuButton_pressed()` delle Opzioni → `GlobalsUtilities.SaveData()` → `config.save(config_path)`, poi ritorno a `MainMenu.tscn`.
+
+### ⚠️ Problema noto: scelta lingua non funzionante
+- `OptionMenu._on_set_language(opSymbol, lang)` calcola l'indice da `GlobalsUtilities.currLanguage` (via `language.find(currLanguage)`), ignora di fatto il parametro `lang` passato e riscrive `currLanguage`/`languageNode.text` dall'indice calcolato.
+- Conseguenza: al caricamento (`_on_set_language(0, saved_lang)`) la lingua salvata viene scritta nel config ma poi sovrascritta dall'indice di `currLanguage` (sempre "Italiano" all'avvio), quindi la lingua non cambia correttamente.
+- **Da risolvere** nella prossima fase dedicata; per ora la selezione IT/EN è inaffidabile (è il prossimo lavoro principale — vedi "TODO rimasti").
+
+---
+
+## Statistiche, Traguardi e Notifiche (completate)
+
+### Architettura — fonte unica, nessuna duplicazione
+- **Liste e descrizioni traguardi**: un unico array `achievements` in `Stats.gd` (23 righe) è la fonte unica per nome/descrizione/secret. `GlobalsUtilities` non porta una lista a parte: mantiene solo i flag persistiti.
+- **Statistiche**: dict `GlobalsUtilities.stats` (7 chiavi: `games_played`, `games_won`, `current_streak`, `best_streak`, `fastest_win_turns`, `advantage_rounds`, `safe_rounds`).
+- **Traguardi**: flag `unlocked_achievements` (dict id→bool), idempotente, persistito in config.
+
+### Condizioni di unlock (tutte coperte da test)
+| Categoria | Id (es.) | Condizione |
+|---|---|---|
+| Carte primordiali | jolly_primo, imbroglio_primo, gold_prima, ottantanove_primo, piu_undici_primo | prima giocata locale della carta |
+| Mani al turno (secret) | cascata_d_oro (3×89), imbattibile (3×+11), imbroglione (3×Imbroglio), oro_puro (3×Gold) | P1 inizia un turno con 3 carte dello stesso tipo |
+| Rimbalzo / GdV / vittoria | stratega, per_un_soffio, carta_della_vittoria, trasformista, jolly_strategico, contromossa, oro_vincente, all_ultimo_turno | condizioni legate a azione/vittoria |
+| Giro Sicuro / Vantaggio (secret→non) | giro_sicuro, giro_di_vantaggio | **attivazione locale** → contatore; **conclusione (solo P1 attivatore)** → traguardo |
+| Vittorie cumulative | dieci_vittorie, vittorie_25, vittorie_50, vittorie_100 | n° di vittorie raggiunte |
+
+> **Nota modifica manuale**: la lista è stata curata a mano — **rimossi** `prima_vittoria` e `cinque_vittorie`; **aggiunti** `oro_puro` e `imbroglione`. La lista corrente in `Stats.gd` è la fonte di verità; non ripristinare né riordinare.
+
+### Flusso contatori Giri Sicuro / Vantaggio
+1. Il motore emette l'evento `advantage_started` con `player_id` = attivatore (per **entrambo** i giri: Gold→Safe, 89/chain→GdV).
+2. `GlobalsUtilities.apply_action_result()` ricostruisce lo stato del giro dal snapshot (che arriva DOPO `advance_turn`) + dagli eventi.
+3. Solo se l'attivatore == player locale → `record_special_round_started(sr_type, pid, local)`:
+   - `"advantage"` → `stats["advantage_rounds"] += 1`
+   - `"safe"` → `stats["safe_rounds"] += 1`
+   - attivatore ≠ locale → **non** incrementa (return immediato)
+   - chiama `SaveData()` (persistenza immediata).
+4. GdV attivabile anche **senza** evento `advantage_started`: trasformazione +11 → Gold-89 (`_plus11_transformed_to_89`) → `record_special_round_started("advantage", local, local)`. La struttura `if/elif` evita il doppio conteggio.
+5. **Conclusione**: quando un giro conclusivo viene chiuso e l'attivatore era P1 → `unlock_achievement("giro_di_vantaggio")` o `unlock_achievement("giro_sicuro")`. Il contatore **non** incrementa di nuovo alla conclusione (già incrementato a 1 all'attivazione).
+
+### Notifica di sblocco — nodi preesistenti di `Main.tscn`
+- **Nodi**: `OverlayLayer/UnlockPopup` (Control) con etichette `UnlockName` e `UnlockDesc`. **Nessun nodo/scena creato dinamicamente**; si riusano solo questi.
+- **Wire**: signal `achievement_unlocked(achievement_id)` emesso da `GlobalsUtilities.unlock_achievement()` → `Main._on_achievement_unlocked()` (connessione legacy `connect(...)` con stringa).
+- **Comportamento**:
+  - `mouse_filter = MOUSE_FILTER_IGNORE` (la notifica non blocca l'input).
+  - Nome+descrizione letti dall'array `achievements` di `Stats.gd` (stessa fonte della UI Statistiche); descrizioni `secret` mostrate solo dopo unlock, altrimenti "Bloccato".
+  - Timer `NOTIFICATION_DURATION = 4.0 s` in `_process(delta)`.
+  - **Coda FIFO** (`_unlock_queue`): un nuovo unlock durante la visualizzazione va in coda ed è mostrato solo dopo i 4s; **non resetta il timer** corrente (nessuna perdita, ordine di arrivo).
+  - **Gated**: se `GlobalsUtilities.demoStarted` o `tutorialStarted` → nessuna notifica (né display né enqueue) — demo/tutorial restano silenziosi.
+
+### Salvataggio / caricamento
+- `SaveData()` scrive le sezioni `STATS/*` + `ACHIEVEMENTS/<id>` nel `ConfigFile` (`RT100.cfg` desktop, `user://RT100.cfg` Android) e salva lingua/fullscreen/volumi.
+- Chiamata: all'avvio `LoadSavedData()` (da `_ready()`), a ogni unlock, a ogni incremento di contatore (attivazione), al ritorno al menu dalle Opzioni e a partita conclusa.
+- `stats` + `unlocked_achievements` vengono ricaricati in `_load_stats_from_config()`.
+
+### Schermata Game Over / post-partita
+- `Main.tscn → OverlayLayer/GameOverPopup` (PopupPanel): etichetta risultato, conteggio partite giocate/vinte, serie corrente e miglior serie; font dedicato `fonts/gameOverFont.tres`.
 ---
 
 ## AudioManager — Musica Dinamica
@@ -96,6 +179,7 @@ Torna al Menu:
 3. **Partita**: `set_game_music(piatto, sr_active)` → dinamica per soglie del Piatto.
 4. **Ogni frame** (`_process()`): legge `GlobalsUtilities.plateValue` e `GlobalsUtilities.sr_active` e aggiorna i volumi con fade (0.7s).
 5. **Nessun stop/play**: durante menu/partita gli stem non si fermano mai; l'ingresso/uscita avviene SOLO tramite volume_db con tween.
+6. **Controllo volumi** (API per le Opzioni): `set_master_volume(v)`, `set_music_volume(v)`, `set_sfx_volume(v)`, `set_music_enabled(b)`, `set_sfx_enabled(b)` → gestiti da `_update_volumes()` sui bus Master/Music/SFX.
 
 ### Soglie musica (da `GlobalsUtilities`)
 
@@ -298,7 +382,7 @@ Il sistema di scoring è comune; solo i pesi variano. **Nota**: non esiste più 
 | Shadow / Pile Presentation | `tests/shadow_integration_test.gd/.tscn` | 20 | ✅ 0 FAIL (ombra non circolare, 1/pila, jitter pile, ombre CPU) |
 | Fan Geometry (CPU) | `tests/fan_geometry_test.gd/.tscn` | 7 | ✅ 0 FAIL (ventaglio carte CPU) |
 | GameController | `tests/game_controller_test.gd` | 238 | ✅ 0 FAIL (incl. GdV blocking, popup re-open, race condition) |
-| Card Selection | `tests/card_selection_test.gd` | 27 | ✅ 0 FAIL (fix HUDLayer.mouse_filter) |
+| Card Selection | `tests/card_selection_test.gd` | 24/3 | 🔴 3 FAIL (catena click→GC: stato `CARD_SELECTED`, card_id salvato, Play; il fix strutturale `HUDLayer.mouse_filter=IGNORE` passa — da investigare separatamente) |
 | CardAnimator | `tests/card_animator_test.gd` | 5 | ✅ 0 FAIL |
 | CardAnimator Multi-Player | `tests/card_animator_test2.gd` | 20 | ✅ 0 FAIL |
 | Demo Integrazione | `tests/demo_integration_test.gd` | 5 | ⚠️ flaky (partite casuali; occasionalmente >200 turni senza vincitore — preesistente) |
@@ -309,18 +393,27 @@ Il sistema di scoring è comune; solo i pesi variano. **Nota**: non esiste più 
 | AI Decisioni Base | `tests/ai_test.gd` | 3 | ✅ 0 FAIL (preferenza alta, Gold, Gold chain) |
 | AI Avanzate | `tests/ai_advanced_test.gd` | 7 | ✅ 0 FAIL (vittoria, Jolly strategico, bounce, Imbroglio, hold-back +11) |
 | Reset Hand Rule | `tests/reset_hand_rule_test.gd` | 3 | ✅ 0 FAIL (GS vietato, GdV una volta) |
-| Tutorial Mode (1A) | `tests/tutorial_test.gd` | 71 | ✅ 0 FAIL (routing, input bloccato, navigazione, demo deterministica) |
-| Scripted Demo (1B) | `tests/scripted_demo_test.gd` | 26 | ✅ 0 FAIL (stato iniziale, sequenze step, rewind, popup reali, riproducibilità) |
+| Tutorial Mode (1A) | `tests/tutorial_test.gd` | 68/3 | ⚠️ 3 FAIL — **WIP tutorial**: nuovo step "plate" in testa a `_build_steps()` sposta indici + setup; NON causato da stats/notifiche |
+| Scripted Demo (1B) | `tests/scripted_demo_test.gd` | 22/7 | 🔴 7 FAIL — **WIP**: mani/piatto delle demo allineati al nuovo ordine step in corso; NON causati da stats/notifiche |
+| Stats & Achievements | `tests/stats_achievements_test.gd` | 69 | ✅ 0 FAIL (contatori GS/GdV, attivazione locale/avversaria, conclusione senza doppio incremento, persistenza save/load, UI display) |
+| Achievement Notification | `tests/achievement_notification_test.gd` | 25 | ✅ 0 FAIL (FIFO, ~4s, no reset timer, gated demo/tutorial, descrizioni secret) |
 
 **Test Python:** 93 test totali — 87 in `test_roadto100_rules.py` + 6 in `test_roadto100_ai.py` — tutti OK.
+
+> ⚠️ **Discrepanze test (verificate 24/09):** su 30 suite eseguibili, **27 verdi (exit 0)**, 3 rosse:
+> - `tutorial_test` (68/3) e `scripted_demo_test` (22/7) — causati dal lavoro **WIP** sul tutorial (nuovo step "plate" + setup demo in `TutorialController.gd`), **NON** dai cambiamenti stats/traguardi/notifiche.
+> - `card_selection_test` (24/3) — 3 fallimenti nella catena click→GC (`CARD_SELECTED`, card_id, Play); il fix strutturale `HUDLayer.mouse_filter=IGNORE` passa. Da investigare separatamente (non correlato a stats/traguardi).
+> - `gs_end_cpu_test.gd` / `sr_end_cpu_test.gd`: file `.gd` presenti **ma senza `.tscn`** → non eseguibili col runner standard (`Godot --path . tests/X.tscn`).
 
 ---
 
 ## TODO rimasti
 
-- [x] ~~**Fix selezione carte nel turno umano**~~ — **RISOLTO** (HUDLayer.mouse_filter=IGNORE, test card_selection_test)
-- [x] ~~**AI avversaria** (`player_2`)~~ — **IMPLEMENTATA** (score-based strategic AI in Python/GDScript, integrata in ManualGame)
-- [x] ~~**AI personalità multiple**~~ — **COMPLETATO** (P3 aggressiva, P4 tattica/prudente, stessa base RoadTo100AI con pesi diversi)
+- [ ] **Localizzazione IT/EN** — **prossimo lavoro principale.** Direzione concordata: sistema di localizzazione nativo di Godot (`TranslationServer` + file di traduzione). Non implementare ora; eseguire in una sessione dedicata. (La selezione lingua nelle Opzioni è attualmente inaffidabile — vedi sezione "Opzioni e Salvataggio".)
+- [ ] **Popup `deleteDataButton` (Opzioni)** — aggiungere almeno **50 px** di distanza tra il bordo inferiore della finestra del popup e i suoi pulsanti (oggi sono appoggiati al bordo). Usare il **corretto sistema di layout/stile del popup**, senza rompere l'altro popup né il resto del layout.
+- [ ] **Allineamento test tutorial/scripted demo** — `tutorial_test` (68/3) e `scripted_demo_test` (22/7) rossi: causati dal nuovo step "plate" / setup demo WIP in `TutorialController.gd`; da ricalibrare quando il contenuto tutorial sarà definitivo.
+- [ ] **Investigare `card_selection_test` (24/3)** — 3 fallimenti nella catena click→GC (`CARD_SELECTED`, card_id salvato, Play); fix strutturale `HUDLayer.mouse_filter=IGNORE` presente e verde. Verificare se è una regressione del recente cambio di struttura `Main.tscn`/overlay o un limite headless.
+- [ ] **Test special round (CPU)** — `gs_end_cpu_test.gd` / `sr_end_cpu_test.gd` senza `.tscn`: aggiungere la scena `.tscn` per renderli eseguibili col runner standard.
 - [ ] **Multiplayer**: non iniziato.
 
 ---
@@ -1022,5 +1115,30 @@ Ogni pressione di "Mostra" esegue **solo lo step corrente**, con una demo **comp
 
 - **`demo_integration_test` flaky (preesistente, non da questo lavoro):** esegue partite *casuali* e richiede un vincitore entro 200 turni a partita; con il meccanismo di rimbalzo una partita può occasionalmente superarli. Verificato: codice HEAD e working-tree hanno la stessa frequenza di fallimento (~2/4). Non correlato alle modifiche della sessione (questo test non usa DebugDemo né `start_scenario`). Da sistemare separatamente (es. determinismo o `max_turns_per_game` più alto) se si vuole verde stabile.
 - **Tutorial 1C NON implementato:** l'utente ha chiesto di non procedere senza conferma esplicita.
-- **Pulsanti Online/Opzioni/Shop/Statistiche** presenti come icone ma non cablati (funzionalità future).
+- **Pulsanti Online/Opzioni/Shop/Statistiche**: [Opzioni] e [STATISTICHE] ora **cablati** ([Statistiche] → `Stats.tscn`); [Online]/[Shop] restano icone non cablate (funzionalità future). *(Aggiornato 24/09)*
+
+---
+
+## ULTIMA SESSIONE (24 settembre 2026) — Statistiche, Traguardi, Notifica e Game Over
+
+**Obiettivo:** completare statistiche persistenti, lista traguardi (modificata a mano), notifica di sblocco, contatori Giri Sicuro/Vantaggio e schermata post-partita.
+
+### Completato
+- **Statistiche** (`Stats.tscn` + `Stats.gd`): 7 righe lette da runtime (nessun placeholder), valori da `GlobalsUtilities.stats`.
+- **Traguardi**: lista unica di **23** in `Stats.gd` (fonte unica). Modifica manuale: **rimossi** `prima_vittoria` e `cinque_vittorie`; **aggiunti** `oro_puro` e `imbroglione`. 11 non-secret + 12 secret (descrizione visibile solo post-unlock).
+- **Contatori Giri Sicuro/Vantaggio**: `safe_rounds` / `advantage_rounds` incrementati solo a **attivazione locale** (`record_special_round_started`, attivatore == player locale); giro avviato da un avversario non conta; **nessun doppio incremento** alla conclusione (il traguardo si sblocca solo alla conclusione, se P1 è l'attivatore). GdV attivabile anche via trasformazione +11 → 89.
+- **Notifica sblocco**: nodi preesistenti `Main.tscn → OverlayLayer/UnlockPopup` + `UnlockName`/`UnlockDesc` (nessun nodo/scena nuovo); coda FIFO ~4 s, **no reset** del timer su nuovo arrivo, gated da `demoStarted`/`tutorialStarted`, descrizioni secret rivelate post-unlock; wire via signal `achievement_unlocked` emesso da `GlobalsUtilities.unlock_achievement()`.
+- **Game Over / post-partita**: popup `OverlayLayer/GameOverPopup` (risultato, partite giocate/vinte, serie corrente/miglior) + font `fonts/gameOverFont.tres`; pulsante [STATISTICHE] cablato in MainMenu.
+- **Persistenza**: `SaveData()`/`LoadSavedData()` scrivono/leggono le sezioni `STATS` e `ACHIEVEMENTS` nel `ConfigFile` (oltre a lingua/fullscreen/volumi).
+
+### Test (verificati 24/09)
+- ✅ `stats_achievements_test`: **69 assert, 0 FAIL** (contatori GS/GdV, attivazione locale/avversaria, conclusione senza doppio incremento, persistenza save/load, UI display).
+- ✅ `achievement_notification_test`: **25 assert, 0 FAIL** (FIFO, ~4 s, no reset timer, gated demo/tutorial, descrizioni secret).
+- ⚠️ **27 su 30 suite verdi.** Rosse: `tutorial_test` (68/3) e `scripted_demo_test` (22/7) — causate dal **nuovo step "plate"** WIP nel tutorial (`TutorialController.gd`), **NON** da questa sessione; `card_selection_test` (24/3) — catena click→GC, da ri-investigare (il fix strutturale `HUDLayer.mouse_filter=IGNORE` passa).
+- 📌 `gs_end_cpu_test.gd` / `sr_end_cpu_test.gd`: file `.gd` presenti **senza `.tscn`** → non eseguibili col runner standard.
+
+### Attività ancora da fare (per la release 1)
+1. **Localizzazione IT/EN** — *prossimo lavoro principale*: sistema di localizzazione nativo di Godot (`TranslationServer` + file di traduzione).
+2. **Popup `deleteDataButton` (Opzioni)** — almeno 50 px tra il bordo inferiore del popup e i pulsanti (oggi appoggiati); usare il corretto sistema di layout/stile del popup senza rompere altri popup né il resto.
+3. Ri-investigare `card_selection_test` (24/3) e riallineare i test tutorial/scripted demo al contenuto definitivo.
 

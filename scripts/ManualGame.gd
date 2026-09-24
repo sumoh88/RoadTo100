@@ -13,7 +13,6 @@ var running = false
 var max_turns = 1000
 var step_delay_ms = 600
 var _game_gen = -1  # Generation ID at game start — invalidates stale timers
-
 var BGsQnty = 4
 
 # F7: +11 Gold chain (mirrors RoadTo100Rules.GOLD_CHAIN) — decides whether a
@@ -71,13 +70,13 @@ func find_reset_hand_seed():
 
 	var scenario = {
 		"player_count": 4,
-		"current_player_index": 0,
+		"current_player_index": 1,
 
 		"hands": {
-			"player_1": ["89", "Imbroglio", "Imbroglio"],
 			"player_2": ["+1", "+2", "+3"],
 			"player_3": ["+4", "+5", "+6"],
-			"player_4": ["+7", "+8", "+9"]
+			"player_4": ["+7", "+8", "+9"],
+			"player_1": ["Gold67", "Gold23", "Gold89"]
 		},
 
 		# L'ultimo elemento viene pescato per primo.
@@ -129,7 +128,8 @@ func start_game():
 	running = true
 	stats = {"play_card":0,"change_card":0,"reset_hand":0,"advantage_turns":0}
 
-	_gc.start_game(4)
+	_gc.start_game(GlobalsUtilities.gamePlayers)
+#	find_reset_hand_seed()
 	# Capture the generation AFTER start_game increments it, so that any
 	# timer scheduled from a previous game (with the old generation) will
 	# be detected as stale in _on_timer_timeout.
@@ -207,7 +207,7 @@ func _on_timer_timeout():
 
 	if cur_player_idx >= 0 and cur_player_idx < players.size():
 		cur_player_id = str(players[cur_player_idx].get("id", ""))
-
+		var i = 0
 		for c in players[cur_player_idx].get("hand", []):
 			cur_hand.append(str(c.get("card_id", "")))
 

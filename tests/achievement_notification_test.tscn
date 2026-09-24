@@ -1,0 +1,6 @@
+[gd_scene format=2]
+
+[ext_resource path="res://tests/achievement_notification_test.gd" type="Script" id=1]
+
+[node name="AchievementNotificationTest" type="Node"]
+script = ExtResource( 1 )

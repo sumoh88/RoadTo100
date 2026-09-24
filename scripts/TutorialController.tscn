@@ -33,12 +33,10 @@ font_path = "res://fonts/Dyuthi.ttf"
 
 [sub_resource type="DynamicFont" id=30]
 size = 30
-outline_size = 2
 outline_color = Color( 0, 0, 0, 1 )
 use_mipmaps = true
 use_filter = true
-extra_spacing_top = 5
-extra_spacing_bottom = -10
+extra_spacing_bottom = -8
 extra_spacing_char = -1
 font_data = SubResource( 29 )
 
@@ -101,7 +99,8 @@ margin_left = -410.0
 margin_top = -270.0
 margin_right = 410.0
 margin_bottom = 270.0
-rect_pivot_offset = Vector2( -725, -63 )
+rect_scale = Vector2( 1.7, 1.7 )
+rect_pivot_offset = Vector2( 410, 270 )
 custom_styles/panel = SubResource( 14 )
 
 [node name="Image" type="TextureRect" parent="TutorialOverlay/Panel"]
@@ -128,11 +127,19 @@ align = 1
 margin_left = 280.0
 margin_top = 90.0
 margin_right = 795.0
-margin_bottom = 416.0
+margin_bottom = 418.0
 custom_fonts/normal_font = SubResource( 30 )
 bbcode_enabled = true
-meta_underlined = false
-scroll_following = true
+tab_size = 1
+text = "Nel tuo turno puoi scegliere se giocare una carta o rimetterne una nel Mazzo, poi peschi una nuova carta.
+In basso trovi la tua mano, mentre al centro invece trovi, in ordine:
+
+◌ il Piatto (il punteggio).
+◌ il Mazzo (dal quale si pesca).
+◌ la pila degli Scarti (per le carte giocate).
+
+Il Mazzo è composto da 30 Incremento,
+10 Jolly, 7 Imbroglio, 7 Gold, 3 Gold 89 e 3 carte +11. Per un totale di 60 carte."
 
 [node name="BackMenuButton" type="Button" parent="TutorialOverlay/Panel"]
 margin_left = 37.0

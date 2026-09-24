@@ -126,7 +126,6 @@ var _linear_volumes := {
 #  READY — rileva, sceglie, carica, avvia TUTTI gli stem
 # =========================
 func _ready():
-	GlobalsUtilities.LoadSavedData()
 	_load_random_song()
 	_start_all_stems()
 	# Stato iniziale = menu: tutti e 5 al 100%
@@ -401,7 +400,6 @@ func play_sfx(stream: AudioStreamPlayer, cooldown: float = default_sfx_cooldown)
 	sfx_player.pitch_scale = stream.pitch_scale
 	sfx_player.stream = stream.stream
 	sfx_player.play()
-
 
 func stop_sfx(stream: AudioStreamPlayer):
 	sfx_player.stream = stream.stream

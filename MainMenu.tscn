@@ -170,7 +170,6 @@ custom_styles/pressed = SubResource( 16 )
 custom_styles/focus = SubResource( 17 )
 custom_styles/disabled = SubResource( 25 )
 custom_styles/normal = SubResource( 19 )
-disabled = true
 
 [node name="Label" type="Label" parent="ButtonsArea/Stats"]
 show_behind_parent = true
@@ -320,6 +319,9 @@ custom_styles/normal = SubResource( 10 )
 text = "ESCI DAL GIOCO"
 
 [connection signal="pressed" from="ButtonsArea/Play" to="." method="_on_Play_pressed"]
+[connection signal="pressed" from="ButtonsArea/Stats" to="." method="_on_Stats_pressed"]
+[connection signal="pressed" from="ButtonsArea/Online" to="." method="_on_Online_pressed"]
 [connection signal="pressed" from="ButtonsArea/Tutorial" to="." method="_on_Tutorial_pressed"]
+[connection signal="pressed" from="ButtonsArea/Shop" to="." method="_on_Shop_pressed"]
 [connection signal="pressed" from="ButtonsArea/Options" to="." method="_on_Options_pressed"]
 [connection signal="pressed" from="ExitGame" to="." method="_on_ExitGame_pressed"]

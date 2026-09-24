@@ -306,7 +306,7 @@ func _build_steps():
 		{
 			"id": "turn_basics",
 			"title": "Il turno e il tavolo",
-			"text": "Nel tuo turno puoi scegliere se giocare una carta o rimetterne una nel Mazzo, poi peschi una nuova carta.\nIn basso trovi la tua mano, mentre al centro invece trovi, in ordine:\n◌ il Piatto (il punteggio).\n◌ il Mazzo (dal quale si pesca).\n◌ la pila degli Scarti (per le carte giocate).\n\nIl Mazzo è composto da 30 Incremento,\n10 Jolly, 7 Imbroglio, 7 Gold, 3 Gold 89 e 3 carte +11. Per un totale di 60 carte.",
+			"text": "Nel tuo turno puoi scegliere se giocare una carta o rimetterne una nel Mazzo, poi peschi una nuova carta.\nIn basso trovi la tua mano (composta da 3 carte) mentre al centro trovi:\n◌ il Piatto (il punteggio).\n\n◌ il Mazzo (dal quale si pesca).\n◌ la pila degli Scarti (per le carte giocate).\n\nIl Mazzo è composto da 30 Incremento,\n10 Jolly, 7 Imbroglio, 7 Gold, 3 Gold 89 e 3 carte +11. Per un totale di 60 carte.",
 			"image": "res://icon.png",
 			"demo_turns": 1,
 			"scenario": {
@@ -323,7 +323,34 @@ func _build_steps():
 				]
 			},
 		},
-		# STEP 0 — Incrementi (scripted: +7 demo, rewind, Jolly demo).
+		# STEP 0 — Il Piatto (scripted: plate growing demo).
+		{
+			"id": "plate",
+			"title": "Il Piatto",
+			"text": "Il Piatto rappresenta il valore condiviso della partita, all'inizio della partita il suo valore è sempre 0.\n\nLe Carte Gold, comprese le Carte Gold Speciali, vengono posizionate nel Piatto e, una volta giocate, rimangono nel Piatto fino al termine della partita. Non vengono mai rimescolate nel Mazzo.\n\nTutte le altre carte giocate vengono posizionate nella Pila degli Scarti.",
+			"image": "res://imgs/plate.png",
+			"demo_turns": 5,
+			"scenario": {
+				"segments": [
+					{"setup": _sc_setup(["+1", "+10", "Gold23"], "Jolly", {"piatto": 0}),
+					"script": [
+						{"action": "play", "card": "+1"},
+						{"action": "play", "card": "0"}
+					]},
+					{"setup": _sc_setup(["+1", "+10", "Gold23"], "Jolly", {"piatto": 0}),
+					"script": [
+						{"action": "play", "card": "+10"},
+						{"action": "play", "card": "0"}
+					]},
+					{"setup": _sc_setup(["+1", "+10", "Gold23"], "Jolly", {"piatto": 0}),
+					"script": [
+						{"action": "play", "card": "Gold23"},
+						{"action": "play", "card": "0"}
+					]},
+				]
+			},
+		},
+		# STEP 1 — Incrementi (scripted: +7 demo, rewind, Jolly demo).
 		{
 			"id": "increment_cards",
 			"title": "Carte Incremento",
@@ -432,14 +459,12 @@ func _build_steps():
 					"piatto": 89, "special_round_active": true, "special_round_type": "advantage",
 					"special_round_player_id": "player_1"}), "script": [
 						{"action": "play", "card": "+11"},
-						{"action": "play", "card": "0"},
 						{"action": "play", "card": "0"}
 					]},
 					# Case 2: +11 on a normal Piatto.
 					{"setup": _sc_setup(["+11", "+3", "+5"], "+4", {"piatto": 30}),
 					"script": [
 						{"action": "play", "card": "+11"},
-						{"action": "play", "card": "0"},
 						{"action": "play", "card": "0"}
 					]},
 					# Case 3: +11 after a Gold -> transforms into the next Gold.
@@ -466,7 +491,6 @@ func _build_steps():
 						{"action": "play", "card": "+3"},
 						{"action": "play", "card": "+6"},
 						{"action": "play", "card": "+11"},
-						{"action": "play", "card": "0"},
 						{"action": "play", "card": "0"}
 					]},
 					# Show using a Jolly as the exact value to reach 100 and win.
@@ -476,7 +500,7 @@ func _build_steps():
 						{"action": "play", "card": "+2"},
 						{"action": "play", "card": "+3"},
 						{"action": "play", "card": "+6"},
-						{"action": "play", "card": "0"},
+						{"action": "play", "card": "+3"},
 						{"action": "play", "card": "0"}
 					]},
 					{"setup": _sc_setup(["Imbroglio", "Gold67", "Jolly"], "+4", {"piatto": 82}),
@@ -486,7 +510,6 @@ func _build_steps():
 						{"action": "play", "card": "+10"},
 						{"action": "play", "card": "+10"},
 						{"action": "play", "card": "Jolly", "value": +3},
-						{"action": "play", "card": "0"},
 						{"action": "play", "card": "0"}
 					]},
 					{"setup": _sc_setup(["Imbroglio", "Gold67", "Jolly"], "+4", {"piatto": 82}),

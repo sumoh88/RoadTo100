@@ -72,6 +72,13 @@
 | DebugDemo | `scripts/DebugDemo.gd` | ✅ Integrato con GC (E6) |
 | DemoButton | In `Main.tscn` | ✅ Funzionante |
 | **GameController** | `scripts/GameController.gd` | ✅ Implementato (E1–E8) |
+| **Menu/Opzioni** | | |
+| OptionMenu | `OptionMenu.tscn` + `OptionMenu.gd` | ✅ Schermata Opzioni: fullscreen, volumi Music/SFX, deleteData; **lingua IT/EN = prossimo lavoro principale** |
+| Salvataggio config | `GlobalsUtilities.gd` (`SaveData`/`LoadSavedData`) | ✅ ConfigFile `RT100.cfg` (user:// su Android) per lingua/fullscreen/volumi + statistiche/traguardi (sezioni `STATS`, `ACHIEVEMENTS`) |
+| **Statistiche & Traguardi** | | |
+| Stats UI | `Stats.tscn` + `Stats.gd` | ✅ 7 righe statistiche (da runtime, nessun placeholder) + lista di **23 traguardi** (fonte unica array `achievements`; modificata manualmente: rimossi `prima_vittoria`/`cinque_vittorie`, aggiunti `oro_puro`/`imbroglione`) |
+| Notifica sblocco | `Main.gd` (usa nodi preesistenti `OverlayLayer/UnlockPopup` + `UnlockName`/`UnlockDesc`) | ✅ popup FIFO ~4s, **no reset timer** su nuovo arrivo, gated da demo/tutorial, descrizioni secret rivelate post-unlock; wire via signal `achievement_unlocked` di `GlobalsUtilities` |
+| Game Over / post-partita | `Main.tscn → OverlayLayer/GameOverPopup` | ✅ Popup post-partita (risultato, partite giocate/vinte, serie corrente/miglior) + font `fonts/gameOverFont.tres` |
 
 ### Stato passaggi
 
@@ -83,6 +90,7 @@
 | D — Presenter/UI | ✅ **Completato e verificato** | Bug risolti (incluse schermata vittoria e carta 89). Test verificati con 10+ Demo. |
 | E — Input/Animazioni | ✅ **Completato (Step 1–8)** | GameController, card selection, bottoni, popup Jolly/Imbroglio/Gold Reveal, CardAnimator multi-player (giocata 0.7s + pesca 0.6s per tutti e 4 i giocatori), DebugDemo integrato, perform_action(). Step 8: correzione animazioni non visibili e multi-player, 20+9 test di verifica. |
 | F — Special Round (Giro Sicuro) | ✅ **Completato (F1–F8)** | Passaggio F chiuso. F8: cap Piatto a 100, popup Jolly/Imbroglio da available_actions. Fix post-F8: HandResetPopup GdV-only, reset_hand senza advance_turn, GS blocked cards UI, SR badge, victory anim pre-GAME_OVER. |
+| G — Statistiche, Traguardi e Notifiche | ✅ **Completato** | `Stats.tscn` (7 righe + 23 traguardi, fonte unica), notifica `UnlockPopup` FIFO ~4s/no-reset/gated, contatori `safe_rounds`/`advantage_rounds` (attivazione locale + conclusione → traguardo; GdV anche via +11→89), popup Game Over; persistenza in config (`STATS`, `ACHIEVEMENTS`). |
 
 ---
 
@@ -182,8 +190,10 @@ Queste decisioni NON devono essere rimesse in discussione:
 | **Demo Verifica** | `tests/demo_verification_test.gd` + `.tscn` | Eventi per tutti e 4 i giocatori, struttura eventi | ✅ 9 assert, 0 FAIL |
 | **Manual Game (1H+3C)** | `tests/manual_game_test.gd` + `.tscn` | ManualGame: CPU auto, pausa turno umano, esclusione reciproca, overlay non blocca input | ✅ 26 assert, 0 FAIL |
 | **Manual Game Smoke** | `tests/manual_game_smoke.tscn` | Verifica wiring reale: pulsante → ManualGame → CPU avanza | ✅ PASS |
-| **Tutorial Mode (1A)** | `tests/tutorial_test.gd` + `.tscn` | Routing tutorial, input bloccato, navigazione, "Mostra" demo deterministica | ✅ 71 assert, 0 FAIL |
-| **Scripted Demo (1B)** | `tests/scripted_demo_test.gd` + `.tscn` | Stato iniziale, sequenze per step, rewind, popup reali, riproducibilità | ✅ 26 assert, 0 FAIL |
+| **Tutorial Mode (1A)** | `tests/tutorial_test.gd` + `.tscn` | Routing tutorial, input bloccato, navigazione, "Mostra" demo deterministica | ⚠️ 68/3 — WIP tutorial (nuovo step "plate") |
+| **Scripted Demo (1B)** | `tests/scripted_demo_test.gd` + `.tscn` | Stato iniziale, sequenze per step, rewind, popup reali, riproducibilità | 🔴 22/7 — WIP tutorial/demo setup |
+| **Stats & Achievements** | `tests/stats_achievements_test.gd` + `.tscn` | Contatori GS/GdV, attivazione locale/avversaria, conclusione senza doppio incremento, persistenza save/load, UI display | ✅ 69 assert, 0 FAIL |
+| **Achievement Notification** | `tests/achievement_notification_test.gd` + `.tscn` | FIFO, ~4s, no reset timer, gated demo/tutorial, descrizioni secret | ✅ 25 assert, 0 FAIL |
 
 ---
 
@@ -338,6 +348,18 @@ Bug risolti:
 
 ## Prossimo lavoro
 
+### ✅ Opzioni, Salvataggio e rifiniture Tutorial (19 settembre 2026)
+
+Lavoro manuale sul flusso di menu e sulle impostazioni: schermata Opzioni, sistema di salvataggio/configurazione e correzioni alla demo del Tutorial.
+
+- **Schermata Opzioni** (`OptionMenu.tscn`/`.gd`): nuova scena raggiungibile dal pulsante [Opzioni] della MainMenu (`_on_Options_pressed`). Controlli: selezione lingua IT/EN (pulsanti prev/next), toggle Fullscreen, slider volumi Music/SFX. UI e funzionalità implementate.
+- **Sistema Salvataggio** (`GlobalsUtilities.gd`): `SaveData()` / `LoadSavedData()` con `ConfigFile` → file `RT100.cfg` (desktop) oppure `user://RT100.cfg` (Android). Persiste lingua, fullscreen e volumi. Load chiamata da `GlobalsUtilities._ready()` (avvio) e save al ritorno al menu dalle Opzioni.
+- **AudioManager** (`AudioManager.gd`): nuovo API di controllo volumi per le Opzioni (`set_master_volume`, `set_music_volume`, `set_sfx_volume`, `set_music_enabled`, `set_sfx_enabled`, `_update_volumes`).
+- **Tutorial**: aggiornati gli step delle demo scriptate in `scripts/TutorialController.gd` (rimossi giochi segnaposto `{"card":"0"}` superflui, corretto un valore) per comportamento/UI più puliti.
+- **Correzione sintassi commenti nei test** (`tests/*.gd`): `//` → `#` dove necessario.
+
+**⚠️ Limite aperto:** la selezione della lingua NON funziona ancora correttamente — `_on_set_language()` ricalcola l'indice da `currLanguage` e sovrascrive il valore passato (vedi sezione "Opzioni e Salvataggio" in PROJECT_STATE.md). Da risolvere in una sessione dedicata.
+
 ### ✅ SplashScreen, MainMenu ridisegnata e Modalità Tutorial (14 settembre 2026)
 
 Lavoro sul flusso di avvio e sulla modalità guidata "Come si gioca" (nessuna modifica alle regole; preparazione/rewind della demo nel sistema demo/engine).
@@ -406,13 +428,16 @@ Dettagli completi di F1–F8 in `PROJECT_STATE.md` sezione "Passaggio F".
 
 ### Attività successive al Passaggio F
 
-1. ~~**Fix selezione carte nel turno umano**~~ — **RISOLTO** (HUDLayer.mouse_filter=IGNORE, test card_selection_test)
+1. ~~**Fix selezione carte nel turno umano**~~ — **RISOLTO** (HUDLayer.mouse_filter=IGNORE). ⚠️ `card_selection_test` ora 24/3 (catena click→GC) — da ri-investigare prima della release.
 2. ~~**AI per player_2**~~ — **IMPLEMENTATA** (`games/roadto100/ai.py` + `engine/RoadTo100AI.gd`). Score-based strategic AI integrata in ManualGame.
-3. ~~**SplashScreen + MainMenu ridisegnata + Modalità Tutorial (1A+1B)**~~ — **COMPLETATO** (14 settembre 2026). Demo scriptate deterministiche; test tutorial_test 71/0, scripted_demo_test 26/0.
-4. **Multiplayer** — `RemoteGameAdapter` + networking. Architettura definita, implementazione futura.
-5. **Migliorie UI/UX** — Texture carte definitive, effetti sonori, schermata di vittoria, animazioni più ricche; cablare i pulsanti Online/Opzioni/Shop/Statistiche (icone già presenti).
-6. **AI personalità multiple** — Varianti difficulty (aggressive/defensive) bilanciando i pesi esistenti.
+3. ~~**SplashScreen + MainMenu ridisegnata + Modalità Tutorial (1A+1B)**~~ — **COMPLETATO** (14 settembre 2026). Demo scriptate deterministiche. ⚠️ Test ora in WIP (tutorial_test 68/3, scripted_demo_test 22/7) per il nuovo step "plate" da inserire — da riallineare al contenuto tutorial definitivo.
+4. ~~**Statistiche / Traguardi + Notifica sblocco + Game Over**~~ — **IMPLEMENTATA** (24 settembre 2026): schermata Stats (7 righe + 23 traguardi, fonte unica), contatori Giri Sicuro/Vantaggio, notifica `UnlockPopup` FIFO ~4s/no-reset/gated, popup Game Over; persistenza in config (`STATS`, `ACHIEVEMENTS`); pulsante [STATISTICHE] cablato in MainMenu.
+5. ~~**Opzioni + Salvataggio**~~ — **IMPLEMENTATA** (19 settembre 2026): fullscreen, volumi Music/SFX, deleteData, persistenza lingua/fullscreen/volumi/STATS/ACHIEVEMENTS. ⚠️ Lingua IT/EN e spacing `deleteDataButton` restano aperti (punti 8–9).
+6. **Migliorie UI/UX** — Texture carte definitive, effetti sonori, animazioni più ricche; pulsanti Online/Shop (solo se nel scope della release 1).
 7. **Stabilizzare `demo_integration_test`** — test flaky (partite casuali >200 turni senza vincitore); rendere deterministico o alzare `max_turns_per_game`.
+8. **Localizzazione IT/EN** — **prossimo lavoro principale**: usare il sistema di localizzazione nativo di Godot (`TranslationServer` + file di traduzione). Non implementare ora; eseguire in una sessione dedicata.
+9. **Popup `deleteDataButton` (Opzioni)** — aggiungere almeno **50 px** di distanza tra il bordo inferiore della finestra del popup e i suoi pulsanti (oggi appoggiati al bordo); usare il **corretto sistema di layout/stile del popup**, senza rompere l'altro popup né il resto del layout.
+10. **Multiplayer** — `RemoteGameAdapter` + networking. Architettura definita, implementazione futura (non necessaria per la release 1 single-player).
 
 ### Modalità manuale 1 umano + 3 CPU — ✅ Implementata (21 agosto 2026)
 
@@ -428,12 +453,12 @@ Implementata con `scripts/ManualGame.gd`: pulsante "Inizia Partita" in `Main.tsc
 
 ## Come riprendere il lavoro
 
-Apri una nuova chat, chiedi di leggere `PROJECT_STATE.md` e `ROADMAP.md`. Inizia dalla sezione **"ULTIMA SESSIONE"** in `PROJECT_STATE.md` per il contesto delle ultime correzioni, poi prosegui dalla prossima attività nella roadmap.
+Apri una nuova chat, chiedi di leggere `PROJECT_STATE.md` e `ROADMAP.md`. Inizia dalla sezione **"Statistiche, Traguardi e Notifiche (completate)"** in `PROJECT_STATE.md` per il contesto dell'ultimo lavoro, poi prosegui dalla prossima attività nella roadmap (Localizzazione IT/EN e spacing `deleteDataButton`).
 
-Tutte le suite di test sono verdi. Eseguire i test dopo ogni modifica:
+**Stato test (verificato 24/09):** 27 su 30 suite verdi (exit 0). Rosse: `card_selection_test` (24/3), `tutorial_test` (68/3) e `scripted_demo_test` (22/7) — quest'ultima due causate dal nuovo step "plate" WIP nel tutorial; `card_selection` da ri-investigare. Eseguire i test dopo ogni modifica:
 
 ```bash
 /home/sumaka/bin/Godot3 --path /media/sumaka/Giochi/GodotProjects/roadTo100 tests/<suite>.tscn --no-window
 ```
 
-Suite disponibili: `game_controller_test`, `presenter_test`, `board_test`, `provider_test`, `rules_test`, `domain_test`, `card_animator_test`, `card_animator_test2`, `demo_integration_test`, `demo_verification_test`, `manual_game_test`, `manual_game_smoke`, `card_selection_test`, `plus11_gold_transformation_test`, `tutorial_test`, `scripted_demo_test`.
+Suite disponibili: `game_controller_test`, `presenter_test`, `board_test`, `provider_test`, `rules_test`, `domain_test`, `card_animator_test`, `card_animator_test2`, `demo_integration_test`, `demo_verification_test`, `manual_game_test`, `manual_game_smoke`, `card_selection_test`, `plus11_gold_transformation_test`, `tutorial_test`, `scripted_demo_test`, `stats_achievements_test`, `achievement_notification_test`.

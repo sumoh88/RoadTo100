@@ -533,6 +533,9 @@ func apply_action(game, action_dict):
 			plateau = 100
 			current_player.metadata["score"] = int(current_player.metadata.get("score", 0)) + increment
 			game.winner = current_player
+			# var PlayCard = AudioManager.get_node("SFXPlayer/PlayCard")
+			# PlayCard.stream = load("res://sound/victoryJingle.wav")
+			# AudioManager.play_sfx(PlayCard)
 	elif not sr_active and (plateau == 100 or plateau > 100):
 		plateau = 100
 		current_player.metadata["score"] = int(current_player.metadata.get("score", 0)) + increment

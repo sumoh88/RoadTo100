@@ -20,9 +20,14 @@ func _ready():
 	if m == null: return
 	var ga = _child(m, "GameArea"); if ga == null: return
 	var hud = _child(ga, "HUDLayer")
+	var ovrl = _child(m, "OverlayLayer")
+	var gop = _child(ovrl, "GameOverPopup")
+	var goc = _child(gop, "GameOverContainer")
+
 	if hud != null:
 		_turn_label = _child(hud, "TurnLabel")
-		_instruction_label = _child(hud, "InstructionLabel")
+		_instruction_label = _child(goc, "InstructionLabel")
+		
 		_advantage_label = _child(hud, "AdvantageLabel")
 		var p = _child(hud, "ActionPanel")
 		if p != null:
@@ -110,7 +115,20 @@ func apply_snapshot(s):
 		elif at == "change_card": hc = true
 	if _play_button != null: _play_button.disabled = !hp
 	if _change_button != null: _change_button.disabled = !hc
-	if _game_over_popup != null and w != null and !_game_over_popup.visible: _game_over_popup.popup()
+	if _game_over_popup != null and w != null:
+		if !_game_over_popup.visible:
+			_game_over_popup.popup()
+
+		var goc = _child(_game_over_popup, "GameOverContainer")
+		var gamePlayed = goc.get_node("GamePlayed")
+		var gameWon = goc.get_node("GameWon")
+		var gameSeries = goc.get_node("GameSeries")
+		var gameBestSeries = goc.get_node("GameBestSeries")
+		gamePlayed.get_node("Value").text = str(GlobalsUtilities.stats["games_played"])
+		gameWon.get_node("Value").text = str(GlobalsUtilities.stats["games_won"])
+		gameSeries.get_node("Value").text = str(GlobalsUtilities.stats["current_streak"])
+		gameBestSeries.get_node("Value").text = str(GlobalsUtilities.stats["best_streak"])
+
 	
 
 func diagnose():
