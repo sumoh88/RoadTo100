@@ -36,6 +36,8 @@ func _ready():
 		$DemoButton.emit_signal("pressed")
 
 	_connect_unlock_notifications()
+	_localize()
+	GlobalsUtilities.connect("language_changed", self, "_on_language_changed")
 
 
 # Wires the existing UnlockPopup (OverlayLayer/UnlockPopup) to achievement
@@ -142,6 +144,27 @@ func _hide_current_unlock():
 	_unlock_popup.modulate.a = 1.0
 
 	_show_next_unlock()
+
+func _localize():
+	$OverlayLayer/GameOverPopup/GameOverContainer/GamePlayed.text = tr("STAT_GP")
+	$OverlayLayer/GameOverPopup/GameOverContainer/GameWon.text = tr("STAT_GW")
+	$OverlayLayer/GameOverPopup/GameOverContainer/GameSeries.text = tr("STAT_WS")
+	$OverlayLayer/GameOverPopup/GameOverContainer/GameBestSeries.text = tr("STAT_BS")
+	$OverlayLayer/GameOverPopup/GameOverContainer/GameOverLabel.text = tr("GAMEOVER")
+	$GameArea/BoardArea/DrawPile/CountLabelName.text = tr("HAND_REMAINED")
+	$OverlayLayer/ValueChoicePopup/VBox/MsgLabel.text = tr("CHOOSE_VALUE_STATIC")
+	$GameArea/HUDLayer/ActionPanel/BackMenuButton.text = tr("ACTION_BACK")
+	$StartGameButton.text = tr("NEW_GAME")
+	$DemoButton.text = tr("DEMO_AUTO")
+	$OverlayLayer/HandResetPopup/VBox/MsgLabel.text = tr("RESHUFFLE_MSG")
+	$OverlayLayer/ValueChoicePopup/VBox/CancelBtn.text = tr("CANCEL_BTN")
+	$OverlayLayer/HandResetPopup/VBox/BtnRow/YesBtn.text = tr("YES")
+	$OverlayLayer/HandResetPopup/VBox/BtnRow/NoBtn.text = tr("NO")
+	$GameArea/HUDLayer/TurnLabel.text = tr("TURN_PREFIX") % 1
+
+func _on_language_changed(_locale):
+	_localize()
+
 # Returns the TutorialController node. Uses the scene-instanced one from
 # Main.tscn when present; otherwise instantiates it from its .tscn so the
 # tutorial UI (structure + appearance defined in the scene) is always available.

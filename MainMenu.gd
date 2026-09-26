@@ -11,6 +11,21 @@ func _ready():
 	var langNode = optionMenu.get_node("VBoxContainer/Language/HBoxContainer/currLanguage")
 	langNode.text = GlobalsUtilities.currLanguage
 	print("__________________ LANG: ", langNode.text)
+	_localize()
+	GlobalsUtilities.connect("language_changed", self, "_on_language_changed")
+
+func _localize():
+	$ButtonsArea/Play/Label.text = tr("MENU_PLAY")
+	$ButtonsArea/Play/Label/LabelSmall.text = tr("MENU_PLAY_SUB")
+	$ButtonsArea/Stats/Label.text = tr("MENU_STATS")
+	$ButtonsArea/Online/Label.text = tr("MENU_ONLINE")
+	$ButtonsArea/Tutorial/Label.text = tr("MENU_HOW_TO_PLAY")
+	$ButtonsArea/Shop/Label.text = tr("MENU_SHOP")
+	$ButtonsArea/Options/Label.text = tr("MENU_OPTIONS")
+	$ExitGame.text = tr("MENU_QUIT")
+
+func _on_language_changed(_locale):
+	_localize()
 
 
 

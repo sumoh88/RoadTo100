@@ -55,6 +55,7 @@ func _ready():
 	# Start hidden; only active while in tutorial mode.
 	if _overlay_root != null:
 		_overlay_root.visible = false
+	_localize()
 
 func _input(event):
 	if not _demo_mouse_blocked:
@@ -68,6 +69,14 @@ func _input(event):
 				
 	if event is InputEventMouseButton or event is InputEventMouseMotion:
 		get_tree().set_input_as_handled()
+
+
+
+func _localize():
+	$TutorialOverlay/Panel/BackMenuButton.text = tr("ACTION_BACK")
+	$TutorialOverlay/Panel/PrevButton.text = tr("ACTION_PREV")
+	$TutorialOverlay/Panel/ShowButton.text = tr("ACTION_SHOW")
+	$TutorialOverlay/Panel/ProceedButton.text = tr("ACTION_NEXT")
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -259,7 +268,7 @@ func _populate(step):
 	if _text_label != null:
 		_text_label.text = step["text"]
 	if _proceed_btn != null:
-		_proceed_btn.text = "Fine" if _is_last_step() else "Prosegui"
+		_proceed_btn.text = tr("ACTION_END") if _is_last_step() else tr("ACTION_NEXT")
 
 
 func _show_popup_content():
@@ -305,8 +314,8 @@ func _build_steps():
 		# STEP base — Regole base (seeded short demo, unchanged).
 		{
 			"id": "turn_basics",
-			"title": "Il turno e il tavolo",
-			"text": "Nel tuo turno puoi scegliere se giocare una carta o rimetterne una nel Mazzo, poi peschi una nuova carta.\nIn basso trovi la tua mano (composta da 3 carte) mentre al centro trovi:\n◌ il Piatto (il punteggio).\n\n◌ il Mazzo (dal quale si pesca).\n◌ la pila degli Scarti (per le carte giocate).\n\nIl Mazzo è composto da 30 Incremento,\n10 Jolly, 7 Imbroglio, 7 Gold, 3 Gold 89 e 3 carte +11. Per un totale di 60 carte.",
+			"title": tr("TUT_STEP1_NAME"),
+			"text": tr("TUT_STEP1_DESC"),
 			"image": "res://icon.png",
 			"demo_turns": 1,
 			"scenario": {
@@ -326,8 +335,8 @@ func _build_steps():
 		# STEP 0 — Il Piatto (scripted: plate growing demo).
 		{
 			"id": "plate",
-			"title": "Il Piatto",
-			"text": "Il Piatto rappresenta il valore condiviso della partita, all'inizio della partita il suo valore è sempre 0.\n\nLe Carte Gold, comprese le Carte Gold Speciali, vengono posizionate nel Piatto e, una volta giocate, rimangono nel Piatto fino al termine della partita. Non vengono mai rimescolate nel Mazzo.\n\nTutte le altre carte giocate vengono posizionate nella Pila degli Scarti.",
+			"title": tr("TUT_STEP2_NAME"),
+			"text": tr("TUT_STEP2_DESC"),
 			"image": "res://imgs/plate.png",
 			"demo_turns": 5,
 			"scenario": {
@@ -353,8 +362,8 @@ func _build_steps():
 		# STEP 1 — Incrementi (scripted: +7 demo, rewind, Jolly demo).
 		{
 			"id": "increment_cards",
-			"title": "Carte Incremento",
-			"text": "Le carte Incremento aggiungono il loro valore al Piatto.\n\nEsistono Incrementi da +1 a +10.\n\nIl Jolly, quando viene giocato, ti fa scegliere il valore dell'incremento.",
+			"title": tr("TUT_STEP3_NAME"),
+			"text": tr("TUT_STEP3_DESC"),
 			"image": "res://imgs/inc7.png",
 			"scenario": {
 				"segments": [
@@ -373,8 +382,8 @@ func _build_steps():
 		# STEP 2 — Imbroglio (scripted: play Imbroglio, choose -7).
 		{
 			"id": "imbroglio",
-			"title": "Carta Imbroglio",
-			"text": "L'Imbroglio ti fa scegliere un valore da -15 a +15 (escluso 0).\nPuoi usarlo per aumentare o ridurre il Piatto.\n\nAttenzione:\nL'imbroglio non può essere usato per ottenere una vittoria.\nL'imbroglio non può mai raggiungere o superare 100 o portare il piatto sotto lo 0.",
+			"title": tr("TUT_STEP4_NAME"),
+			"text": tr("TUT_STEP4_DESC"),
 			"image": "res://imgs/imb.png",
 			"scenario": {
 				"segments": [
@@ -388,8 +397,8 @@ func _build_steps():
 		# STEP 3 — Gold (scripted: play Gold, Safe Round activation + choice).
 		{
 			"id": "gold",
-			"title": "Carte Gold",
-			"text": "Le carte Gold impostano il Piatto al loro valore e attivano un Giro Sicuro:\n\nL'attivatore del Giro Sicuro (rappresentato da una stella) sceglie quale tipo di carta bloccare per un intero turno!\n\nSfruttalo a tuo vantaggio per velocizzare o rallentare la partita.\n\nEsiste solo una copia per ogni Gold, e sono:\n12, 23, 34, 45, 56, 67, 78",
+			"title": tr("TUT_STEP5_NAME"),
+			"text": tr("TUT_STEP5_DESC"),
 			"image": "res://imgs/gold23.png",
 			"scenario": {
 				"segments": [
@@ -406,8 +415,8 @@ func _build_steps():
 		# STEP 4 — Regola del Rimbalzo (scripted: gdv bounce demo).
 		{
 			"id": "bounce_rules",
-			"title": "Regola del rimbalzo",
-			"text": "Se una Carta Incremento porta il Piatto oltre 100, viene applicata la Regola del Rimbalzo:\n\nSei il Piatto supera 100 il valore in eccesso rimbalza indietro!\n\nTieni sempre sott'occhio il valore del Piatto, potresti anche sfruttarlo a tuo vantaggio.",
+			"title": tr("TUT_STEP6_NAME"),
+			"text": tr("TUT_STEP6_DESC"),
 			"image": "res://imgs/plate.png",
 			"demo_turns": 7,
 			"scenario": {
@@ -429,8 +438,8 @@ func _build_steps():
 		# restriction: only increments/+11 are playable for the others).
 		{
 			"id": "gdv",
-			"title": "Carta 89 e Giro di Vantaggio",
-			"text": "La carta 89 imposta il Piatto a 89 e avvia il Giro di Vantaggio.\nL'attivatore diventa il Giocatore in Vantaggio fino alla fine del suo prossimo turno:\n\nDurante il Giro di Vantaggio solo il Giocatore in Vantaggio può fare 100 e vincere, inoltre il Giocare in Vantaggio ignora il rimbalzo!\n\nDurante il Giro di Vantaggio si possono giocare solo carte di tipo Incremento.",
+			"title": tr("TUT_STEP7_NAME"),
+			"text": tr("TUT_STEP7_DESC"),
 			"image": "res://imgs/spe89.png",
 			"demo_turns": 5,
 			"scenario": {
@@ -449,8 +458,8 @@ func _build_steps():
 		# STEP 6 — +11 (three cases, each a prepared segment = rewind between).
 		{
 			"id": "plus11",
-			"title": "Carta +11",
-			"text": "La carta +11 è un Incremento Speciale e aggiunge 11 al Piatto.\n\nQuesta carta ignora la regola del rimbalzo e il Giro di Vantaggio, se il piatto è vicino a 100 puoi usarla per vincere subito!\n\nInoltre, se usi la carta +11 subito dopo una carta Gold si trasforma nella Gold successiva attivando così il giro speciale!\n\nNon sprecarla!",
+			"title": tr("TUT_STEP8_NAME"),
+			"text": tr("TUT_STEP8_DESC"),
 			"image": "res://imgs/spe+11.png",
 			"scenario": {
 				"segments": [
@@ -478,8 +487,8 @@ func _build_steps():
 		# STEP 7 — Consigli / combo (my designed pedagogical sequence).
 		{
 			"id": "consigli",
-			"title": "Consigli e combo",
-			"text": "Combina le carte per avvantaggiarti o per svantaggiare gli avversari in modo che sia tu a portare il Piatto a 100.\n\nPer esempio puoi combinare due +11 al momento giusto per vincere.\nOppure prova a usare il Rimbalzo o le Imbroglio per togliere la vittoria a un avversario.",
+			"title": tr("TUT_STEP9_NAME"),
+			"text": tr("TUT_STEP9_DESC"),
 			"image": "res://imgs/incJolly.png",
 			"scenario": {
 				"segments": [

@@ -1,11 +1,18 @@
 extends Control
 
-#onready var languageNode = $VBoxContainer/Language/HBoxContainer/currLanguage
+onready var languageNode = $VBoxContainer/Language/HBoxContainer/currLanguage
+onready var languageTitle = $VBoxContainer/Language/title
+onready var delete_data_dialog = $DeleteSaveButton/DeleteConfirmPopup
+onready var delete_data_bg = $DeleteSaveButton/DeleteDataBG
 #onready var fullscreenNode = $VBoxContainer/Utility/FullscreenLabel/CheckFullScreen
 #onready var musicNode = $VBoxContainer/Audio/MusicLabel/CheckMusic
 #onready var SFXNode = $VBoxContainer/Audio/SFXLabel/CheckSFX
-onready var delete_data_dialog = $DeleteSaveButton/ConfirmationDialog
-onready var delete_data_bg = $DeleteSaveButton/DeleteDataBG
+
+onready var origSpacingTop = languageTitle.get("custom_fonts/font").extra_spacing_top
+onready var origSpacingChar = languageTitle.get("custom_fonts/font").extra_spacing_char
+onready var origSize = languageTitle.get("custom_fonts/font").size
+
+
 
 func _ready():
 	var utilityNode = $VBoxContainer/Utility/
@@ -16,55 +23,42 @@ func _ready():
 		utilityNode.visible = false
 		audioNode.rect_position.y = 65
 		SFXNode.rect_position.y = 65
-	delete_btn_init()
-		
-		
-func delete_btn_init():
-	var main = load("res://Main.tscn").instance()
-	var reset_popup = main.get_node("OverlayLayer/HandResetPopup")
-	var reset_popup_btns = $DeleteSaveButton
-	
-	var style = reset_popup.get_stylebox("panel")
-	var styleBtn = reset_popup_btns.get_stylebox("normal")
-	var styleBtnHover = reset_popup_btns.get_stylebox("hover")
-	var styleBtnPressed = reset_popup_btns.get_stylebox("pressed")
-	var btn = delete_data_dialog.get_node("get_ok")
-	
+	_localize()
+	GlobalsUtilities.connect("language_changed", self, "_on_language_changed")
 
-	delete_data_dialog.add_stylebox_override("panel", style)
-	delete_data_dialog.window_title = ""
-	delete_data_dialog.dialog_text = "     Sei sicuro di voler cancellare tutti i dati salvati?     "
-	delete_data_dialog.get_ok().text = "     Sicuro     "
-	delete_data_dialog.get_cancel().text = "     Annulla     "
-	
-	delete_data_dialog.get_ok().add_stylebox_override("normal", styleBtn)
-	delete_data_dialog.get_cancel().add_stylebox_override("normal", styleBtn)
-	delete_data_dialog.get_ok().add_stylebox_override("hover", styleBtnHover)
-	delete_data_dialog.get_cancel().add_stylebox_override("hover", styleBtnHover)
-	delete_data_dialog.get_ok().add_stylebox_override("pressed", styleBtnPressed)
-	delete_data_dialog.get_cancel().add_stylebox_override("pressed", styleBtnPressed)
-	var dialog_text = delete_data_dialog.get_label()
-	dialog_text.align = Label.ALIGN_CENTER
-	dialog_text.valign = Label.ALIGN_CENTER
-	styleBtn.set_default_margin(MARGIN_TOP, 15)
-	styleBtn.set_default_margin(MARGIN_BOTTOM, 10)
-	styleBtnHover.set_default_margin(MARGIN_TOP, 15)
-	styleBtnHover.set_default_margin(MARGIN_BOTTOM, 10)
-	styleBtnPressed.set_default_margin(MARGIN_TOP, 15)
-	styleBtnPressed.set_default_margin(MARGIN_BOTTOM, 10)
-	delete_data_dialog.connect("confirmed", self, "_on_delete_data_confirmed")
-	delete_data_dialog.get_cancel().connect("pressed", self, "_on_delete_data_cancelled")
-	add_child(delete_data_dialog)
+
+
+func _localize():
+	$VBoxContainer/Language/title.text = tr("OPT_LANGUAGE_LABEL")
+	$VBoxContainer/Utility/FullscreenLabel.text = tr("OPT_FULLSCREEN")
+	$VBoxContainer/Audio/MusicLabel.text = tr("OPT_MUSIC")
+	$VBoxContainer/Audio/SFXLabel.text = tr("OPT_SFX")
+	$BackMenuButton.text = tr("OPT_BACK")
+	$DeleteSaveButton/btnLabel.text = tr("OPT_DELETE_BTN")
+	_localize_popup()
+
+func _localize_popup():
+	delete_data_dialog.get_node("VBox/Label").text = tr("OPT_DELETE_DIALOG")
+	delete_data_dialog.get_node("VBox/BtnRow/ConfirmYesBtn").text = tr("YES")
+	delete_data_dialog.get_node("VBox/BtnRow/ConfirmNoBtn").text = tr("NO")
+
+func _on_language_changed(_locale):
+	_localize()
+	_localize_popup()
 	
 	
 
 
 func _on_delete_data_confirmed():
 	delete_data_bg.visible = false
+	delete_data_dialog.visible = false
+#	delete_data_dialog.popup()
 	GlobalsUtilities.DeleteSavedData()
 
 func _on_delete_data_cancelled():
 	delete_data_bg.visible = false
+	delete_data_dialog.visible = false
+#	delete_data_dialog.popup()
 
 
 func _on_DeleteSaveButton_pressed():
@@ -76,7 +70,6 @@ func _on_DeleteSaveButton_pressed():
 
 
 func LoadFromData():
-	var languageNode = $VBoxContainer/Language/HBoxContainer/currLanguage
 	var fullscreenNode = $VBoxContainer/Utility/FullscreenLabel/CheckFullScreen
 	var musicNode = $VBoxContainer/Audio/MusicLabel/CheckMusic
 	var SFXNode = $VBoxContainer/Audio/SFXLabel/CheckSFX
@@ -113,25 +106,29 @@ func LoadFromData():
 
 
 
-func _on_set_language(opSymbol, lang):
+func _on_set_language(operSymbol, lang):
+	var idx = GlobalsUtilities.language.find(str(lang))
+	if idx < 0:
+		idx = 0
+	idx = idx + operSymbol
+	if idx < 0:
+		idx = GlobalsUtilities.language.size() - 1
+	elif idx >= GlobalsUtilities.language.size():
+		idx = 0
+	var new_name = GlobalsUtilities.language[idx]
+	GlobalsUtilities.set_language(new_name)
 	if GlobalsUtilities.config != null:
-		GlobalsUtilities.config.set_value("LANGUAGE", "language", lang)
-	var langIndex = GlobalsUtilities.language.find(GlobalsUtilities.currLanguage)
-	langIndex = langIndex+opSymbol
-	if langIndex < 0:
-		langIndex = GlobalsUtilities.language.size()-1
-	elif langIndex > GlobalsUtilities.language.size()-1:
-		langIndex = 0
-	GlobalsUtilities.languageNode.text = GlobalsUtilities.language[langIndex]
-	GlobalsUtilities.currLanguage = GlobalsUtilities.languageNode.text
+		GlobalsUtilities.config.set_value("LANGUAGE", "language", new_name)
+	GlobalsUtilities.SaveData()
 
 func _on_Next_pressed():
 	_on_set_language(1, GlobalsUtilities.currLanguage)
+	languageNode.text = GlobalsUtilities.currLanguage
 
 
 func _on_Prev_pressed():
 	_on_set_language(-1, GlobalsUtilities.currLanguage)
-
+	languageNode.text = GlobalsUtilities.currLanguage
 
 
 func _on_BackMenuButton_pressed():
@@ -161,3 +158,11 @@ func _on_CheckSFX_value_changed(value):
 	AudioServer.set_bus_volume_db(bus, linear2db(value/10))
 
 
+
+
+func _on_ConfirmYesBtn_pressed():
+	_on_delete_data_confirmed()
+
+
+func _on_ConfirmNoBtn_pressed():
+	_on_delete_data_cancelled()

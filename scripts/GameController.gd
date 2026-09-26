@@ -335,7 +335,9 @@ func _on_card_selected(card_id):
 		if _hand != null and _hand.has_method("set_selected"):
 			_hand.set_selected(card_id)
 		_state = State.CARD_SELECTED
-
+		if _turn != null and _turn.has_method("show_tip"):
+			_turn.show_tip("")
+		print("aaaaaaaaaaaaaaaaaaaaaaa")
 	elif _state == State.CARD_SELECTED:
 		if card_id == _selected_card_id:
 			_clear_selection()
@@ -366,16 +368,16 @@ func _on_play_pressed():
 		# 89 blocked until Piatto reaches 20 or more.
 		if _is_selected_card_89_not_allowed():
 			if _turn != null and _turn.has_method("show_tip"):
-				_turn.show_tip("Bloccata: Piatto troppo basso.")
+				_turn.show_tip(tr("TIP_BLOCKED_LOW"))
 			return
 		if _is_selected_card_blocked_by_sr():
 			if _turn != null and _turn.has_method("show_tip"):
-				_turn.show_tip("Bloccata: Giro Sicuro")
+				_turn.show_tip(tr("TIP_BLOCKED_SAF"))
 			return
 		# GdV: non-Incremento cards are not playable during Giro di Vantaggio.
 		if _is_selected_card_blocked_by_gdv():
 			if _turn != null and _turn.has_method("show_tip"):
-				_turn.show_tip("Bloccata: Giro di Vantaggio")
+				_turn.show_tip(tr("TIP_BLOCKED_GDV"))
 			return
 		var ct = _get_selected_card_type()
 		if ct == "jolly" or ct == "imbroglio":
@@ -394,7 +396,8 @@ func _on_play_pressed():
 			perform_action({"action_type": "play_card", "card_id": _selected_card_id})
 	elif _state == State.READY_FOR_INPUT:
 		if _turn != null and _turn.has_method("show_tip"):
-			_turn.show_tip("Seleziona prima una carta")
+			print("AAAAAAAAAAAAAAAAAA")
+			_turn.show_tip(tr("TIP_SELECT_CARD"))
 
 
 func _on_change_pressed():
@@ -402,7 +405,8 @@ func _on_change_pressed():
 		perform_action({"action_type": "change_card", "card_id": _selected_card_id})
 	elif _state == State.READY_FOR_INPUT:
 		if _turn != null and _turn.has_method("show_tip"):
-			_turn.show_tip("Seleziona prima una carta")
+			print("BBBBBBBBBBBBBBBBBB")
+			_turn.show_tip(tr("TIP_SELECT_CARD"))
 
 
 func _on_cancel_pressed():
@@ -458,7 +462,7 @@ func _open_value_choice(card_name, all_values, valid_values):
 		print("[GC] WARNING: No choices provided by engine for " + card_name + " — all options disabled")
 
 	if _value_choice_label != null:
-		_value_choice_label.text = "Scegli il valore per " + card_name
+		_value_choice_label.text = tr("CHOOSE_VALUE_FOR") % card_name
 		GlobalsUtilities.setCustomFont(_value_choice_label, 32)
 
 	# Clear old buttons from grid
@@ -1068,7 +1072,7 @@ func _open_safe_round_choice():
 	_pending_blocked_type = true
 
 	if _value_choice_label != null:
-		_value_choice_label.text = "Scegli la tipologia da bloccare"
+		_value_choice_label.text = tr("CHOOSE_BLOCK_TYPE")
 
 	# Clear old buttons and create Safe Round type buttons
 	if _value_btn_grid != null:
@@ -1078,16 +1082,16 @@ func _open_safe_round_choice():
 
 		var vList = VBoxContainer.new()
 		vList.rect_min_size = Vector2(465, 650)
-		vList.add_constant_override("separation", 10)
 		vList.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		_value_btn_grid.add_child(vList)
 		for choice in SAFE_ROUND_CHOICES:
 			var btn = Button.new()
+			var inc = 1.5
 			btn.text = choice
-			btn.rect_min_size = Vector2(180, 70)
-			btn.margin_bottom = 20
+			btn.rect_min_size = Vector2(180, 70) * inc
+			btn.margin_bottom = 40
 			btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-			GlobalsUtilities.setCustomFont(btn, 32, 0, 6)
+			GlobalsUtilities.setCustomFont(btn, 32*inc, 0, 6*inc)
 			if choice == "Incremento":
 				GlobalsUtilities.setCustomStyle(btn,"normal", "btnHover")
 			elif choice == "Gold":

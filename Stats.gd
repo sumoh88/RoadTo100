@@ -32,6 +32,24 @@ func _ready():
 	_setup_fonts()
 	_update_stats_display()
 	_build_achievements_ui()
+	_localize()
+	GlobalsUtilities.connect("language_changed", self, "_on_language_changed")
+
+func _localize():
+	$StatsContainer/StatsList/StatsHeader.text = tr("STAT_HEADER")
+	$StatsContainer/StatsList/games_played/Name.text = tr("STAT_GP_LBL")
+	$StatsContainer/StatsList/games_won/Name.text = tr("STAT_GW_LBL")
+	$StatsContainer/StatsList/current_streak/Name.text = tr("STAT_WS_LBL")
+	$StatsContainer/StatsList/best_streak/Name.text = tr("STAT_BS_LBL")
+	$StatsContainer/StatsList/fastest_win_turns/Name.text = tr("STAT_FW_LBL")
+	$StatsContainer/StatsList/advantage_rounds/Name.text = tr("STAT_GDV_LBL")
+	$StatsContainer/StatsList/safe_rounds/Name.text = tr("STAT_SAF_LBL")
+	$StatsContainer/UnlockList/AchHeader.text = tr("ACH_HEADER")
+	$BackMenuButton.text = tr("STAT_BACK")
+
+func _on_language_changed(_locale):
+	_localize()
+	_update_stats_display()
 
 
 # Populate the 7 static statistic values from the persisted stats.
@@ -46,7 +64,7 @@ func _update_stats_display():
 	if gp > 0:
 		pct = int(round(100.0 * gw / gp))
 	var fwt = int(s["fastest_win_turns"])
-	var fastest_text = str(fwt) + " turni" if fwt >= 0 else "N/D"
+	var fastest_text = (tr("FASTEST_WIN_LABEL") % fwt) if fwt >= 0 else tr("STAT_NOT_APPLICABLE")
 
 	_set_stat_value("games_played", str(gp))
 	_set_stat_value("games_won", str(gw) + " (" + str(pct) + "%)")
@@ -76,30 +94,30 @@ var achievements := [
 	# --- 1-11: NON-SECRET (name + description always visible) ---
 	#{"id": "prima_vittoria", "name": "Prima vittoria", "description": "Vinci una partita.", "secret": false},
 	#{"id": "cinque_vittorie", "name": "Ci sto prendendo la mano", "description": "Vinci 5 partite.", "secret": false},
-	{"id": "dieci_vittorie", "name": "Giocatore abituale", "description": "Vinci 10 partite.", "secret": false},
-	{"id": "vittorie_25", "name": "Veterano", "description": "Vinci 25 partite.", "secret": false},
-	{"id": "vittorie_50", "name": "Esperto", "description": "Vinci 50 partite.", "secret": false},
-	{"id": "vittorie_100", "name": "Centenario", "description": "Vinci 100 partite.", "secret": false},
-	{"id": "jolly_primo", "name": "Jolly!", "description": "Gioca il tuo primo Jolly.", "secret": false},
-	{"id": "imbroglio_primo", "name": "Che Canaglia!", "description": "Gioca il tuo primo Imbroglio.", "secret": false},
-	{"id": "gold_prima", "name": "Spendaccione", "description": "Gioca la tua prima Gold.", "secret": false},
-	{"id": "ottantanove_primo", "name": "Quasi alla fine", "description": "Gioca la tua prima 89.", "secret": false},
-	{"id": "giro_sicuro", "name": "Giro Sicuro", "description": "Attiva e concludi il tuo\nprimo Giro Sicuro.", "secret": false},
-	{"id": "giro_di_vantaggio", "name": "Giro di Vantaggio", "description": "Attiva e concludi il tuo\nprimo Giro di Vantaggio.", "secret": false},
-	{"id": "piu_undici_primo", "name": "Undici!", "description": "Gioca la tua prima +11.", "secret": false},
+	{"id": "dieci_vittorie", "name": tr("ACH_DIECI_VITTORIE_NAME"), "description": tr("ACH_DIECI_VITTORIE_DESC"), "secret": false},
+	{"id": "vittorie_25", "name": tr("ACH_VITTORIE_25_NAME"), "description": tr("ACH_VITTORIE_25_DESC"), "secret": false},
+	{"id": "vittorie_50", "name": tr("ACH_VITTORIE_50_NAME"), "description": tr("ACH_VITTORIE_50_DESC"), "secret": false},
+	{"id": "vittorie_100", "name": tr("ACH_VITTORIE_100_NAME"), "description": tr("ACH_VITTORIE_100_DESC"), "secret": false},
+	{"id": "jolly_primo", "name": tr("ACH_JOLLY_PRIMO_NAME"), "description": tr("ACH_JOLLY_PRIMO_DESC"), "secret": false},
+	{"id": "imbroglio_primo", "name": tr("ACH_IMBROGLIO_PRIMO_NAME"), "description": tr("ACH_IMBROGLIO_PRIMO_DESC"), "secret": false},
+	{"id": "gold_prima", "name": tr("ACH_GOLD_PRIMA_NAME"), "description": tr("ACH_GOLD_PRIMA_DESC"), "secret": false},
+	{"id": "ottantanove_primo", "name": tr("ACH_OTTANTANOVE_PRIMO_NAME"), "description": tr("ACH_OTTANTANOVE_PRIMO_DESC"), "secret": false},
+	{"id": "giro_sicuro", "name": tr("ACH_GIRO_SICURO_NAME"), "description": tr("ACH_GIRO_SICURO_DESC"), "secret": false},
+	{"id": "giro_di_vantaggio", "name": tr("ACH_GIRO_DI_VANTAGGIO_NAME"), "description": tr("ACH_GIRO_DI_VANTAGGIO_DESC"), "secret": false},
+	{"id": "piu_undici_primo", "name": tr("ACH_PIU_UNDICI_PRIMO_NAME"), "description": tr("ACH_PIU_UNDICI_PRIMO_DESC"), "secret": false},
 	# --- 12-23: SECRET (description visible only when unlocked) ---
-	{"id": "carta_della_vittoria", "name": "Carta della Vittoria", "description": "Vinci con una +11.", "secret": true},
-	{"id": "trasformista", "name": "Trasformista", "description": "Trasforma una +11 in Gold.", "secret": true},
-	{"id": "per_un_soffio", "name": "Per un soffio", "description": "Perdi una partita mentre sei\nil Giocatore in Vantaggio.", "secret": true},
-	{"id": "stratega", "name": "Stratega", "description": "Usa il rimbalzo per togliere la\nvittoria al giocatore successivo.", "secret": true},
-	{"id": "imbroglione", "name": "Imbroglione!", "description": "Inizia un turno con tre carte\nImbroglio in mano.", "secret": true},
-	{"id": "oro_puro", "name": "Oro puro", "description": "Inizia un turno con tre carte\nGold in mano.", "secret": true},
-	{"id": "cascata_d_oro", "name": "Cascata d'oro", "description": "Inizia un turno con tre carte\n89 in mano.", "secret": true},
-	{"id": "imbattibile", "name": "Imbattibile", "description": "Inizia un turno con tre carte\n+11 in mano.", "secret": true},
-	{"id": "contromossa", "name": "Contromossa", "description": "Vinci dopo aver utilizzato un\nImbroglio nel turno precedente.", "secret": true},
-	{"id": "jolly_strategico", "name": "Jolly strategico", "description": "Vinci una partita dopo aver\nutilizzato un Jolly.", "secret": true},
-	{"id": "oro_vincente", "name": "Oro vincente", "description": "Vinci una partita mentre sei\nl'attivatore di un Giro Sicuro.", "secret": true},
-	{"id": "all_ultimo_turno", "name": "All'ultimo turno", "description": "Vinci proprio nel turno finale\ndi un Giro di Vantaggio.", "secret": true},
+	{"id": "carta_della_vittoria", "name": tr("ACH_CARTA_DELLA_VITTORIA_NAME"), "description": tr("ACH_CARTA_DELLA_VITTORIA_DESC"), "secret": true},
+	{"id": "trasformista", "name": tr("ACH_TRASFORMISTA_NAME"), "description": tr("ACH_TRASFORMISTA_DESC"), "secret": true},
+	{"id": "per_un_soffio", "name": tr("ACH_PER_UN_SOFFIO_NAME"), "description": tr("ACH_PER_UN_SOFFIO_DESC"), "secret": true},
+	{"id": "stratega", "name": tr("ACH_STRATEGA_NAME"), "description": tr("ACH_STRATEGA_DESC"), "secret": true},
+	{"id": "jolly_strategico", "name": tr("ACH_JOLLY_STRATEGICO_NAME"), "description": tr("ACH_JOLLY_STRATEGICO_DESC"), "secret": true},
+	{"id": "oro_vincente", "name": tr("ACH_ORO_VINCENTE_NAME"), "description": tr("ACH_ORO_VINCENTE_DESC"), "secret": true},
+	{"id": "all_ultimo_turno", "name": tr("ACH_ALL_ULTIMO_TURNO_NAME"), "description": tr("ACH_ALL_ULTIMO_TURNO_DESC"), "secret": true},
+	{"id": "contromossa", "name": tr("ACH_CONTROMOSSA_NAME"), "description": tr("ACH_CONTROMOSSA_DESC"), "secret": true},
+	{"id": "imbroglione", "name": tr("ACH_IMBROGLIONE_NAME"), "description": tr("ACH_IMBROGLIONE_DESC"), "secret": true},
+	{"id": "oro_puro", "name": tr("ACH_ORO_PURO_NAME"), "description": tr("ACH_ORO_PURO_DESC"), "secret": true},
+	{"id": "cascata_d_oro", "name": tr("ACH_CASCATA_D_ORO_NAME"), "description": tr("ACH_CASCATA_D_ORO_DESC"), "secret": true},
+	{"id": "imbattibile", "name": tr("ACH_IMBATTIBILE_NAME"), "description": tr("ACH_IMBATTIBILE_DESC"), "secret": true},
 ]
 
 
@@ -199,7 +217,7 @@ func _make_achievement_item(a):
 	desc.size_flags_vertical = Control.SIZE_EXPAND
 
 	if is_secret and not is_unlocked:
-		desc.text = "Bloccato"
+		desc.text = tr("LOCKED")
 	else:
 		desc.text = a["description"]
 

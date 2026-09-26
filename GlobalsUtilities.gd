@@ -4,6 +4,7 @@ extends Node
 # Emitted when an achievement is actually newly unlocked (was previously locked).
 # Main.tscn wires its UnlockPopup notification to this signal.
 signal achievement_unlocked(achievement_id)
+signal language_changed(locale_code)
 
 onready var sr_active = false
 onready var music_play = true
@@ -159,18 +160,33 @@ func LoadSavedData():
 		var music_volume = config.get_value("AUDIO", "music_volume", 0.6)
 		var sfx_volume = config.get_value("AUDIO", "sfx_volume", 0.4)
 		OS.window_fullscreen = fs_value
-		options._on_set_language(0, lang)
+		set_language(lang)
 		options._on_CheckFullScreen_toggled(fs_value)
 		options._on_CheckMusic_value_changed(music_volume * 10)
 		options._on_CheckSFX_value_changed(sfx_volume * 10)
 		_load_stats_from_config()
 	else:
 		print("G LOAD ELSE")
-		options._on_set_language(0, currLanguage)
+		set_language(currLanguage)
 		options._on_CheckFullScreen_toggled(fullscreen)
 		AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Music"), linear2db(0.6))
 		AudioServer.set_bus_volume_db(AudioServer.get_bus_index("SFX"), linear2db(0.4))
 		_load_stats_from_config()
+
+# --- Localizzazione: mappa il nome lingua salvato a un locale di TranslationServer
+func set_language(name):
+	var new_name = str(name)
+	currLanguage = new_name
+	if languageNode != null:
+		languageNode.text = new_name
+	var code = _locale_code_for(new_name)
+	TranslationServer.set_locale(code)
+	emit_signal("language_changed", code)
+
+func _locale_code_for(name):
+	if str(name) == "English":
+		return "en"
+	return "it"
 
 # ---------------------------------------------------------------------------
 # Stats & achievements — persistence (reuses the shared ConfigFile)

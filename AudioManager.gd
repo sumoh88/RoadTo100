@@ -90,7 +90,7 @@ var currValue = 0
 # =========================
 export(float) var master_volume: float = 1.0
 export(float) var music_volume: float = 0.01
-export(float) var sfx_volume: float = 0.15
+export(float) var sfx_volume: float = 0.35
 export(float) var sfx2d_volume: float = 0.5
 export(float) var stemsVolume: float = 0.7
 

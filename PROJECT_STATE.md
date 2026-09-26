@@ -1,6 +1,6 @@
 # RoadTo100 — Stato Progetto
 
-> Aggiornato al: 24 settembre 2026
+> Aggiornato al: 26 settembre 2026
 > Scopo: documento di avvio per future sessioni di sviluppo.
 
 ---
@@ -32,7 +32,8 @@ Il progetto è composto da due codebase separati:
 | **Caricamento musicale su Android** | ✅ Canzone casuale scelta da **elenco esplicito** (necessario perché il listing su `res://` non funziona in APK) — attualmente solo `CardTrickLoop` |
 | **SplashScreen** | ✅ Animazione logo al primo avvio (fade-in 0.7s / display 1.5s / fade-out 0.7s), saltabile con un tasto, poi → MainMenu |
 | **Modalità Tutorial (1A + 1B)** | ✅ Modalità guidata "Come si gioca": popup con overlay bloccante, navigazione Prosegui/Fine, demo deterministica per step (scripted scenario, rewind, popup reali di scelta) |
-| **Opzioni** | ✅ Schermata `OptionMenu.tscn`/`.gd` raggiungibile da [Opzioni] della MainMenu: fullscreen ON/OFF, volumi Music/SFX, salvataggio/dispersione dati (`deleteData`). UI e funzionalità presenti; **la selezione lingua IT/EN è il prossimo lavoro principale** (vedi note) |
+| **Opzioni** | ✅ Schermata `OptionMenu.tscn`/`.gd` raggiungibile da [Opzioni] della MainMenu: lingua IT/EN, fullscreen ON/OFF, volumi Music/SFX, deleteData. UI e funzionalità complete (lingua verificata 26/09) |
+| **Localizzazione IT/EN** | ✅ **Completata e verificata (26/09 2026)** — `TranslationServer` + importazione editor del CSV (`translations/test.csv`) → risorse `test.it.translation` / `test.en.translation`; 63 chiavi, nessuna mancante; cambio lingua senza riavvio; i vecchi `.po` sono stati eliminati dal progetto (vedi sezione Localizzazione) |
 | **Sistema Salvataggio** | ✅ `GlobalsUtilities.SaveData()` / `LoadSavedData()` con `ConfigFile` (`RT100.cfg`, `user://RT100.cfg` su Android). Load chiamata da `GlobalsUtilities._ready()` (avvio) e save dal ritorno al menu delle Opzioni. Persiste lingua, fullscreen, volumi **e statistiche/traguardi** |
 | **Statistiche** | ✅ Schermata `Stats.tscn` + `Stats.gd`: 7 righe (partite giocate/vinte %, corrente/miglior serie, vittoria più veloce, Giri di Vantaggio, Giri Sicuri); valori letti a runtime da `GlobalsUtilities.stats` via `_update_stats_display()` (nessun placeholder) |
 | **Traguardi** | ✅ Lista di **23 traguardi** (fonte unica = array `achievements` in `Stats.gd`). Modificata manualmente: **rimossi** `prima_vittoria` e `cinque_vittorie`; **aggiunti** `oro_puro` e `imbroglione`. 11 non-secret + 12 secret (descrizione visibile solo dopo unlock). Condizioni: carte primordiali, mani al turno, rimbalzo/GdV, vittoria; Giro Sicuro/Giro di Vantaggio = attivazione locale (contatore) + conclusione (traguardo) |
@@ -107,12 +108,39 @@ Torna al Menu:
 2. **Modifica Opzioni**: ogni controllo di `OptionMenu` scrive in `config` (`set_value`) e applica l'effetto subito (OS.fullscreen, bus volume).
 3. **Salvataggio**: `_on_BackMenuButton_pressed()` delle Opzioni → `GlobalsUtilities.SaveData()` → `config.save(config_path)`, poi ritorno a `MainMenu.tscn`.
 
-### ⚠️ Problema noto: scelta lingua non funzionante
-- `OptionMenu._on_set_language(opSymbol, lang)` calcola l'indice da `GlobalsUtilities.currLanguage` (via `language.find(currLanguage)`), ignora di fatto il parametro `lang` passato e riscrive `currLanguage`/`languageNode.text` dall'indice calcolato.
-- Conseguenza: al caricamento (`_on_set_language(0, saved_lang)`) la lingua salvata viene scritta nel config ma poi sovrascritta dall'indice di `currLanguage` (sempre "Italiano" all'avvio), quindi la lingua non cambia correttamente.
-- **Da risolvere** nella prossima fase dedicata; per ora la selezione IT/EN è inaffidabile (è il prossimo lavoro principale — vedi "TODO rimasti").
+### Cambio lingua IT/EN (funzionante, verificato 26/09)
+- **Flusso:** pulsanti prev/next in `OptionMenu` → `GlobalsUtilities.set_language(name)` → `currLanguage` aggiornato + `TranslationServer.set_locale(code)` + signal `language_changed(code)`. I listener (`MainMenu`, `Main`, `Stats`, `TurnPresenter`, `OptionMenu`) riapplicano i propri `tr()` nel handler: **nessun riavvio**.
+- **Codifica locale:** `GlobalsUtilities._locale_code_for()` — "English" → `en`, altrimenti `it`.
+- **Persistenza:** `LANGUAGE/language` ("Italiano"/"English") in `RT100.cfg` (desktop) / `user://RT100.cfg` (Android); applicata da `LoadSavedData()` all'avvio.
 
 ---
+
+## Localizzazione IT/EN — completata e verificata (26/09 2026)
+
+**Sistema:** `TranslationServer` (Godot 3.4) + CSV importato dall'editor.
+
+- **Fonte unica:** `translations/test.csv` — header `KEY,it,en` + **63 chiavi** (55 base + 8 aggiunte successivamente: `STAT_BACK`, `CANCEL_BTN`, `ACTION_PREV`, `ACTION_SHOW`, `ACTION_NEXT`, `ACTION_END`, `TUT_STEP1_NAME`, `TUT_STEP1_DESC`).
+- **Importazione:** editor Godot 3.4.4 → importer `csv_translation` → risorse binarie `translations/test.it.translation` + `test.en.translation` (+ `test.csv.import`).
+- **Registrazione:** project.godot, sezione `[locale]` → `translations=PoolStringArray( "res://translations/test.en.translation", "res://translations/test.it.translation" )`. I riferimenti ai vecchi `.po` sono stati rimossi; i file `it.po`/`en.po` sono stati **eliminati** dal progetto.
+- **Cambio lingua:** Opzioni → `set_language()` → `TranslationServer.set_locale()` + `language_changed` → MainMenu/Main/Stats/TurnPresenter/OptionMenu riapplicano i `tr()`; lingua persistita in config e ripristinata all'avvio.
+- **Verifica (26/09):** probe headless post-eliminazione `.po`: `LOADED_LOCALES: [[en, it]]`; IT `MENU_PLAY`=GIOCA / EN `MENU_PLAY`=PLAY; IT/EN `MENU_PLAY_SUB` corretti. Cross-check codice↔CSV: 63 chiavi usate da `tr()`, **0 mancanti**, 0 extra.
+
+**Chiavi per area (63):**
+
+| Area | Chiavi |
+|---|---|
+| Main Menu | 8 — `MENU_PLAY`, `MENU_PLAY_SUB`, `MENU_STATS`, `MENU_ONLINE`, `MENU_HOW_TO_PLAY`, `MENU_SHOP`, `MENU_OPTIONS`, `MENU_QUIT` |
+| Opzioni | 7 — `OPT_LANGUAGE_LABEL` … `OPT_DELETE_DIALOG` |
+| Pulsanti generici / popup | `YES`, `NO`, `CANCEL`, `CANCEL_BTN` |
+| Gioco / HUD e popup | 15 — `HAND_REMAINED` … `DEMO_AUTO` (turno, badge giro, azioni, scelta valore, Game Over, reshuffle, demo) |
+| Statistiche / Traguardi | 10 — `STAT_HEADER` … `ACH_HEADER` (9) + `STAT_BACK` |
+| Testi dinamici | 9 — `TURN_PREFIX`, `WINNER_FMT`, `TURN_OF`, `YOUR_TURN`, `CHOOSE_VALUE_FOR`, `CHOOSE_BLOCK_TYPE`, `FASTEST_WIN_LABEL`, `STAT_NOT_APPLICABLE`, `LOCKED` |
+| Feedback / tip | 4 — `TIP_BLOCKED_LOW`, `TIP_BLOCKED_SAF`, `TIP_BLOCKED_GDV`, `TIP_SELECT_CARD` |
+| Tutorial (step 1 + nav) | 6 — `ACTION_PREV`, `ACTION_SHOW`, `ACTION_NEXT`, `ACTION_END`, `TUT_STEP1_NAME`, `TUT_STEP1_DESC` |
+
+**Testi non coperti (hardcoded, da valutare):**
+- Passi tutorial 2–6: contenuti hardcoded in `TutorialController._build_steps()` (solo il step 1 è via chiavi).
+- Nomi/descrizioni traguardi: stringhe italiane dentro l'array `achievements` di `Stats.gd` (dati, non `tr()`): restano italiane anche in modalità EN.
 
 ## Statistiche, Traguardi e Notifiche (completate)
 
@@ -381,38 +409,50 @@ Il sistema di scoring è comune; solo i pesi variano. **Nota**: non esiste più 
 | Board | `tests/board_test.gd` | 41 | ✅ 0 FAIL (pile entro limiti jitter ±7px/~±2.5°) |
 | Shadow / Pile Presentation | `tests/shadow_integration_test.gd/.tscn` | 20 | ✅ 0 FAIL (ombra non circolare, 1/pila, jitter pile, ombre CPU) |
 | Fan Geometry (CPU) | `tests/fan_geometry_test.gd/.tscn` | 7 | ✅ 0 FAIL (ventaglio carte CPU) |
-| GameController | `tests/game_controller_test.gd` | 238 | ✅ 0 FAIL (incl. GdV blocking, popup re-open, race condition) |
-| Card Selection | `tests/card_selection_test.gd` | 24/3 | 🔴 3 FAIL (catena click→GC: stato `CARD_SELECTED`, card_id salvato, Play; il fix strutturale `HUDLayer.mouse_filter=IGNORE` passa — da investigare separatamente) |
+| GameController | `tests/game_controller_test.gd` | 238 | ⚠️ 237/1 — 1 FAIL `HR no popup adv player`: **test obsoleta** (aspettativa vecchia regola GdV: reset solo non-attivatori). Il comportamento GDScript corrente è quello corretto per la nuova regola (anche il Giocatore in Vantaggio riceve HandResetPopup) |
+| Card Selection | `tests/card_selection_test.gd` | 27/0 | ✅ VERIFICATO (26/09): root cause reale = gap di wiring nel harness (`_find_presenters()` legge `current_scene` ≠ Main → connessione `card_selected`→GC mai stabilita in headless) + guardia null su `_turn.show_tip("")` in `_on_card_selected`. Catena click→GC completa funziona end-to-end |
 | CardAnimator | `tests/card_animator_test.gd` | 5 | ✅ 0 FAIL |
 | CardAnimator Multi-Player | `tests/card_animator_test2.gd` | 20 | ✅ 0 FAIL |
 | Demo Integrazione | `tests/demo_integration_test.gd` | 5 | ⚠️ flaky (partite casuali; occasionalmente >200 turni senza vincitore — preesistente) |
 | Demo Verifica Eventi | `tests/demo_verification_test.gd` | 9 | ✅ 0 FAIL |
 | Manual Game (1H+3C) | `tests/manual_game_test.gd` | 26 | ✅ 0 FAIL |
 | Manual Game Smoke | `tests/manual_game_smoke.tscn` | — | ✅ PASS |
+| Manual Game Full (legacy) | `tests/manual_game_full.gd/.tscn` | — | 🔴 stale: cerca ManualGame come figlio diretto di Main (ora è sotto GameController); driver assume automazione CPU su tutti i turni (il turno umano pausa). Copertura attuale: manual_game_smoke ✅ + manual_game_test ✅ |
+| Turn Timing (legacy) | `tests/turn_timing_test.gd/.tscn` | — | 🔴 stale: stesso problema di percorso ManualGame + driver; copertura equivalente già in manual_game_smoke |
+| Manual Game Debug (scratch) | `tests/manual_game_debug.gd/.tscn` | 0/1 | 🔴 driver diagnostico con defecto harness reale: GameController creato con `.new()` mai aggiunto all'albero → `_ready()` non parte → provider non inizializzato |
 | +11 Gold Transformation | `tests/plus11_gold_transformation_test.gd` | 3 | ✅ 0 FAIL (Gold chain crea nuova Gold) |
 | AI Decisioni Base | `tests/ai_test.gd` | 3 | ✅ 0 FAIL (preferenza alta, Gold, Gold chain) |
 | AI Avanzate | `tests/ai_advanced_test.gd` | 7 | ✅ 0 FAIL (vittoria, Jolly strategico, bounce, Imbroglio, hold-back +11) |
 | Reset Hand Rule | `tests/reset_hand_rule_test.gd` | 3 | ✅ 0 FAIL (GS vietato, GdV una volta) |
-| Tutorial Mode (1A) | `tests/tutorial_test.gd` | 68/3 | ⚠️ 3 FAIL — **WIP tutorial**: nuovo step "plate" in testa a `_build_steps()` sposta indici + setup; NON causato da stats/notifiche |
+| Tutorial Mode (1A) | `tests/tutorial_test.gd` | 66/5 | ⚠️ 5 FAIL — **WIP tutorial**: contenuto step "plate"/setup non definitivo; NON causato da stats/notifiche |
 | Scripted Demo (1B) | `tests/scripted_demo_test.gd` | 22/7 | 🔴 7 FAIL — **WIP**: mani/piatto delle demo allineati al nuovo ordine step in corso; NON causati da stats/notifiche |
-| Stats & Achievements | `tests/stats_achievements_test.gd` | 69 | ✅ 0 FAIL (contatori GS/GdV, attivazione locale/avversaria, conclusione senza doppio incremento, persistenza save/load, UI display) |
+| Stats & Achievements | `tests/stats_achievements_test.gd` | 69 | ⚠️ 68/1 — 1 FAIL **locale nel test** (non nel gioco): assert su "Vittoria più veloce" hardcode "9 turni" (IT) vs runtime locale en ("9 turns"); `Stats.gd` usa `tr()` correttamente. Fix proposta: assert locale-aware (`tr("FASTEST_WIN_LABEL") % N`) |
 | Achievement Notification | `tests/achievement_notification_test.gd` | 25 | ✅ 0 FAIL (FIFO, ~4s, no reset timer, gated demo/tutorial, descrizioni secret) |
 
 **Test Python:** 93 test totali — 87 in `test_roadto100_rules.py` + 6 in `test_roadto100_ai.py` — tutti OK.
 
-> ⚠️ **Discrepanze test (verificate 24/09):** su 30 suite eseguibili, **27 verdi (exit 0)**, 3 rosse:
-> - `tutorial_test` (68/3) e `scripted_demo_test` (22/7) — causati dal lavoro **WIP** sul tutorial (nuovo step "plate" + setup demo in `TutorialController.gd`), **NON** dai cambiamenti stats/traguardi/notifiche.
-> - `card_selection_test` (24/3) — 3 fallimenti nella catena click→GC (`CARD_SELECTED`, card_id, Play); il fix strutturale `HUDLayer.mouse_filter=IGNORE` passa. Da investigare separatamente (non correlato a stats/traguardi).
+> ⚠️ **Stato test (run fresh 26/09):** su 30 suite eseguibili, **23 verdi (exit 0)**, **7 rosse** — natura di ogni fallimento classificata:
+> - `card_selection_test` — **RISOLTO, 27/0.** Root cause reale (non aspettativa): gap di wiring nel harness (`_find_presenters()` di GameController legge `current_scene` = root test ≠ Main → connessione `card_selected`→GC mai stabilita in headless; tutte le altre suite si connettono esplicitamente) + guardia null mancante su `_turn.show_tip("")` in `_on_card_selected`. Fix: connessione esplicita nel test + guard null in GameController.
+> - `game_controller_test` (237/1) — fallimento `HR no popup adv player` = **aspettativa obsoleta**: il test codifica la vecchia regola GdV (reset_hand solo non-attivatori). Nuova regola confermata: anche il Giocatore in Vantaggio riceve HandResetPopup; comportamento GDScript corrente corretto. Test non aggiornato.
+> - `stats_achievements_test` (68/1) — **defetto nel test, non nel gioco**: assert "Vittoria più veloce" hardcode italiano ("9 turni") mentre runtime locale è en; render usa `tr()` correttamente. Fix proposta: assert locale-aware (`tr("FASTEST_WIN_LABEL") % N`).
+> - `manual_game_full` / `turn_timing_test` — **stale**: cercavano ManualGame come figlio diretto di Main (dopo la ristrutturazione è sotto GameController); il driver assumeva automazione CPU su tutti i turni (il turno umano pausa). Copertura attuale: `manual_game_smoke` ✅ + `manual_game_test` ✅.
+> - `manual_game_debug` — driver scratch/diagnostico, 1 fallimento per defecto harness reale: GameController creato con `.new()` mai aggiunto all'albero → provider non inizializzato.
+> - `tutorial_test` (66/5) e `scripted_demo_test` (22/7) — **WIP a scopo**: contenuto tutorial/demo non definitivo (step "plate"), NON regressioni.
 > - `gs_end_cpu_test.gd` / `sr_end_cpu_test.gd`: file `.gd` presenti **ma senza `.tscn`** → non eseguibili col runner standard (`Godot --path . tests/X.tscn`).
+>
+> **Nota cross-port:** il Python reference (`games/roadto100/rules.py`) codifica ancora la vecchia regola GdV (reset_hand solo non-attivatori); il GDScript segue quella nuova (anche l'advantage player riceve HandResetPopup). Divergenza nota — Python frozen; allineamento richiede aggiornamento di GAME_RULES.md + `rules.py` (da decidere esplicitamente).
 
 ---
 
 ## TODO rimasti
 
-- [ ] **Localizzazione IT/EN** — **prossimo lavoro principale.** Direzione concordata: sistema di localizzazione nativo di Godot (`TranslationServer` + file di traduzione). Non implementare ora; eseguire in una sessione dedicata. (La selezione lingua nelle Opzioni è attualmente inaffidabile — vedi sezione "Opzioni e Salvataggio".)
+- [x] **Localizzazione IT/EN** — **completata e verificata (26/09 2026):** `TranslationServer` + importazione CSV → `test.it.translation` / `test.en.translation`; `.po` eliminati dal progetto; cambio lingua senza riavvio; 63 chiavi usate da `tr()` nel codice, 0 mancanti.
 - [ ] **Popup `deleteDataButton` (Opzioni)** — aggiungere almeno **50 px** di distanza tra il bordo inferiore della finestra del popup e i suoi pulsanti (oggi sono appoggiati al bordo). Usare il **corretto sistema di layout/stile del popup**, senza rompere l'altro popup né il resto del layout.
-- [ ] **Allineamento test tutorial/scripted demo** — `tutorial_test` (68/3) e `scripted_demo_test` (22/7) rossi: causati dal nuovo step "plate" / setup demo WIP in `TutorialController.gd`; da ricalibrare quando il contenuto tutorial sarà definitivo.
-- [ ] **Investigare `card_selection_test` (24/3)** — 3 fallimenti nella catena click→GC (`CARD_SELECTED`, card_id salvato, Play); fix strutturale `HUDLayer.mouse_filter=IGNORE` presente e verde. Verificare se è una regressione del recente cambio di struttura `Main.tscn`/overlay o un limite headless.
+- [ ] **Allineamento test tutorial/scripted demo** — `tutorial_test` (66/5) e `scripted_demo_test` (22/7) rossi: causati dal nuovo step "plate" / setup demo WIP in `TutorialController.gd`; da ricalibrare quando il contenuto tutorial sarà definitivo.
+- [x] **Investigato e risolto `card_selection_test`** (26/09) — 2 fallimenti reali nella catena click→GC: gap di wiring nel harness (connessione `card_selected`→GC mai stabilita in headless, `_find_presenters()` legge `current_scene` ≠ Main) + guardia null su `_turn.show_tip("")` in `GameController._on_card_selected`. Suite ora **27/0**; sweep 30 suite senza regressioni.
+- [ ] **Allineare `game_controller_test` alla nuova regola GdV** — `HR no popup adv player` assevera la vecchia regola (reset solo non-attivatori); nuovo comportamento (anche l'advantage player riceve HandResetPopup) è quello corretto. Aggiornare l'aspettativa del test; valutare allineamento del Python reference (`rules.py`) se si vuole port fedele.
+- [ ] **Rendere locale-aware l'assert UI stats** — `stats_achievements_test`: "Vittoria più veloce" hardcode "9 turni" fallisce con runtime locale en; confrontare contro `tr("FASTEST_WIN_LABEL") % N`.
+- [ ] **Test manual-game stale** — `manual_game_full` / `turn_timing_test`: ManualGame ora sotto GameController (test cercavano un figlio diretto di Main); driver da aggiornare alla struttura attuale o consolidare su `manual_game_smoke` + `manual_game_test`. `manual_game_debug`: driver scratch con provider non creato in harness.
 - [ ] **Test special round (CPU)** — `gs_end_cpu_test.gd` / `sr_end_cpu_test.gd` senza `.tscn`: aggiungere la scena `.tscn` per renderli eseguibili col runner standard.
 - [ ] **Multiplayer**: non iniziato.
 

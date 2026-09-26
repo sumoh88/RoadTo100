@@ -74,6 +74,22 @@ func _has_clicked_conn(card):
 	return false
 
 
+func _wire_card_selection(inst):
+	"""Connect HandPresenter.card_selected -> GameController._on_card_selected.
+
+	In-game this happens automatically in GameController._ready()/_find_presenters(),
+	which walks get_tree().current_scene.get_children(). In the headless harness the
+	test root is the current scene (not Main), so _find_presenters() finds no
+	presenters and never makes the connection — like all integration suites
+	(game_controller_test, manual_game_test, tutorial_test, demo_integration_test)
+	we connect explicitly.
+	"""
+	var hand = inst.get_node_or_null("HandPresenter")
+	var gc = inst.get_node_or_null("GameController")
+	if hand != null and gc != null and hand.has_signal("card_selected"):
+		hand.connect("card_selected", gc, "_on_card_selected")
+
+
 # ===========================================================================
 # 1. Structural fix — HUDLayer must not block the hand
 # ===========================================================================
@@ -362,6 +378,7 @@ func _test_selection_updates_gc_and_play_uses_card_id():
 	var prov = _FakeProvider.new()
 	gc.set_provider(prov)
 	gc._state = 1  # READY_FOR_INPUT
+	_wire_card_selection(inst)
 
 	# Simulate the CardFace emitting "clicked" (as a real mouse click would).
 	hand.emit_signal("card_selected", "inc5_x1")
@@ -404,6 +421,7 @@ func _test_card_face_click_event_selects():
 	})
 	yield(get_tree(), "idle_frame")
 	gc._state = 1  # READY_FOR_INPUT
+	_wire_card_selection(inst)
 
 	var cl = inst.get_node("GameArea/LocalPlayerArea/PlayerHand/CardsLayer")
 	var card = _find_card(cl, "inc9_x1")

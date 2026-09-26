@@ -1,0 +1,132 @@
+KEY,it,en
+MENU_PLAY,GIOCA,PLAY
+MENU_PLAY_SUB,PARTITA VELOCE,QUICK MATCH
+MENU_STATS,STATISTICHE,STATISTICS
+MENU_ONLINE,"GIOCA
+ONLINE","PLAY
+ONLINE"
+MENU_HOW_TO_PLAY,"COME SI
+GIOCA","HOW TO
+PLAY"
+MENU_SHOP,NEGOZIO,SHOP
+MENU_OPTIONS,OPZIONI,OPTIONS
+MENU_QUIT,ESCI DAL GIOCO,QUIT GAME
+OPT_LANGUAGE_LABEL,Lingua:,Language:
+OPT_FULLSCREEN,FullScreen:,FullScreen:
+OPT_MUSIC,Musica:,Music:
+OPT_SFX,SFX:,SFX:
+OPT_BACK,TORNA AL MENU,BACK TO MENU
+OPT_DELETE_BTN,"CANCELLA
+SALVATAGGI","DELETE
+SAVE DATA"
+OPT_DELETE_DIALOG,Vuoi cancellare tutti i dati salvati?,Do you want to delete all saved data?
+YES,Sì,Yes
+NO,No,No
+CANCEL,Annulla,Cancel
+HAND_REMAINED,Rimaste:,Left:
+SR_ADVANTAGE,GIRO DI VANTAGGIO,ADVANTAGE ROUND
+SR_SAFE,GIRO SICURO,SAFE ROUND
+ACTION_PLAY,Gioca,Play
+ACTION_CHANGE,Cambia,Change
+ACTION_BACK,Torna al Menu,Back to Menu
+NEW_GAME,Nuova Partita,New Game
+CHOOSE_VALUE_STATIC,Scegli il valore,Choose value
+GAMEOVER,GAMEOVER,GAME OVER
+STAT_GP,Partite Giocate:,Games Played:
+STAT_GW,Partite Vinte:,Games Won:
+STAT_WS,Vittorie Consecutive:,Win Streaks:
+STAT_BS,Serie Migliore:,Best Series:
+RESHUFFLE_MSG,Nessuna carta Arancione disponibile.\nVuoi cambiare tutta la mano?,No orange cards available.\nReshuffle the whole hand?
+DEMO_AUTO,Demo Automatica (Debug),Auto Demo (Debug)
+STAT_HEADER,STATISTICHE,STATISTICS
+STAT_GP_LBL,Partite giocate:,Games played:
+STAT_GW_LBL,Partite vinte:,Games won:
+STAT_WS_LBL,Vittorie consecutive:,Win streaks:
+STAT_BS_LBL,Miglior serie di vittorie:,Best win streak:
+STAT_FW_LBL,Vittoria più veloce:,Fastest win:
+STAT_GDV_LBL,Giri di Vantaggio attivati:,Advantage Rounds activated:
+STAT_SAF_LBL,Giri Sicuri attivati:,Safe Rounds activated:
+ACH_HEADER,TRAGUARDI,ACHIEVEMENTS
+TURN_PREFIX,Turno %d,Turn %d
+WINNER_FMT,%s vince!,%s wins!
+TURN_OF,Turno di %s,Turn of %s
+YOUR_TURN,Il tuo turno,Your turn
+CHOOSE_VALUE_FOR,Scegli il valore per %s,Choose the value for %s
+CHOOSE_BLOCK_TYPE,Scegli la tipologia da bloccare,Choose the block type
+FASTEST_WIN_LABEL,%d turni,%d turns
+STAT_NOT_APPLICABLE,N/D,N/A
+LOCKED,Bloccato,Locked
+TIP_BLOCKED_LOW,Bloccata: Piatto troppo basso.,Blocked: Plate too low.
+TIP_BLOCKED_SAF,Bloccata: Giro Sicuro,Blocked: Safe Round
+TIP_BLOCKED_GDV,Bloccata: Giro di Vantaggio,Blocked: Advantage Round
+TIP_SELECT_CARD,Seleziona prima una carta,Select a card first
+STAT_BACK,TORNA AL MENU,BACK TO MENU
+CANCEL_BTN,Annulla,Cancel
+ACTION_PREV,Indietro,Back
+ACTION_SHOW,Mostra,Show
+ACTION_NEXT,Continua,Next
+ACTION_END,Fine,Done
+TUT_STEP1_NAME,Il Turno e il Tavolo,Turn and Table
+TUT_STEP1_DESC,"Nel tuo turno puoi scegliere se giocare una carta o rimetterne una nel Mazzo, poi peschi una nuova carta.\nIn basso trovi la tua mano (composta da 3 carte) mentre al centro trovi:\n◌ il Piatto (il punteggio).\n◌ il Mazzo (dal quale si pesca).\n◌ la pila degli Scarti (per le carte giocate).\n\nIl Mazzo è composto da 30 Incremento,\n10 Jolly, 7 Imbroglio, 7 Gold, 3 Gold Speciali 89 e 3 Incrementi Speciali +11. Per un totale di 60 carte.","On your turn, you can choose to play a card or return one to the Deck, then draw a new card.\nAt the bottom, you'll find your hand (made up of 3 cards). In the center, you'll find:\n◌ the Plate (the score).\n◌ the Deck (where you draw your cards).\n◌ the Discard pile (for played cards).\n\nThe Deck is made up of 30 Increments,\n10 Jolly, 7 Cheats (or Imbroglio), 7 Golds, 3 special Golds ""89"", and 3 special Increments ""+11"", for a total of 60 cards."
+TUT_STEP2_NAME,Il Piatto,The Plate
+TUT_STEP2_DESC,"Il Piatto rappresenta il valore condiviso della partita, all'inizio della partita il suo valore è sempre 0.\n\nLe Carte Gold, comprese le Carte Gold Speciali, vengono posizionate nel Piatto e, una volta giocate, rimangono nel Piatto fino al termine della partita. Non vengono mai rimescolate nel Mazzo.\n\nTutte le altre carte giocate vengono posizionate nella Pila degli Scarti.","The Plate represents the shared value of the match; at the start of the match its value is always 0.\n\nGold Cards, including Special Gold Cards, are placed on the Plate and, once played, stay on the Plate until the end of the match. They are never shuffled back into the Deck.\n\nAll other played cards are placed in the Discard Pile."
+TUT_STEP3_NAME,Carte Incremento,Increment Cards
+TUT_STEP3_DESC,"Le carte Incremento aggiungono il loro valore al Piatto.\n\nEsistono Incrementi da +1 a +10.\n\nIl Jolly, quando viene giocato, ti fa scegliere il valore dell'incremento.","Increment Cards add their value to the Plate.\n\nIncrements range from +1 to +10.\n\nThe Jolly, when played, lets you choose its increment value."
+TUT_STEP4_NAME,Carta Imbroglio,Cheats Card
+TUT_STEP4_DESC,L'Imbroglio ti fa scegliere un valore da -15 a +15 (escluso 0).\nPuoi usarlo per aumentare o ridurre il Piatto.\n\nAttenzione:\nL'imbroglio non può essere usato per ottenere una vittoria.\nL'imbroglio non può mai raggiungere o superare 100 o portare il piatto sotto lo 0.,"The Cheat (or Imbroglio) lets you choose a value from -15 to +15 (excluding 0).\nYou can use it to increase or decrease the Plate.\n\nNote:\nA Cheat cannot be used to score a win.\nThe Cheat can never reach or exceed 100, or bring the Plate below 0."
+TUT_STEP5_NAME,Carte Gold,Gold Cards
+TUT_STEP5_DESC,"Le carte Gold impostano il Piatto al loro valore e attivano un Giro Sicuro:\n\nL'attivatore del Giro Sicuro (rappresentato da una stella) sceglie quale tipo di carta bloccare per un intero turno!\n\nSfruttalo a tuo vantaggio per velocizzare o rallentare la partita.\n\nEsiste solo una copia per ogni Gold, e sono:\n12, 23, 34, 45, 56, 67, 78","Gold Cards set the Plate to their value and activate a Safe Round:\n\nThe Safe Round activator (shown by a star) chooses which card type to block for an entire turn!\n\nUse it to your advantage to speed up or slow down the match.\n\nThere is only one copy of each Gold, and they are:\n12, 23, 34, 45, 56, 67, 78"
+TUT_STEP6_NAME,Regola del rimbalzo,Bounce Rule
+TUT_STEP6_DESC,"Se una Carta Incremento porta il Piatto oltre 100, viene applicata la Regola del Rimbalzo:\n\nSei il Piatto supera 100 il valore in eccesso rimbalza indietro!\n\nTieni sempre sott'occhio il valore del Piatto, potresti anche sfruttarlo a tuo vantaggio.","If an Increment Card brings the Plate above 100, the Bounce Rule is applied:\n\nIf the Plate goes above 100, the excess value bounces back!\n\nAlways keep an eye on the Plate's value - you might even use it to your advantage."
+TUT_STEP7_NAME,Carta 89 e Giro di Vantaggio,89 Card and Advantage Round
+TUT_STEP7_DESC,"La carta 89 imposta il Piatto a 89 e avvia il Giro di Vantaggio.\nL'attivatore diventa il Giocatore in Vantaggio fino alla fine del suo prossimo turno:\n\nDurante il Giro di Vantaggio solo il Giocatore in Vantaggio può fare 100 e vincere, inoltre il Giocare in Vantaggio ignora il rimbalzo!\n\nDurante il Giro di Vantaggio si possono giocare solo carte di tipo Incremento.","The 89 Card sets the Plate to 89 and starts an Advantage Round.\nThe activator becomes the Advantage Player until the end of their next turn:\n\nDuring the Advantage Round, only the Advantage Player can make 100 and win, and the Advantage Player ignores the Bounce Rule!\n\nDuring the Advantage Round, only Increment-type cards can be played."
+TUT_STEP8_NAME,Carta +11,+11 Card
+TUT_STEP8_DESC,"La carta +11 è un Incremento Speciale e aggiunge 11 al Piatto.\n\nQuesta carta ignora la regola del rimbalzo e il Giro di Vantaggio, se il piatto è vicino a 100 puoi usarla per vincere subito!\n\nInoltre, se usi la carta +11 subito dopo una carta Gold si trasforma nella Gold successiva attivando così il giro speciale!\n\nNon sprecarla!","The +11 Card is a Special Increment and adds 11 to the Plate.\n\nThis card ignores the Bounce Rule and the Advantage Round; if the Plate is close to 100, you can use it to win right away!\n\nAlso, if you play the +11 Card right after a Gold Card, it transforms into the next Gold in the chain, activating the special round this way!\n\nDon't waste it!"
+TUT_STEP9_NAME,Consigli e combo,Tips and Combos
+TUT_STEP9_DESC,Combina le carte per avvantaggiarti o per svantaggiare gli avversari in modo che sia tu a portare il Piatto a 100.\n\nPer esempio puoi combinare due +11 al momento giusto per vincere.\nOppure prova a usare il Rimbalzo o le Imbroglio per togliere la vittoria a un avversario.,"Combine cards to help yourself or to hurt your opponents so that it is you who bring the Plate to 100.\n\nFor example, you can combine two +11s at the right moment to win.\nOr try using the Bounce Rule or Cheats to steal a win from an opponent."
+ACH_DIECI_VITTORIE_NAME,Esperto,Expert
+ACH_DIECI_VITTORIE_DESC,Vinci 10 partite.,Win 10 matches.
+ACH_VITTORIE_25_NAME,Maestro,Master
+ACH_VITTORIE_25_DESC,Vinci 25 partite.,Win 25 matches.
+ACH_VITTORIE_50_NAME,Veterano,Veteran
+ACH_VITTORIE_50_DESC,Vinci 50 partite.,Win 50 matches.
+ACH_VITTORIE_100_NAME,Centenario,Centenarian
+ACH_VITTORIE_100_DESC,Vinci 100 partite.,Win 100 matches.
+ACH_JOLLY_PRIMO_NAME,Matematico!,Math Whiz!
+ACH_JOLLY_PRIMO_DESC,Gioca il tuo primo Jolly.,Play your first Jolly.
+ACH_IMBROGLIO_PRIMO_NAME,Che Canaglia!,Trickster!
+ACH_IMBROGLIO_PRIMO_DESC,Gioca il tuo primo Imbroglio.,Play your first Cheat.
+ACH_GOLD_PRIMA_NAME,Prodigo!,Prodigal!
+ACH_GOLD_PRIMA_DESC,Gioca la tua prima Gold.,Play your first Gold Card.
+ACH_OTTANTANOVE_PRIMO_NAME,Quasi alla Fine!,Almost at the End!
+ACH_OTTANTANOVE_PRIMO_DESC,Gioca la tua prima 89.,Play your first 89.
+ACH_GIRO_SICURO_NAME,Al Sicuro,Safe and Sound
+ACH_GIRO_SICURO_DESC,Attiva e concludi il tuo\nprimo Giro Sicuro.,Activate and complete your\nfirst Safe Round.
+ACH_GIRO_DI_VANTAGGIO_NAME,In Vantaggio,In the Lead
+ACH_GIRO_DI_VANTAGGIO_DESC,Attiva e concludi il tuo\nprimo Giro di Vantaggio.,Activate and complete your\nfirst Advantage Round.
+ACH_PIU_UNDICI_PRIMO_NAME,Undici!,Eleven!
+ACH_PIU_UNDICI_PRIMO_DESC,Gioca la tua prima +11.,Play your first +11.
+ACH_CARTA_DELLA_VITTORIA_NAME,Carta della Vittoria,Victory Card
+ACH_CARTA_DELLA_VITTORIA_DESC,Vinci con una +11.,Win with a +11.
+ACH_TRASFORMISTA_NAME,Trasformista,Transformer
+ACH_TRASFORMISTA_DESC,Trasforma una +11 in Gold.,Transform a +11 into a Gold Card.
+ACH_PER_UN_SOFFIO_NAME,Per un Soffio,By a Whisker
+ACH_PER_UN_SOFFIO_DESC,Perdi una partita mentre sei\nil Giocatore in Vantaggio.,Lose a match while you are\nthe Advantage Player.
+ACH_STRATEGA_NAME,Stratega,Strategist
+ACH_STRATEGA_DESC,Usa il rimbalzo per togliere la\nvittoria al giocatore successivo.,Use the bounce to take the\nwin from the next player.
+ACH_JOLLY_STRATEGICO_NAME,Calcolatore,Calculator
+ACH_JOLLY_STRATEGICO_DESC,Vinci una partita dopo aver\nutilizzato un Jolly.,Win a match after using a Jolly.
+ACH_ORO_VINCENTE_NAME,Oro Vincente,Victorious Gold
+ACH_ORO_VINCENTE_DESC,Vinci una partita mentre sei\nl'attivatore di un Giro Sicuro.,Win a match while you are\nthe activator of a Safe Round.
+ACH_ALL_ULTIMO_TURNO_NAME,All'ultimo Turno,Final Turn
+ACH_ALL_ULTIMO_TURNO_DESC,Vinci proprio nel turno finale\ndi un Giro di Vantaggio.,Win right on the final turn\nof an Advantage Round.
+ACH_CONTROMOSSA_NAME,Contromossa,Counterstrike!
+ACH_CONTROMOSSA_DESC,Vinci dopo aver utilizzato un\nImbroglio nel turno precedente.,Win after using a Cheat\non the previous turn.
+ACH_IMBROGLIONE_NAME,Imbroglione!,Grand Trickster!
+ACH_IMBROGLIONE_DESC,Inizia un turno con tre carte\nImbroglio in mano.,Start a turn with three\nCheats in hand.
+ACH_ORO_PURO_NAME,Miniera d'Oro,Gold Mine
+ACH_ORO_PURO_DESC,Inizia un turno con tre carte\nGold in mano.,Start a turn with three\nGold Cards in hand.
+ACH_CASCATA_D_ORO_NAME,Cascata d'Oro,Golden Cascade
+ACH_CASCATA_D_ORO_DESC,Inizia un turno con tre carte\n89 in mano.,Start a turn with three\n89 Cards in hand.
+ACH_IMBATTIBILE_NAME,Imbattibile,Invincible!
+ACH_IMBATTIBILE_DESC,Inizia un turno con tre carte\n+11 in mano.,Start a turn with three\n+11 Cards in hand.

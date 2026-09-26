@@ -8,6 +8,7 @@ signal cancel_pressed
 
 var _turn_label = null
 var _instruction_label = null
+var _warning_label = null
 var _advantage_label = null
 var _play_button = null
 var _change_button = null
@@ -20,6 +21,7 @@ func _ready():
 	if m == null: return
 	var ga = _child(m, "GameArea"); if ga == null: return
 	var hud = _child(ga, "HUDLayer")
+	_warning_label = _child(hud, "InstructionLabel")
 	var ovrl = _child(m, "OverlayLayer")
 	var gop = _child(ovrl, "GameOverPopup")
 	var goc = _child(gop, "GameOverContainer")
@@ -43,6 +45,16 @@ func _ready():
 	var ol = _child(m, "OverlayLayer")
 	if not GlobalsUtilities.tutorialStarted:
 		if ol != null: _game_over_popup = _child(ol, "GameOverPopup")
+	_localize()
+	GlobalsUtilities.connect("language_changed", self, "_on_language_changed")
+
+func _localize():
+	if _play_button != null: _play_button.text = tr("ACTION_PLAY")
+	if _change_button != null: _change_button.text = tr("ACTION_CHANGE")
+	if _cancel_button != null: _cancel_button.text = tr("CANCEL")
+
+func _on_language_changed(_locale):
+	_localize()
 
 
 func _node_up(name):
@@ -71,8 +83,8 @@ func _on_cancel():
 
 
 func show_tip(msg):
-	if _instruction_label != null:
-		_instruction_label.text = msg
+	if _warning_label != null:
+		_warning_label.text = msg
 
 
 func apply_snapshot(s):
@@ -82,15 +94,15 @@ func apply_snapshot(s):
 	var sr = s.get("special_round_active", false); var lid = s.get("local_player_id", "p1")
 	var acts = s.get("available_actions", [])
 	var sr_type = s.get("special_round_type", "")
-	if _turn_label != null: _turn_label.visible = t > 0; _turn_label.text = "Turno " + str(t)
+	if _turn_label != null: _turn_label.visible = t > 0; _turn_label.text = tr("TURN_PREFIX") % t
 	# F7: top indicator distinguishes the active Special Round type.
 	if _advantage_label != null:
 		_advantage_label.visible = sr
 		if sr:
 			if sr_type == "safe":
-				_advantage_label.text = "GIRO SICURO"
+				_advantage_label.text = tr("SR_SAFE")
 			else:
-				_advantage_label.text = "GIRO DI VANTAGGIO"
+				_advantage_label.text = tr("SR_ADVANTAGE")
 	if _instruction_label != null:
 		if w != null:
 			var wn = ""
@@ -100,14 +112,14 @@ func apply_snapshot(s):
 				if player.get("id", "") == w:
 					wn = player.get("name", "")
 					break
-			_instruction_label.text = wn + " vince!"
+			_instruction_label.text = tr("WINNER_FMT") % wn
 		else:
 			# F7: the turn info is never replaced by the Special Round —
 			# the Special Round type lives in _advantage_label.
 			var ci = s.get("current_player_index", 0); var pl = s.get("players", [])
 			if ci < pl.size():
-				_instruction_label.text = "Turno di " + pl[ci].get("name", "Giocatore")
-				if pl[ci].get("id", "") == lid: _instruction_label.text = "Il tuo turno"
+				_instruction_label.text = tr("TURN_OF") % pl[ci].get("name", "Giocatore")
+				if pl[ci].get("id", "") == lid: _instruction_label.text = tr("YOUR_TURN")
 	var hp = false; var hc = false
 	for a2 in acts:
 		var at = a2.get("action_type","")

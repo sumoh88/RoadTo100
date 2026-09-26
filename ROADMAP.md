@@ -73,7 +73,7 @@
 | DemoButton | In `Main.tscn` | ✅ Funzionante |
 | **GameController** | `scripts/GameController.gd` | ✅ Implementato (E1–E8) |
 | **Menu/Opzioni** | | |
-| OptionMenu | `OptionMenu.tscn` + `OptionMenu.gd` | ✅ Schermata Opzioni: fullscreen, volumi Music/SFX, deleteData; **lingua IT/EN = prossimo lavoro principale** |
+| OptionMenu | `OptionMenu.tscn` + `OptionMenu.gd` | ✅ Schermata Opzioni: lingua IT/EN, fullscreen, volumi Music/SFX, deleteData (completata e verificata 26/09) |
 | Salvataggio config | `GlobalsUtilities.gd` (`SaveData`/`LoadSavedData`) | ✅ ConfigFile `RT100.cfg` (user:// su Android) per lingua/fullscreen/volumi + statistiche/traguardi (sezioni `STATS`, `ACHIEVEMENTS`) |
 | **Statistiche & Traguardi** | | |
 | Stats UI | `Stats.tscn` + `Stats.gd` | ✅ 7 righe statistiche (da runtime, nessun placeholder) + lista di **23 traguardi** (fonte unica array `achievements`; modificata manualmente: rimossi `prima_vittoria`/`cinque_vittorie`, aggiunti `oro_puro`/`imbroglione`) |
@@ -183,16 +183,19 @@ Queste decisioni NON devono essere rimesse in discussione:
 | **Board** | `tests/board_test.gd` + `.tscn` | Plateau visual stack, gold/non-gold separation, opponent centering, rotation setup, chronological order, jitter pile entro limiti | ✅ 41 assert, 0 FAIL |
 | **Shadow / Pile Presentation** | `tests/shadow_integration_test.gd` + `.tscn` | Ombra non circolare (SDF), 1 ombra/pila, jitter Piatto/Scarti entro limiti, ombre CPU 1-per-carta | ✅ 20 assert, 0 FAIL |
 | **Fan Geometry (CPU)** | `tests/fan_geometry_test.gd` + `.tscn` | Geometria ventaglio carte CPU (rotazione e convergenza dei bordi) | ✅ 7 assert, 0 FAIL |
-| **GameController** | `tests/game_controller_test.gd` + `.tscn` | Stati, card selection, bottoni, popup (incl. GS pre-azione, HandResetPopup GdV-only), animazioni, input GUI reale, Jolly/Imbroglio choices, race condition "Nuova partita" (5 test Generation ID) | ✅ 238 assert, 0 FAIL |
+| **GameController** | `tests/game_controller_test.gd` + `.tscn` | Stati, card selection, bottoni, popup (incl. GS pre-azione, HandResetPopup GdV), animazioni, input GUI reale, Jolly/Imbroglio choices, race condition "Nuova partita" (5 test Generation ID) | ⚠️ 237/1 — 1 FAIL `HR no popup adv player`: **test obsoleta** (vecchia regola GdV: reset solo non-attivatori); nuovo comportamento (anche advantage player riceve HandResetPopup) è corretto. Python reference ancora su vecchia regola |
 | **CardAnimator** | `tests/card_animator_test.gd` + `.tscn` | FIFO, segnali start/finish, headless fallback, busy guard | ✅ 5 assert, 0 FAIL |
 | **CardAnimator MP** | `tests/card_animator_test2.gd` + `.tscn` | find_card per player, opponent, clone, dest, hide_drawn, event routing | ✅ 20 assert, 0 FAIL |
 | **Demo Integrazione** | `tests/demo_integration_test.gd` + `.tscn` | GameController + LocalGameEngine reale, 4 giocatori, azioni automatiche (incl. `blocked_type` GS) | ⚠️ flaky (partite casuali; occasionalmente >200 turni senza vincitore — preesistente) |
 | **Demo Verifica** | `tests/demo_verification_test.gd` + `.tscn` | Eventi per tutti e 4 i giocatori, struttura eventi | ✅ 9 assert, 0 FAIL |
 | **Manual Game (1H+3C)** | `tests/manual_game_test.gd` + `.tscn` | ManualGame: CPU auto, pausa turno umano, esclusione reciproca, overlay non blocca input | ✅ 26 assert, 0 FAIL |
 | **Manual Game Smoke** | `tests/manual_game_smoke.tscn` | Verifica wiring reale: pulsante → ManualGame → CPU avanza | ✅ PASS |
-| **Tutorial Mode (1A)** | `tests/tutorial_test.gd` + `.tscn` | Routing tutorial, input bloccato, navigazione, "Mostra" demo deterministica | ⚠️ 68/3 — WIP tutorial (nuovo step "plate") |
+| **Manual Game Full (legacy)** | `tests/manual_game_full.gd/.tscn` | — | 🔴 stale: cercava ManualGame come figlio diretto di Main (ora sotto GameController) + driver che assume automazione completa |
+| **Turn Timing (legacy)** | `tests/turn_timing_test.gd/.tscn` | — | 🔴 stale: stesso problema di percorso + driver; copertura equivalente già in manual_game_smoke |
+| **Manual Game Debug (scratch)** | `tests/manual_game_debug.gd/.tscn` | — | 🔴 driver diagnostico: GameController `.new()` mai aggiunto all'albero → provider non inizializzato |
+| **Tutorial Mode (1A)** | `tests/tutorial_test.gd` + `.tscn` | Routing tutorial, input bloccato, navigazione, "Mostra" demo deterministica | ⚠️ 66/5 — WIP tutorial (nuovo step "plate") |
 | **Scripted Demo (1B)** | `tests/scripted_demo_test.gd` + `.tscn` | Stato iniziale, sequenze per step, rewind, popup reali, riproducibilità | 🔴 22/7 — WIP tutorial/demo setup |
-| **Stats & Achievements** | `tests/stats_achievements_test.gd` + `.tscn` | Contatori GS/GdV, attivazione locale/avversaria, conclusione senza doppio incremento, persistenza save/load, UI display | ✅ 69 assert, 0 FAIL |
+| **Stats & Achievements** | `tests/stats_achievements_test.gd` + `.tscn` | Contatori GS/GdV, attivazione locale/avversaria, conclusione senza doppio incremento, persistenza save/load, UI display | ⚠️ 68/1 — 1 FAIL **locale nel test**, non nel gioco: assert UI hardcode italiano ("9 turni") vs runtime locale en; render usa `tr()` correttamente |
 | **Achievement Notification** | `tests/achievement_notification_test.gd` + `.tscn` | FIFO, ~4s, no reset timer, gated demo/tutorial, descrizioni secret | ✅ 25 assert, 0 FAIL |
 
 ---
@@ -428,16 +431,24 @@ Dettagli completi di F1–F8 in `PROJECT_STATE.md` sezione "Passaggio F".
 
 ### Attività successive al Passaggio F
 
-1. ~~**Fix selezione carte nel turno umano**~~ — **RISOLTO** (HUDLayer.mouse_filter=IGNORE). ⚠️ `card_selection_test` ora 24/3 (catena click→GC) — da ri-investigare prima della release.
+1. ~~**Fix selezione carte nel turno umano**~~ — **RISOLTO** (HUDLayer.mouse_filter=IGNORE). `card_selection_test` **risolto 27/0** (26/09): gap di wiring nel harness + guardia null su `_turn.show_tip("")` in GameController; sweep 30 suite senza regressioni.
 2. ~~**AI per player_2**~~ — **IMPLEMENTATA** (`games/roadto100/ai.py` + `engine/RoadTo100AI.gd`). Score-based strategic AI integrata in ManualGame.
-3. ~~**SplashScreen + MainMenu ridisegnata + Modalità Tutorial (1A+1B)**~~ — **COMPLETATO** (14 settembre 2026). Demo scriptate deterministiche. ⚠️ Test ora in WIP (tutorial_test 68/3, scripted_demo_test 22/7) per il nuovo step "plate" da inserire — da riallineare al contenuto tutorial definitivo.
+3. ~~**SplashScreen + MainMenu ridisegnata + Modalità Tutorial (1A+1B)**~~ — **COMPLETATO** (14 settembre 2026). Demo scriptate deterministiche. ⚠️ Test ora in WIP (tutorial_test 66/5, scripted_demo_test 22/7) per il nuovo step "plate" da inserire — da riallineare al contenuto tutorial definitivo.
 4. ~~**Statistiche / Traguardi + Notifica sblocco + Game Over**~~ — **IMPLEMENTATA** (24 settembre 2026): schermata Stats (7 righe + 23 traguardi, fonte unica), contatori Giri Sicuro/Vantaggio, notifica `UnlockPopup` FIFO ~4s/no-reset/gated, popup Game Over; persistenza in config (`STATS`, `ACHIEVEMENTS`); pulsante [STATISTICHE] cablato in MainMenu.
-5. ~~**Opzioni + Salvataggio**~~ — **IMPLEMENTATA** (19 settembre 2026): fullscreen, volumi Music/SFX, deleteData, persistenza lingua/fullscreen/volumi/STATS/ACHIEVEMENTS. ⚠️ Lingua IT/EN e spacing `deleteDataButton` restano aperti (punti 8–9).
+5. ~~**Opzioni + Salvataggio**~~ — **IMPLEMENTATA** (19 settembre 2026): fullscreen, volumi Music/SFX, deleteData, persistenza lingua/fullscreen/volumi/STATS/ACHIEVEMENTS. Lingua IT/EN risolta (punto 8). ⚠️ Solo spacing `deleteDataButton` resta aperto (punto 9).
 6. **Migliorie UI/UX** — Texture carte definitive, effetti sonori, animazioni più ricche; pulsanti Online/Shop (solo se nel scope della release 1).
 7. **Stabilizzare `demo_integration_test`** — test flaky (partite casuali >200 turni senza vincitore); rendere deterministico o alzare `max_turns_per_game`.
-8. **Localizzazione IT/EN** — **prossimo lavoro principale**: usare il sistema di localizzazione nativo di Godot (`TranslationServer` + file di traduzione). Non implementare ora; eseguire in una sessione dedicata.
+8. ~~**Localizzazione IT/EN**~~ — **COMPLETATA (26 settembre 2026):** `TranslationServer` + CSV `test.csv` (63 chiavi) → `test.it.translation` / `test.en.translation`; `.po` eliminati dal progetto; cambio lingua senza riavvio verificato (vedi sezione dedicata sotto).
 9. **Popup `deleteDataButton` (Opzioni)** — aggiungere almeno **50 px** di distanza tra il bordo inferiore della finestra del popup e i suoi pulsanti (oggi appoggiati al bordo); usare il **corretto sistema di layout/stile del popup**, senza rompere l'altro popup né il resto del layout.
 10. **Multiplayer** — `RemoteGameAdapter` + networking. Architettura definita, implementazione futura (non necessaria per la release 1 single-player).
+
+### ✅ Localizzazione IT/EN (26 settembre 2026)
+
+- CSV `translations/test.csv` (header `KEY,it,en`, **63 chiavi**: 55 base + `STAT_BACK`, `CANCEL_BTN`, `ACTION_PREV/SHOW/NEXT/END`, `TUT_STEP1_NAME/DESC`).
+- Importazione editor → `test.it.translation` / `test.en.translation`; registrazione in project.godot `[locale]`. Vecchi `.po` eliminati, nessun riferimento residuo.
+- Cambio lingua: `OptionMenu` → `GlobalsUtilities.set_language()` → `TranslationServer.set_locale` + signal; UI ri-applica i `tr()`, lingua persistita in config.
+- Verifica: 0 chiavi mancanti (63 usate da `tr()` = 63 nel CSV); probe headless IT/EN corretta post-eliminazione `.po`.
+- Residui hardcoded: passi tutorial 2–6 e nomi/descrizioni traguardi (dati in `Stats.gd`).
 
 ### Modalità manuale 1 umano + 3 CPU — ✅ Implementata (21 agosto 2026)
 
@@ -453,12 +464,12 @@ Implementata con `scripts/ManualGame.gd`: pulsante "Inizia Partita" in `Main.tsc
 
 ## Come riprendere il lavoro
 
-Apri una nuova chat, chiedi di leggere `PROJECT_STATE.md` e `ROADMAP.md`. Inizia dalla sezione **"Statistiche, Traguardi e Notifiche (completate)"** in `PROJECT_STATE.md` per il contesto dell'ultimo lavoro, poi prosegui dalla prossima attività nella roadmap (Localizzazione IT/EN e spacing `deleteDataButton`).
+Apri una nuova chat, chiedi di leggere `PROJECT_STATE.md` e `ROADMAP.md`. Inizia dalla sezione **"Stato test"** in `PROJECT_STATE.md` per la classificazione attuale delle suite rosse, poi prosegui dalla prossima attività nella roadmap (spacing `deleteDataButton`, riallineamento test tutorial/scripted demo, allineamenti test: GdV reset, stats locale, manual-game stale).
 
-**Stato test (verificato 24/09):** 27 su 30 suite verdi (exit 0). Rosse: `card_selection_test` (24/3), `tutorial_test` (68/3) e `scripted_demo_test` (22/7) — quest'ultima due causate dal nuovo step "plate" WIP nel tutorial; `card_selection` da ri-investigare. Eseguire i test dopo ogni modifica:
+**Stato test (run fresh 26/09):** 23 su 30 suite verdi (exit 0). `card_selection_test` risolto **27/0**. Rosse: `tutorial_test` (66/5) e `scripted_demo_test` (22/7) — WIP a scopo, contenuto tutorial/demo non definitivo; `game_controller_test` (237/1) — test obsoleta sulla nuova regola GdV (anche l'advantage player riceve HandResetPopup); `stats_achievements_test` (68/1) — locale nel test, non nel gioco; `manual_game_full` / `turn_timing_test` — stale (ManualGame ora sotto GameController); `manual_game_debug` — driver scratch, provider non creato. `manual_game_smoke` PASS. Nota: il Python reference codifica ancora la vecchia regola GdV (reset solo non-attivatori). Eseguire i test dopo ogni modifica:
 
 ```bash
 /home/sumaka/bin/Godot3 --path /media/sumaka/Giochi/GodotProjects/roadTo100 tests/<suite>.tscn --no-window
 ```
 
-Suite disponibili: `game_controller_test`, `presenter_test`, `board_test`, `provider_test`, `rules_test`, `domain_test`, `card_animator_test`, `card_animator_test2`, `demo_integration_test`, `demo_verification_test`, `manual_game_test`, `manual_game_smoke`, `card_selection_test`, `plus11_gold_transformation_test`, `tutorial_test`, `scripted_demo_test`, `stats_achievements_test`, `achievement_notification_test`.
+Suite disponibili (30): `game_controller_test`, `presenter_test`, `board_test`, `provider_test`, `rules_test`, `domain_test`, `card_animator_test`, `card_animator_test2`, `demo_integration_test`, `demo_verification_test`, `manual_game_test`, `manual_game_smoke`, `manual_game_full`, `turn_timing_test`, `manual_game_debug`, `card_selection_test`, `plus11_gold_transformation_test`, `reset_hand_rule_test`, `selected_value_test`, `bounce_scoring_test`, `fan_geometry_test`, `shadow_integration_test`, `stats_achievements_test`, `achievement_notification_test`, `ai_test`, `ai_advanced_test`, `ai_personality_test`, `manual_game_bug_11_test`, `tutorial_test`, `scripted_demo_test`.
