@@ -57,7 +57,7 @@ FASTEST_WIN_LABEL,%d turni,%d turns
 STAT_NOT_APPLICABLE,N/D,N/A
 LOCKED,Bloccato,Locked
 TIP_BLOCKED_LOW,Bloccata: Piatto troppo basso.,Blocked: Plate too low.
-TIP_BLOCKED_SAF,Bloccata: Giro Sicuro,Blocked: Safe Round
+TIP_BLOCKED_SAF,Bloccate: ,Blocked: 
 TIP_BLOCKED_GDV,Bloccata: Giro di Vantaggio,Blocked: Advantage Round
 TIP_SELECT_CARD,Seleziona prima una carta,Select a card first
 STAT_BACK,TORNA AL MENU,BACK TO MENU
@@ -130,3 +130,6 @@ ACH_CASCATA_D_ORO_NAME,Cascata d'Oro,Golden Cascade
 ACH_CASCATA_D_ORO_DESC,Inizia un turno con tre carte\n89 in mano.,Start a turn with three\n89 Cards in hand.
 ACH_IMBATTIBILE_NAME,Imbattibile,Invincible!
 ACH_IMBATTIBILE_DESC,Inizia un turno con tre carte\n+11 in mano.,Start a turn with three\n+11 Cards in hand.
+INCREMENT,Incremento,Increment
+GOLD,Gold,Gold
+IMBROGLIO,Imbroglio,Imbroglio

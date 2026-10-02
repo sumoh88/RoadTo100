@@ -1,0 +1,7 @@
+[gd_scene format=2]
+
+[ext_resource path="res://tests/manual_game_bug_11_test.gd" type="Script" id=1]
+
+[node name="Main" type="Node"]
+script = ExtResource( 1 )
+

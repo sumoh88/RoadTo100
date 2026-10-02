@@ -158,7 +158,6 @@ func _animate_card_played(event):
 		yield(get_tree().create_timer(0.03), "timeout")
 		_process_next()
 		return
-
 	# Create clone with the card's visual appearance in animation layer coords
 	var clone = TextureRect.new()
 	clone.texture = card_node.texture
@@ -168,10 +167,20 @@ func _animate_card_played(event):
 	clone.rect_size = card_node.rect_size
 	clone.rect_position = _global_to_layer(card_node.rect_global_position)
 	clone.mouse_filter = 2
+	if player_id != "player_1":
+		# Hide the played CPU card's soft shadow while the clone animates to
+		# the discard pile. _update_opponents() rebuilds all fan shadows after
+		# the snapshot is applied, so they are restored on the next turn.
+		var layer = card_node.get_parent()
+		if layer != null:
+			for sh in layer.get_children():
+				if sh.name == "OPS" + card_node.name.substr(2):
+					sh.visible = false
+					break
 
 	# Hide the original card BEFORE the snapshot removes it
 	card_node.visible = false
-
+	
 	_animation_layer.add_child(clone)
 	_active_clones.append(clone)
 
@@ -193,9 +202,9 @@ func _animate_card_played(event):
 	clone.queue_free()
 	yield(get_tree().create_timer(0.02), "timeout")
 	
+	
+	
 	var PlayCard = AudioManager.get_node("SFXPlayer/PlayCard")
-
-
 	if card_id.begins_with("gold"):
 		PlayCard.stream = load("res://sound/playGoldCard.wav")
 	elif card_id.begins_with("card89"):

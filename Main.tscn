@@ -511,20 +511,20 @@ mouse_filter = 2
 [node name="TurnLabel" type="Label" parent="GameArea/HUDLayer"]
 anchor_top = 1.0
 anchor_bottom = 1.0
-margin_left = 205.0
-margin_top = -1006.0
-margin_right = 477.0
-margin_bottom = -960.0
+margin_left = 222.0
+margin_top = -1004.0
+margin_right = 494.0
+margin_bottom = -958.0
 custom_fonts/font = ExtResource( 34 )
 text = "Turno 1"
 
 [node name="InstructionLabel" type="Label" parent="GameArea/HUDLayer"]
 anchor_left = 0.5
 anchor_right = 0.5
-margin_left = -300.0
-margin_top = 370.0
-margin_right = 300.0
-margin_bottom = 455.0
+margin_left = -298.0
+margin_top = 366.0
+margin_right = 302.0
+margin_bottom = 451.0
 grow_horizontal = 2
 grow_vertical = 2
 custom_fonts/font = ExtResource( 33 )
@@ -551,10 +551,12 @@ margin_bottom = 1015.0
 mouse_filter = 1
 
 [node name="PlayButton" type="Button" parent="GameArea/HUDLayer/ActionPanel"]
-margin_left = 42.0
+visible = false
+margin_left = -10.0
 margin_top = -20.0
-margin_right = 222.0
+margin_right = 170.0
 margin_bottom = 50.0
+rect_scale = Vector2( 1.5, 1.5 )
 custom_fonts/font = SubResource( 23 )
 custom_styles/hover = SubResource( 29 )
 custom_styles/pressed = SubResource( 30 )
@@ -565,10 +567,11 @@ disabled = true
 text = "Gioca"
 
 [node name="ChangeButton" type="Button" parent="GameArea/HUDLayer/ActionPanel"]
-margin_left = 242.0
-margin_top = -20.0
-margin_right = 422.0
-margin_bottom = 50.0
+margin_left = 124.0
+margin_top = -38.0
+margin_right = 304.0
+margin_bottom = 32.0
+rect_scale = Vector2( 1.5, 1.5 )
 custom_fonts/font = SubResource( 23 )
 custom_styles/hover = SubResource( 29 )
 custom_styles/pressed = SubResource( 30 )
@@ -579,10 +582,11 @@ disabled = true
 text = "Cambia"
 
 [node name="BackMenuButton" type="Button" parent="GameArea/HUDLayer/ActionPanel"]
-margin_left = 242.0
+margin_left = 124.0
 margin_top = -871.0
-margin_right = 422.0
+margin_right = 304.0
 margin_bottom = -801.0
+rect_scale = Vector2( 1.5, 1.5 )
 custom_fonts/font = SubResource( 23 )
 custom_styles/hover = SubResource( 29 )
 custom_styles/pressed = SubResource( 30 )
@@ -592,16 +596,18 @@ custom_styles/normal = SubResource( 27 )
 text = "Torna al Menu"
 
 [node name="StartGameButton" type="Button" parent="."]
-margin_left = 205.0
-margin_top = 925.0
-margin_right = 385.0
-margin_bottom = 995.0
+margin_left = 222.0
+margin_top = 905.0
+margin_right = 402.0
+margin_bottom = 975.0
+rect_scale = Vector2( 1.5, 1.5 )
 custom_fonts/font = SubResource( 23 )
 custom_styles/hover = SubResource( 29 )
 custom_styles/pressed = SubResource( 30 )
 custom_styles/focus = SubResource( 31 )
 custom_styles/disabled = SubResource( 24 )
 custom_styles/normal = SubResource( 28 )
+disabled = true
 text = "Nuova Partita"
 
 [node name="CardAnimationLayer" type="Control" parent="."]
@@ -610,6 +616,7 @@ anchor_bottom = 1.0
 mouse_filter = 2
 
 [node name="OverlayLayer" type="Control" parent="."]
+visible = false
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2

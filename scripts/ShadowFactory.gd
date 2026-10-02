@@ -90,7 +90,6 @@ func add_pile_shadow(
 	# Permette, ad esempio, di nascondere inizialmente
 	# l'ombra della pila degli Scarti.
 	sh.visible = start_visible
-
 	parent.add_child(sh)
 	parent.move_child(sh, 0)
 
@@ -122,3 +121,4 @@ func make_card_shadow(pos, size, rot_deg, pivot_offset):
 	sh.material = make_material(sh.rect_size)
 
 	return sh
+	

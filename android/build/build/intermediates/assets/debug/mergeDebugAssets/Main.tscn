@@ -1,0 +1,953 @@
+[gd_scene load_steps=77 format=2]
+
+[ext_resource path="res://imgs/table.png" type="Texture" id=1]
+[ext_resource path="res://imgs/plate.png" type="Texture" id=2]
+[ext_resource path="res://imgs/cardback.png" type="Texture" id=3]
+[ext_resource path="res://imgs/cardbackplate.png" type="Texture" id=4]
+[ext_resource path="res://fonts/Dyuthi.ttf" type="DynamicFontData" id=5]
+[ext_resource path="res://scripts/DebugDemo.gd" type="Script" id=6]
+[ext_resource path="res://scripts/BoardPresenter.gd" type="Script" id=7]
+[ext_resource path="res://scripts/HandPresenter.gd" type="Script" id=8]
+[ext_resource path="res://scripts/TurnPresenter.gd" type="Script" id=9]
+[ext_resource path="res://scripts/CardAnimator.gd" type="Script" id=10]
+[ext_resource path="res://scripts/GameController.gd" type="Script" id=11]
+[ext_resource path="res://scripts/ManualGame.gd" type="Script" id=12]
+[ext_resource path="res://fonts/starFont.tres" type="DynamicFont" id=13]
+[ext_resource path="res://imgs/tableBG1.png" type="Texture" id=14]
+[ext_resource path="res://imgs/imb.png" type="Texture" id=15]
+[ext_resource path="res://Main.gd" type="Script" id=16]
+[ext_resource path="res://imgs/btnDisabled.png" type="Texture" id=17]
+[ext_resource path="res://imgs/btnNG.png" type="Texture" id=18]
+[ext_resource path="res://imgs/btnBack.png" type="Texture" id=19]
+[ext_resource path="res://imgs/btnChange.png" type="Texture" id=20]
+[ext_resource path="res://imgs/btnPlay.png" type="Texture" id=21]
+[ext_resource path="res://imgs/btnHover.png" type="Texture" id=22]
+[ext_resource path="res://imgs/btnPressed.png" type="Texture" id=23]
+[ext_resource path="res://fonts/menuFont.tres" type="DynamicFont" id=24]
+[ext_resource path="res://imgs/popup.png" type="Texture" id=25]
+[ext_resource path="res://imgs/cncPressed.png" type="Texture" id=26]
+[ext_resource path="res://imgs/cncDisabled.png" type="Texture" id=27]
+[ext_resource path="res://imgs/cncHover.png" type="Texture" id=28]
+[ext_resource path="res://imgs/btnChoice.png" type="Texture" id=29]
+[ext_resource path="res://imgs/popupCenter.png" type="Texture" id=30]
+[ext_resource path="res://imgs/btnChoiceHover.png" type="Texture" id=31]
+[ext_resource path="res://imgs/btnChoicePressed.png" type="Texture" id=32]
+[ext_resource path="res://fonts/gameFont.tres" type="DynamicFont" id=33]
+[ext_resource path="res://fonts/gameSmallFont.tres" type="DynamicFont" id=34]
+[ext_resource path="res://fonts/gameOverFont.tres" type="DynamicFont" id=35]
+[ext_resource path="res://fonts/popupFont.tres" type="DynamicFont" id=36]
+[ext_resource path="res://imgs/popupUnlock.png" type="Texture" id=37]
+
+[sub_resource type="Theme" id=1]
+
+[sub_resource type="DynamicFont" id=4]
+size = 105
+outline_size = 2
+outline_color = Color( 0.568627, 0.568627, 0.568627, 1 )
+use_mipmaps = true
+use_filter = true
+extra_spacing_char = -10
+font_data = ExtResource( 5 )
+
+[sub_resource type="DynamicFontData" id=5]
+font_path = "res://fonts/Dyuthi.ttf"
+
+[sub_resource type="DynamicFont" id=6]
+size = 23
+use_mipmaps = true
+use_filter = true
+font_data = SubResource( 5 )
+
+[sub_resource type="DynamicFont" id=11]
+size = 105
+outline_size = 3
+outline_color = Color( 0, 0, 0, 1 )
+use_mipmaps = true
+use_filter = true
+font_data = ExtResource( 5 )
+
+[sub_resource type="DynamicFont" id=2]
+size = 84
+outline_size = 3
+outline_color = Color( 0, 0, 0, 1 )
+use_mipmaps = true
+use_filter = true
+font_data = ExtResource( 5 )
+
+[sub_resource type="DynamicFontData" id=56]
+font_path = "res://fonts/Dyuthi.ttf"
+
+[sub_resource type="DynamicFont" id=23]
+size = 28
+outline_size = 2
+outline_color = Color( 0, 0, 0, 1 )
+use_mipmaps = true
+use_filter = true
+extra_spacing_top = 5
+extra_spacing_char = -1
+extra_spacing_space = -2
+font_data = SubResource( 56 )
+
+[sub_resource type="StyleBoxTexture" id=29]
+texture = ExtResource( 22 )
+region_rect = Rect2( 0, 0, 180, 70 )
+
+[sub_resource type="StyleBoxTexture" id=30]
+texture = ExtResource( 23 )
+region_rect = Rect2( 0, 0, 180, 70 )
+
+[sub_resource type="StyleBoxTexture" id=31]
+
+[sub_resource type="StyleBoxTexture" id=24]
+texture = ExtResource( 17 )
+region_rect = Rect2( 0, 0, 180, 70 )
+
+[sub_resource type="StyleBoxTexture" id=25]
+texture = ExtResource( 21 )
+region_rect = Rect2( 0, 0, 180, 70 )
+
+[sub_resource type="StyleBoxTexture" id=26]
+texture = ExtResource( 20 )
+region_rect = Rect2( 0, 0, 180, 70 )
+
+[sub_resource type="StyleBoxTexture" id=27]
+texture = ExtResource( 19 )
+region_rect = Rect2( 0, 0, 180, 70 )
+
+[sub_resource type="StyleBoxTexture" id=28]
+texture = ExtResource( 18 )
+region_rect = Rect2( 0, 0, 180, 70 )
+
+[sub_resource type="StyleBoxTexture" id=32]
+texture = ExtResource( 30 )
+region_rect = Rect2( 0, 0, 474, 680 )
+
+[sub_resource type="StyleBoxEmpty" id=52]
+
+[sub_resource type="DynamicFontData" id=40]
+font_path = "res://fonts/Dyuthi.ttf"
+
+[sub_resource type="DynamicFont" id=41]
+size = 32
+outline_size = 2
+outline_color = Color( 0, 0, 0, 1 )
+use_mipmaps = true
+use_filter = true
+extra_spacing_top = 4
+extra_spacing_char = -1
+font_data = SubResource( 40 )
+
+[sub_resource type="StyleBoxTexture" id=36]
+texture = ExtResource( 28 )
+region_rect = Rect2( 0, 0, 478, 70 )
+
+[sub_resource type="StyleBoxTexture" id=37]
+texture = ExtResource( 26 )
+region_rect = Rect2( 0, 0, 478, 70 )
+
+[sub_resource type="StyleBoxEmpty" id=42]
+
+[sub_resource type="StyleBoxTexture" id=39]
+texture = ExtResource( 27 )
+region_rect = Rect2( 0, 0, 478, 70 )
+
+[sub_resource type="StyleBoxTexture" id=35]
+texture = ExtResource( 27 )
+region_rect = Rect2( 0, 0, 478, 70 )
+
+[sub_resource type="StyleBoxTexture" id=54]
+texture = ExtResource( 30 )
+region_rect = Rect2( 0, 0, 474, 680 )
+
+[sub_resource type="DynamicFontData" id=9]
+font_path = "res://fonts/Dyuthi.ttf"
+
+[sub_resource type="DynamicFont" id=10]
+size = 80
+outline_size = 3
+use_mipmaps = true
+use_filter = true
+font_data = SubResource( 9 )
+
+[sub_resource type="DynamicFont" id=55]
+size = 10
+outline_size = 2
+use_mipmaps = true
+use_filter = true
+font_data = ExtResource( 5 )
+
+[sub_resource type="StyleBoxTexture" id=43]
+texture = ExtResource( 25 )
+region_rect = Rect2( 0, 0, 1040, 460 )
+axis_stretch_horizontal = 2
+axis_stretch_vertical = 2
+
+[sub_resource type="DynamicFontData" id=95]
+font_path = "res://fonts/Dyuthi.ttf"
+
+[sub_resource type="DynamicFont" id=45]
+size = 32
+outline_size = 2
+outline_color = Color( 0, 0, 0, 1 )
+use_mipmaps = true
+use_filter = true
+extra_spacing_bottom = -6
+extra_spacing_char = -1
+font_data = SubResource( 95 )
+
+[sub_resource type="DynamicFontData" id=96]
+font_path = "res://fonts/Dyuthi.ttf"
+
+[sub_resource type="DynamicFont" id=46]
+size = 48
+outline_size = 2
+outline_color = Color( 0, 0, 0, 1 )
+use_mipmaps = true
+use_filter = true
+extra_spacing_top = 10
+font_data = SubResource( 96 )
+
+[sub_resource type="StyleBoxTexture" id=47]
+texture = ExtResource( 31 )
+region_rect = Rect2( 0, 0, 70, 70 )
+
+[sub_resource type="StyleBoxTexture" id=48]
+texture = ExtResource( 32 )
+region_rect = Rect2( 0, 0, 70, 70 )
+
+[sub_resource type="StyleBoxEmpty" id=49]
+
+[sub_resource type="StyleBoxTexture" id=50]
+texture = ExtResource( 29 )
+region_rect = Rect2( 0, 0, 70, 70 )
+
+[sub_resource type="StyleBoxTexture" id=51]
+texture = ExtResource( 29 )
+region_rect = Rect2( 0, 0, 70, 70 )
+
+[node name="Main" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+rect_min_size = Vector2( 1920, 1080 )
+mouse_filter = 1
+theme = SubResource( 1 )
+script = ExtResource( 16 )
+
+[node name="Background" type="TextureRect" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+texture = ExtResource( 1 )
+expand = true
+stretch_mode = 2
+
+[node name="BackgroundImage" type="TextureRect" parent="Background"]
+show_behind_parent = true
+anchor_right = 1.0
+anchor_bottom = 1.0
+texture = ExtResource( 14 )
+
+[node name="GameArea" type="Control" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+rect_min_size = Vector2( 1920, 1080 )
+mouse_filter = 1
+
+[node name="OpponentsLayer" type="Control" parent="GameArea"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 1
+
+[node name="TopSeat" type="Control" parent="GameArea/OpponentsLayer"]
+margin_left = 880.0
+margin_top = 120.0
+margin_right = 1038.0
+margin_bottom = 240.0
+mouse_filter = 1
+
+[node name="CardsLayer" type="Control" parent="GameArea/OpponentsLayer/TopSeat"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+rect_scale = Vector2( 2, 2 )
+mouse_filter = 1
+
+[node name="SRBadge" type="Label" parent="GameArea/OpponentsLayer/TopSeat"]
+visible = false
+margin_left = 400.0
+margin_top = -20.0
+margin_right = 500.0
+margin_bottom = 80.0
+rect_pivot_offset = Vector2( -50, -50 )
+custom_colors/font_color = Color( 1, 1, 0, 1 )
+custom_fonts/font = ExtResource( 13 )
+text = "★"
+align = 1
+valign = 1
+
+[node name="LeftSeat" type="Control" parent="GameArea/OpponentsLayer"]
+margin_left = 105.0
+margin_top = 478.0
+margin_right = 293.0
+margin_bottom = 602.0
+mouse_filter = 1
+
+[node name="CardsLayer" type="Control" parent="GameArea/OpponentsLayer/LeftSeat"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+margin_left = -15.0
+margin_right = -15.0
+rect_scale = Vector2( 2, 2 )
+mouse_filter = 1
+
+[node name="SRBadge" type="Label" parent="GameArea/OpponentsLayer/LeftSeat"]
+visible = false
+margin_top = -250.0
+margin_right = 100.0
+margin_bottom = -150.0
+rect_pivot_offset = Vector2( -50, -50 )
+custom_colors/font_color = Color( 1, 1, 0, 1 )
+custom_fonts/font = ExtResource( 13 )
+text = "★"
+align = 1
+valign = 1
+
+[node name="RightSeat" type="Control" parent="GameArea/OpponentsLayer"]
+margin_left = 1626.0
+margin_top = 478.0
+margin_right = 1814.0
+margin_bottom = 602.0
+mouse_filter = 1
+
+[node name="CardsLayer" type="Control" parent="GameArea/OpponentsLayer/RightSeat"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+margin_left = 15.0
+margin_right = 15.0
+rect_scale = Vector2( 2, 2 )
+mouse_filter = 1
+
+[node name="SRBadge" type="Label" parent="GameArea/OpponentsLayer/RightSeat"]
+visible = false
+margin_left = 90.0
+margin_top = 260.0
+margin_right = 190.0
+margin_bottom = 360.0
+rect_pivot_offset = Vector2( -50, -50 )
+custom_colors/font_color = Color( 1, 1, 0, 1 )
+custom_fonts/font = ExtResource( 13 )
+text = "★"
+align = 1
+valign = 1
+
+[node name="BoardArea" type="Control" parent="GameArea"]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -306.0
+margin_top = -60.0
+margin_right = 379.0
+margin_bottom = 232.0
+rect_scale = Vector2( 0.9, 0.9 )
+mouse_filter = 1
+
+[node name="PlateauZone" type="Control" parent="GameArea/BoardArea"]
+margin_right = 203.0
+margin_bottom = 284.0
+mouse_filter = 1
+
+[node name="PermanentCardsLayer" type="Control" parent="GameArea/BoardArea/PlateauZone"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+margin_bottom = 8.0
+mouse_filter = 2
+
+[node name="PermanentCardBack" type="TextureRect" parent="GameArea/BoardArea/PlateauZone/PermanentCardsLayer"]
+margin_right = 203.0
+margin_bottom = 292.0
+mouse_filter = 2
+texture = ExtResource( 4 )
+expand = true
+
+[node name="PlateauValueCard" type="TextureRect" parent="GameArea/BoardArea/PlateauZone/PermanentCardsLayer"]
+visible = false
+margin_right = 203.0
+margin_bottom = 292.0
+mouse_filter = 2
+texture = ExtResource( 2 )
+expand = true
+
+[node name="ValueLabel" type="Label" parent="GameArea/BoardArea/PlateauZone"]
+visible = false
+anchor_right = 1.0
+anchor_bottom = 1.0
+margin_top = -12.0
+margin_right = -3.0
+margin_bottom = 63.0
+custom_colors/font_color = Color( 1, 1, 1, 1 )
+custom_fonts/font = SubResource( 4 )
+text = "0"
+align = 1
+valign = 1
+autowrap = true
+
+[node name="DrawPile" type="Control" parent="GameArea/BoardArea"]
+margin_left = 240.0
+margin_right = 441.0
+margin_bottom = 266.0
+mouse_filter = 1
+
+[node name="CardBack" type="TextureRect" parent="GameArea/BoardArea/DrawPile"]
+margin_right = 203.0
+margin_bottom = 292.0
+mouse_filter = 2
+texture = ExtResource( 3 )
+expand = true
+
+[node name="CountLabelName" type="Label" parent="GameArea/BoardArea/DrawPile"]
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+margin_left = -60.5
+margin_top = -251.0
+margin_right = 21.5
+margin_bottom = -227.0
+custom_colors/font_color = Color( 0, 0, 0, 1 )
+custom_fonts/font = SubResource( 6 )
+text = "Rimaste:"
+
+[node name="CountLabel" type="Label" parent="GameArea/BoardArea/DrawPile"]
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+margin_left = 29.5
+margin_top = -251.0
+margin_right = 71.5
+margin_bottom = -227.0
+custom_colors/font_color = Color( 0, 0, 0, 1 )
+custom_fonts/font = SubResource( 6 )
+text = "0"
+
+[node name="DiscardPile" type="Control" parent="GameArea/BoardArea"]
+margin_left = 480.0
+margin_right = 685.0
+margin_bottom = 266.0
+mouse_filter = 1
+
+[node name="TopCard" type="TextureRect" parent="GameArea/BoardArea/DiscardPile"]
+margin_right = 203.0
+margin_bottom = 292.0
+mouse_filter = 2
+texture = ExtResource( 15 )
+expand = true
+
+[node name="ResolvedValueLabel" type="Label" parent="GameArea/BoardArea/DiscardPile/TopCard"]
+margin_top = 67.0
+margin_right = 190.0
+margin_bottom = 290.0
+custom_colors/font_color = Color( 1, 1, 1, 1 )
+custom_fonts/font = SubResource( 11 )
+align = 1
+valign = 1
+
+[node name="EmptyPileInput" type="Control" parent="GameArea/BoardArea/DiscardPile"]
+visible = false
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 1
+
+[node name="LocalPlayerArea" type="Control" parent="GameArea"]
+margin_left = 570.0
+margin_top = 775.0
+margin_right = 1350.0
+margin_bottom = 1060.0
+mouse_filter = 1
+
+[node name="PlayerHand" type="Control" parent="GameArea/LocalPlayerArea"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+margin_left = 60.0
+margin_top = 35.0
+margin_right = 60.0
+margin_bottom = 35.0
+rect_scale = Vector2( 0.85, 0.85 )
+mouse_filter = 1
+
+[node name="CardsLayer" type="Control" parent="GameArea/LocalPlayerArea/PlayerHand"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 1
+
+[node name="HoverLayer" type="Control" parent="GameArea/LocalPlayerArea/PlayerHand"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="InteractionBlocker" type="Control" parent="GameArea/LocalPlayerArea/PlayerHand"]
+visible = false
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="SRBadge" type="Label" parent="GameArea/LocalPlayerArea"]
+visible = false
+margin_left = -30.0
+margin_top = 110.0
+margin_right = 70.0
+margin_bottom = 210.0
+rect_pivot_offset = Vector2( -50, -50 )
+custom_colors/font_color = Color( 1, 1, 0, 1 )
+custom_fonts/font = ExtResource( 13 )
+text = "★"
+align = 1
+valign = 1
+
+[node name="HUDLayer" type="Control" parent="GameArea"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="TurnLabel" type="Label" parent="GameArea/HUDLayer"]
+anchor_top = 1.0
+anchor_bottom = 1.0
+margin_left = 205.0
+margin_top = -1006.0
+margin_right = 477.0
+margin_bottom = -960.0
+custom_fonts/font = ExtResource( 34 )
+text = "Turno 1"
+
+[node name="InstructionLabel" type="Label" parent="GameArea/HUDLayer"]
+anchor_left = 0.5
+anchor_right = 0.5
+margin_left = -300.0
+margin_top = 370.0
+margin_right = 300.0
+margin_bottom = 455.0
+grow_horizontal = 2
+grow_vertical = 2
+custom_fonts/font = ExtResource( 33 )
+align = 1
+valign = 1
+
+[node name="AdvantageLabel" type="Label" parent="GameArea/HUDLayer"]
+visible = false
+anchor_left = 0.5
+anchor_right = 0.5
+margin_left = -361.5
+margin_top = 300.0
+margin_right = 361.5
+margin_bottom = 385.0
+custom_fonts/font = SubResource( 2 )
+text = "GIRO DI VANTAGGIO"
+align = 1
+
+[node name="ActionPanel" type="Control" parent="GameArea/HUDLayer"]
+margin_left = 1280.0
+margin_top = 945.0
+margin_right = 1850.0
+margin_bottom = 1015.0
+mouse_filter = 1
+
+[node name="PlayButton" type="Button" parent="GameArea/HUDLayer/ActionPanel"]
+margin_left = 42.0
+margin_top = -20.0
+margin_right = 222.0
+margin_bottom = 50.0
+custom_fonts/font = SubResource( 23 )
+custom_styles/hover = SubResource( 29 )
+custom_styles/pressed = SubResource( 30 )
+custom_styles/focus = SubResource( 31 )
+custom_styles/disabled = SubResource( 24 )
+custom_styles/normal = SubResource( 25 )
+disabled = true
+text = "Gioca"
+
+[node name="ChangeButton" type="Button" parent="GameArea/HUDLayer/ActionPanel"]
+margin_left = 242.0
+margin_top = -20.0
+margin_right = 422.0
+margin_bottom = 50.0
+custom_fonts/font = SubResource( 23 )
+custom_styles/hover = SubResource( 29 )
+custom_styles/pressed = SubResource( 30 )
+custom_styles/focus = SubResource( 31 )
+custom_styles/disabled = SubResource( 24 )
+custom_styles/normal = SubResource( 26 )
+disabled = true
+text = "Cambia"
+
+[node name="BackMenuButton" type="Button" parent="GameArea/HUDLayer/ActionPanel"]
+margin_left = 242.0
+margin_top = -871.0
+margin_right = 422.0
+margin_bottom = -801.0
+custom_fonts/font = SubResource( 23 )
+custom_styles/hover = SubResource( 29 )
+custom_styles/pressed = SubResource( 30 )
+custom_styles/focus = SubResource( 31 )
+custom_styles/disabled = SubResource( 24 )
+custom_styles/normal = SubResource( 27 )
+text = "Torna al Menu"
+
+[node name="StartGameButton" type="Button" parent="."]
+margin_left = 205.0
+margin_top = 925.0
+margin_right = 385.0
+margin_bottom = 995.0
+custom_fonts/font = SubResource( 23 )
+custom_styles/hover = SubResource( 29 )
+custom_styles/pressed = SubResource( 30 )
+custom_styles/focus = SubResource( 31 )
+custom_styles/disabled = SubResource( 24 )
+custom_styles/normal = SubResource( 28 )
+text = "Nuova Partita"
+
+[node name="CardAnimationLayer" type="Control" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="OverlayLayer" type="Control" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="InputBlocker" type="ColorRect" parent="OverlayLayer"]
+visible = false
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color( 0, 0, 0, 0.45 )
+
+[node name="ValueChoicePopup" type="PopupPanel" parent="OverlayLayer"]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -262.0
+margin_top = -364.0
+margin_right = 262.0
+margin_bottom = 364.0
+rect_pivot_offset = Vector2( 262, 364 )
+custom_styles/panel = SubResource( 32 )
+
+[node name="VBox" type="Tree" parent="OverlayLayer/ValueChoicePopup"]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -262.0
+margin_top = -364.0
+margin_right = 262.0
+margin_bottom = 364.0
+size_flags_horizontal = 5
+size_flags_vertical = 5
+custom_styles/bg = SubResource( 52 )
+allow_reselect = true
+allow_rmb_select = true
+select_mode = 1
+
+[node name="MsgLabel" type="Label" parent="OverlayLayer/ValueChoicePopup/VBox"]
+anchor_left = 0.5
+anchor_right = 0.5
+margin_left = -239.0
+margin_top = 20.0
+margin_right = 239.0
+margin_bottom = 57.0
+custom_fonts/font = ExtResource( 24 )
+text = "Scegli il valore"
+align = 1
+valign = 1
+
+[node name="BtnGrid" type="GridContainer" parent="OverlayLayer/ValueChoicePopup/VBox"]
+margin_left = 29.0
+margin_top = 70.0
+margin_right = 494.0
+margin_bottom = 70.0
+columns = 5
+
+[node name="CancelBtn" type="Button" parent="OverlayLayer/ValueChoicePopup/VBox"]
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+margin_left = -234.0
+margin_top = -88.0
+margin_right = 234.0
+margin_bottom = -24.0
+custom_fonts/font = SubResource( 41 )
+custom_styles/hover = SubResource( 36 )
+custom_styles/pressed = SubResource( 37 )
+custom_styles/focus = SubResource( 42 )
+custom_styles/disabled = SubResource( 39 )
+custom_styles/normal = SubResource( 35 )
+text = "Annulla"
+
+[node name="CardDetailsPopup" type="PopupPanel" parent="OverlayLayer"]
+margin_left = 650.0
+margin_top = 300.0
+margin_right = 1270.0
+margin_bottom = 780.0
+
+[node name="GameOverPopup" type="PopupPanel" parent="OverlayLayer"]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -239.5
+margin_top = -325.0
+margin_right = 239.5
+margin_bottom = 355.0
+custom_styles/panel = SubResource( 54 )
+
+[node name="GameOverContainer" type="Control" parent="OverlayLayer/GameOverPopup"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Spacer" type="Label" parent="OverlayLayer/GameOverPopup/GameOverContainer"]
+margin_right = 40.0
+margin_bottom = 48.0
+text = "
+
+"
+
+[node name="GameOverLabel" type="Label" parent="OverlayLayer/GameOverPopup/GameOverContainer"]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -239.5
+margin_top = -300.0
+margin_right = 239.5
+margin_bottom = -199.0
+custom_colors/font_color = Color( 0, 0, 0, 1 )
+custom_fonts/font = SubResource( 10 )
+text = "GAMEOVER"
+align = 1
+
+[node name="InstructionLabel" type="Label" parent="OverlayLayer/GameOverPopup/GameOverContainer"]
+anchor_left = 0.5
+anchor_right = 0.5
+margin_left = -199.5
+margin_top = 115.0
+margin_right = 200.5
+margin_bottom = 165.0
+custom_fonts/font = ExtResource( 35 )
+align = 1
+valign = 1
+
+[node name="Divider" type="Label" parent="OverlayLayer/GameOverPopup/GameOverContainer"]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -200.0
+margin_top = -185.0
+margin_right = 200.0
+margin_bottom = -135.0
+custom_colors/font_color = Color( 1, 1, 1, 1 )
+custom_fonts/font = SubResource( 55 )
+text = "——————————————————————————————————————"
+align = 1
+valign = 1
+
+[node name="GamePlayed" type="Label" parent="OverlayLayer/GameOverPopup/GameOverContainer"]
+anchor_left = 0.5
+anchor_right = 0.5
+margin_left = -199.5
+margin_top = 220.0
+margin_right = 200.5
+margin_bottom = 270.0
+custom_fonts/font = ExtResource( 34 )
+text = "Partite Giocate:"
+align = 1
+valign = 1
+
+[node name="Value" type="Label" parent="OverlayLayer/GameOverPopup/GameOverContainer/GamePlayed"]
+margin_top = 40.0
+margin_right = 400.0
+margin_bottom = 90.0
+custom_colors/font_color = Color( 0.968627, 0.780392, 0.215686, 1 )
+custom_fonts/font = ExtResource( 35 )
+align = 1
+valign = 1
+
+[node name="GameWon" type="Label" parent="OverlayLayer/GameOverPopup/GameOverContainer"]
+anchor_left = 0.5
+anchor_right = 0.5
+margin_left = -199.5
+margin_top = 320.0
+margin_right = 200.5
+margin_bottom = 370.0
+custom_fonts/font = ExtResource( 34 )
+text = "Partite Vinte:"
+align = 1
+valign = 1
+
+[node name="Value" type="Label" parent="OverlayLayer/GameOverPopup/GameOverContainer/GameWon"]
+margin_top = 40.0
+margin_right = 400.0
+margin_bottom = 90.0
+custom_colors/font_color = Color( 0.968627, 0.780392, 0.215686, 1 )
+custom_fonts/font = ExtResource( 35 )
+align = 1
+valign = 1
+
+[node name="GameSeries" type="Label" parent="OverlayLayer/GameOverPopup/GameOverContainer"]
+anchor_left = 0.5
+anchor_right = 0.5
+margin_left = -199.5
+margin_top = 420.0
+margin_right = 200.5
+margin_bottom = 470.0
+custom_fonts/font = ExtResource( 34 )
+text = "Vittorie Consecutive:"
+align = 1
+valign = 1
+
+[node name="Value" type="Label" parent="OverlayLayer/GameOverPopup/GameOverContainer/GameSeries"]
+margin_top = 40.0
+margin_right = 400.0
+margin_bottom = 90.0
+custom_colors/font_color = Color( 0.968627, 0.780392, 0.215686, 1 )
+custom_fonts/font = ExtResource( 35 )
+align = 1
+valign = 1
+
+[node name="GameBestSeries" type="Label" parent="OverlayLayer/GameOverPopup/GameOverContainer"]
+anchor_left = 0.5
+anchor_right = 0.5
+margin_left = -199.5
+margin_top = 520.0
+margin_right = 200.5
+margin_bottom = 570.0
+custom_fonts/font = ExtResource( 34 )
+text = "Serie Migliore:"
+align = 1
+valign = 1
+
+[node name="Value" type="Label" parent="OverlayLayer/GameOverPopup/GameOverContainer/GameBestSeries"]
+margin_top = 40.0
+margin_right = 400.0
+margin_bottom = 90.0
+custom_colors/font_color = Color( 0.968627, 0.780392, 0.215686, 1 )
+custom_fonts/font = ExtResource( 35 )
+align = 1
+valign = 1
+
+[node name="HandResetPopup" type="PopupPanel" parent="OverlayLayer"]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -260.0
+margin_top = -115.0
+margin_right = 260.0
+margin_bottom = 115.0
+rect_pivot_offset = Vector2( 260, 115 )
+custom_styles/panel = SubResource( 43 )
+
+[node name="VBox" type="Control" parent="OverlayLayer/HandResetPopup"]
+margin_right = 520.0
+margin_bottom = 230.0
+
+[node name="MsgLabel" type="Label" parent="OverlayLayer/HandResetPopup/VBox"]
+margin_top = 30.0
+margin_right = 520.0
+margin_bottom = 90.0
+custom_fonts/font = SubResource( 45 )
+text = "Nessuna carta Arancione disponibile. Cambiare tutta la mano?"
+align = 1
+autowrap = true
+
+[node name="BtnRow" type="Control" parent="OverlayLayer/HandResetPopup/VBox"]
+margin_top = 104.0
+margin_right = 520.0
+margin_bottom = 194.0
+
+[node name="YesBtn" type="Button" parent="OverlayLayer/HandResetPopup/VBox/BtnRow"]
+margin_left = 151.0
+margin_top = -1.0
+margin_right = 241.0
+margin_bottom = 89.0
+custom_fonts/font = SubResource( 46 )
+custom_styles/hover = SubResource( 47 )
+custom_styles/pressed = SubResource( 48 )
+custom_styles/focus = SubResource( 49 )
+custom_styles/disabled = SubResource( 50 )
+custom_styles/normal = SubResource( 51 )
+text = "Sì"
+
+[node name="NoBtn" type="Button" parent="OverlayLayer/HandResetPopup/VBox/BtnRow"]
+margin_left = 281.0
+margin_top = -1.0
+margin_right = 371.0
+margin_bottom = 89.0
+custom_fonts/font = SubResource( 46 )
+custom_styles/hover = SubResource( 47 )
+custom_styles/pressed = SubResource( 48 )
+custom_styles/focus = SubResource( 49 )
+custom_styles/disabled = SubResource( 50 )
+custom_styles/normal = SubResource( 51 )
+text = "No"
+
+[node name="UnlockPopup" type="TextureRect" parent="OverlayLayer"]
+visible = false
+margin_left = 10.0
+margin_top = 10.0
+margin_right = 690.0
+margin_bottom = 190.0
+texture = ExtResource( 37 )
+
+[node name="UnlockName" type="Label" parent="OverlayLayer/UnlockPopup"]
+margin_left = 168.0
+margin_top = 17.0
+margin_right = 671.0
+margin_bottom = 63.0
+custom_colors/font_color = Color( 0.968627, 0.780392, 0.215686, 1 )
+custom_fonts/font = ExtResource( 35 )
+align = 1
+valign = 1
+
+[node name="UnlockDesc" type="Label" parent="OverlayLayer/UnlockPopup"]
+margin_left = 168.0
+margin_top = 66.0
+margin_right = 670.0
+margin_bottom = 162.0
+custom_fonts/font = ExtResource( 36 )
+align = 1
+valign = 1
+
+[node name="GameController" type="Node" parent="."]
+script = ExtResource( 11 )
+
+[node name="DebugDemo" type="Node" parent="GameController"]
+script = ExtResource( 6 )
+
+[node name="ManualGame" type="Node" parent="GameController"]
+script = ExtResource( 12 )
+
+[node name="BoardPresenter" type="Node" parent="."]
+script = ExtResource( 7 )
+
+[node name="HandPresenter" type="Node" parent="."]
+script = ExtResource( 8 )
+
+[node name="TurnPresenter" type="Node" parent="."]
+script = ExtResource( 9 )
+
+[node name="CardAnimator" type="Node" parent="."]
+script = ExtResource( 10 )
+
+[node name="DemoButton" type="Button" parent="."]
+visible = false
+margin_left = 10.0
+margin_top = 56.0
+margin_right = 260.0
+margin_bottom = 92.0
+text = "Demo Automatica (Debug)"
+
+[connection signal="pressed" from="GameArea/HUDLayer/ActionPanel/BackMenuButton" to="." method="_on_BackMenuButton_pressed"]
+[connection signal="pressed" from="StartGameButton" to="GameController/ManualGame" method="start_game"]
+[connection signal="pressed" from="DemoButton" to="GameController/DebugDemo" method="start_demo"]

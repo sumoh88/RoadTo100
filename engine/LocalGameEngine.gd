@@ -283,6 +283,7 @@ func _card_to_dict(card):
 		"value": card.value,
 		"color": card.color,
 		"card_type": card.metadata.get("card_type", ""),
+		"category": card.metadata.get("category", ""),
 	}
 
 

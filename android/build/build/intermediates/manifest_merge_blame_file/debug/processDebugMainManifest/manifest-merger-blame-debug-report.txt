@@ -1,0 +1,113 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="org.godotengine.rt100"
+4    android:installLocation="auto"
+5    android:versionCode="1"
+6    android:versionName="1.0" > <!-- glEsVersion is modified by the exporter, changing this value here has no effect. -->
+7    <uses-sdk
+8        android:minSdkVersion="19"
+9        android:targetSdkVersion="30" />
+10
+11    <supports-screens
+11-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:12:5-16:40
+12        android:largeScreens="true"
+12-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:15:9-36
+13        android:normalScreens="true"
+13-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:14:9-37
+14        android:smallScreens="true"
+14-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:13:9-36
+15        android:xlargeScreens="true" />
+15-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:16:9-37
+16
+17    <uses-feature
+17-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/src/debug/AndroidManifest.xml:10:5-78
+18        android:glEsVersion="0x00030000"
+18-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/src/debug/AndroidManifest.xml:10:19-51
+19        android:required="true" />
+19-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/src/debug/AndroidManifest.xml:10:52-75
+20
+21    <instrumentation
+21-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/src/debug/AndroidManifest.xml:11:5-16:57
+22        android:name=".GodotInstrumentation"
+22-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/src/debug/AndroidManifest.xml:13:9-45
+23        android:icon="@mipmap/icon"
+23-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/src/debug/AndroidManifest.xml:14:9-36
+24        android:label="@string/godot_project_name_string"
+24-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/src/debug/AndroidManifest.xml:15:9-58
+25        android:targetPackage="org.godotengine.rt100" />
+25-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/src/debug/AndroidManifest.xml:16:9-54
+26
+27    <application
+27-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:31:5-88:19
+28        android:allowBackup="false"
+28-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:31:68-95
+29        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+29-->[androidx.core:core:1.2.0] /home/sumaka/.gradle/caches/8.11.1/transforms/16f85451bca575581b5ad8a14fa90660/transformed/core-1.2.0/AndroidManifest.xml:24:18-86
+30        android:debuggable="true"
+31        android:extractNativeLibs="true"
+32        android:hasFragileUserData="false"
+32-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:31:118-152
+33        android:icon="@mipmap/icon"
+33-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:31:238-265
+34        android:isGame="true"
+34-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:31:96-117
+35        android:label="@string/godot_project_name_string"
+35-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:31:18-67
+36        android:requestLegacyExternalStorage="false" >
+36-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:31:153-197
+37        <activity
+37-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:59:9-82:20
+38            android:name="com.godot.game.GodotApp"
+38-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:60:13-37
+39            android:configChanges="orientation|keyboardHidden|screenSize|smallestScreenSize|density|keyboard|navigation|screenLayout|uiMode"
+39-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:67:13-141
+40            android:excludeFromRecents="false"
+40-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:65:13-47
+41            android:exported="true"
+41-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:61:13-36
+42            android:label="@string/godot_project_name_string"
+42-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:62:13-62
+43            android:launchMode="singleTask"
+43-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:64:13-44
+44            android:resizeableActivity="false"
+44-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:68:13-47
+45            android:screenOrientation="userLandscape"
+45-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:66:13-50
+46            android:theme="@style/GodotAppSplashTheme" >
+46-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:63:13-55
+47            <intent-filter>
+47-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:74:13-81:29
+48                <action android:name="android.intent.action.MAIN" />
+48-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:75:17-69
+48-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:75:25-66
+49
+50                <category android:name="android.intent.category.LAUNCHER" />
+50-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:76:17-77
+50-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:76:27-74
+51
+52                <!--
+53                Enable access to OpenXR on Oculus mobile devices, no-op on other Android
+54                platforms.
+55                -->
+56                <category android:name="com.oculus.intent.category.VR" />
+56-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:80:17-74
+56-->/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/AndroidManifest.xml:80:27-71
+57            </intent-filter>
+58        </activity>
+59        <!-- Records the version of the Godot editor used for building -->
+60        <meta-data
+61            android:name="org.godotengine.editor.version"
+62            android:value="3.4.4.stable" /> <!-- Records the version of the Godot library -->
+63        <meta-data
+63-->[godot-lib.debug.aar] /home/sumaka/.gradle/caches/8.11.1/transforms/4b8179e2953773eb89565fe40a8e8f67/transformed/jetified-godot-lib.debug/AndroidManifest.xml:19:9-21:44
+64            android:name="org.godotengine.library.version"
+64-->[godot-lib.debug.aar] /home/sumaka/.gradle/caches/8.11.1/transforms/4b8179e2953773eb89565fe40a8e8f67/transformed/jetified-godot-lib.debug/AndroidManifest.xml:20:13-59
+65            android:value="3.4.4.stable" />
+65-->[godot-lib.debug.aar] /home/sumaka/.gradle/caches/8.11.1/transforms/4b8179e2953773eb89565fe40a8e8f67/transformed/jetified-godot-lib.debug/AndroidManifest.xml:21:13-41
+66
+67        <service android:name="org.godotengine.godot.GodotDownloaderService" />
+67-->[godot-lib.debug.aar] /home/sumaka/.gradle/caches/8.11.1/transforms/4b8179e2953773eb89565fe40a8e8f67/transformed/jetified-godot-lib.debug/AndroidManifest.xml:23:9-80
+67-->[godot-lib.debug.aar] /home/sumaka/.gradle/caches/8.11.1/transforms/4b8179e2953773eb89565fe40a8e8f67/transformed/jetified-godot-lib.debug/AndroidManifest.xml:23:18-77
+68    </application>
+69
+70</manifest>

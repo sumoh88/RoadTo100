@@ -1,0 +1,4 @@
+#Thu Oct 01 14:09:06 CEST 2026
+base.0=/media/sumaka/Giochi/GodotProjects/roadTo100/android/build/build/intermediates/dex/debug/mergeDexDebug/classes.dex
+path.0=classes.dex
+renamed.0=classes.dex

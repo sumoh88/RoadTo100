@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.godot.game-mergeDebugResources-8:/values-ms/values-ms.xml",
+            "map": [
+                {
+                    "source": "/home/sumaka/.gradle/caches/8.11.1/transforms/16f85451bca575581b5ad8a14fa90660/transformed/core-1.2.0/res/values-ms/values-ms.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "100",
+                        "endOffsets": "151"
+                    }
+                }
+            ]
+        }
+    ]
+}

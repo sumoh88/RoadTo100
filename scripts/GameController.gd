@@ -144,6 +144,7 @@ func start_game(player_count, rng=null):
 	GlobalsUtilities.reset_game_tracking()
 	_provider.start_game(player_count, rng)
 
+	main.get_node("StartGameButton").disabled = true
 	var ShuffleDeal = AudioManager.get_node("SFXPlayer/ShuffleDeal")
 	AudioManager.play_sfx(ShuffleDeal)
 	# Switch to dynamic game music (Piatto starts at 0, no special round)
@@ -331,19 +332,22 @@ func _update_choice_blocker():
 
 func _on_card_selected(card_id):
 	if _state == State.READY_FOR_INPUT:
+		_turn._warning_label.text = ""
 		_selected_card_id = card_id
 		if _hand != null and _hand.has_method("set_selected"):
+			_turn._warning_label.text = ""
 			_hand.set_selected(card_id)
 		_state = State.CARD_SELECTED
 		if _turn != null and _turn.has_method("show_tip"):
 			_turn.show_tip("")
-		print("aaaaaaaaaaaaaaaaaaaaaaa")
 	elif _state == State.CARD_SELECTED:
 		if card_id == _selected_card_id:
-			_clear_selection()
-			_state = State.READY_FOR_INPUT
+			#_clear_selection()
+			#_state = State.READY_FOR_INPUT
+			_on_play_pressed()
 		else:
 			if _hand != null and _hand.has_method("clear_selection"):
+				_turn._warning_label.text = ""
 				_hand.clear_selection()
 			_selected_card_id = card_id
 			if _hand != null and _hand.has_method("set_selected"):
@@ -364,6 +368,8 @@ func _clear_selection():
 
 func _on_play_pressed():
 	if _state == State.CARD_SELECTED and _selected_card_id != "":
+		var ct = _get_selected_card_type()
+		var cc = _get_selected_card_type("category")
 		# Safe Round: a blocked card is selectable (for Cambio Carta) but not playable.
 		# 89 blocked until Piatto reaches 20 or more.
 		if _is_selected_card_89_not_allowed():
@@ -372,14 +378,19 @@ func _on_play_pressed():
 			return
 		if _is_selected_card_blocked_by_sr():
 			if _turn != null and _turn.has_method("show_tip"):
-				_turn.show_tip(tr("TIP_BLOCKED_SAF"))
+				print("AAAAAAAAA CARDTYPE:", str(cc))
+				if cc == "increment":
+					_turn.show_tip(tr("TIP_BLOCKED_SAF")+tr("INCREMENT"))
+				elif cc == "imbroglio":
+					_turn.show_tip(tr("TIP_BLOCKED_SAF")+tr("IMBROGLIO"))
+				elif cc == "gold":
+					_turn.show_tip(tr("TIP_BLOCKED_SAF")+tr("GOLD"))
 			return
 		# GdV: non-Incremento cards are not playable during Giro di Vantaggio.
 		if _is_selected_card_blocked_by_gdv():
 			if _turn != null and _turn.has_method("show_tip"):
 				_turn.show_tip(tr("TIP_BLOCKED_GDV"))
 			return
-		var ct = _get_selected_card_type()
 		if ct == "jolly" or ct == "imbroglio":
 			# Show all theoretical values in the popup; only engine-validated
 			# choices are enabled. The full range is always displayed so the
@@ -1229,7 +1240,7 @@ func _validate_selection(snapshot):
 # Card type lookup
 # ---------------------------------------------------------------------------
 
-func _get_selected_card_type():
+func _get_selected_card_type(category = ""):
 	if _selected_card_id == "" or _last_snapshot == null:
 		return ""
 	var lid = _last_snapshot.get("local_player_id", "player_1")
@@ -1237,7 +1248,11 @@ func _get_selected_card_type():
 		if p.get("id", "") == lid:
 			for c in p.get("hand", []):
 				if c.get("card_id", "") == _selected_card_id:
-					return c.get("card_type", "")
+					if category == "category":
+						print("BBBBBBBB: ", c.get("category", ""))
+						return c.get("category", "")
+					else:
+						return c.get("card_type", "")
 	return ""
 
 

@@ -76,6 +76,7 @@ dependencies {
 }
 
 android {
+    namespace "com.godot.game"
     compileSdkVersion versions.compileSdk
     buildToolsVersion versions.buildTools
 

@@ -98,6 +98,7 @@ func apply_snapshot(s):
 	# F7: top indicator distinguishes the active Special Round type.
 	if _advantage_label != null:
 		_advantage_label.visible = sr
+		# _warning_label.visible = sr
 		if sr:
 			if sr_type == "safe":
 				_advantage_label.text = tr("SR_SAFE")
@@ -118,8 +119,8 @@ func apply_snapshot(s):
 			# the Special Round type lives in _advantage_label.
 			var ci = s.get("current_player_index", 0); var pl = s.get("players", [])
 			if ci < pl.size():
-				_instruction_label.text = tr("TURN_OF") % pl[ci].get("name", "Giocatore")
-				if pl[ci].get("id", "") == lid: _instruction_label.text = tr("YOUR_TURN")
+				_warning_label.text = tr("TURN_OF") % pl[ci].get("name", "Giocatore")
+				if pl[ci].get("id", "") == lid: _warning_label.text = tr("YOUR_TURN")
 	var hp = false; var hc = false
 	for a2 in acts:
 		var at = a2.get("action_type","")
@@ -130,7 +131,8 @@ func apply_snapshot(s):
 	if _game_over_popup != null and w != null:
 		if !_game_over_popup.visible:
 			_game_over_popup.popup()
-
+		var main = _node_up("Main")
+		main.get_node("StartGameButton").disabled = false
 		var goc = _child(_game_over_popup, "GameOverContainer")
 		var gamePlayed = goc.get_node("GamePlayed")
 		var gameWon = goc.get_node("GameWon")
@@ -144,6 +146,6 @@ func apply_snapshot(s):
 	
 
 func diagnose():
-	print("Turn: turn=" + str(_turn_label != null) + " instr=" + str(_instruction_label != null) + " adv=" + str(_advantage_label != null) + " play=" + str(_play_button != null) + " go=" + str(_game_over_popup != null))
+	print("Turn: turn=" + str(_turn_label != null) + " instr=" + str(_warning_label != null) + " adv=" + str(_advantage_label != null) + " play=" + str(_play_button != null) + " go=" + str(_game_over_popup != null))
 func _diagnose_nodes():
-	return " turn=" + (_turn_label.text if _turn_label != null else "?") + " instr=" + (_instruction_label.text if _instruction_label != null else "?")
+	return " turn=" + (_turn_label.text if _turn_label != null else "?") + " instr=" + (_warning_label.text if _warning_label != null else "?")

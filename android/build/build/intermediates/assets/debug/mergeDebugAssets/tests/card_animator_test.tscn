@@ -1,0 +1,6 @@
+[gd_scene format=2]
+
+[ext_resource path="res://tests/card_animator_test.gd" type="Script" id=1]
+
+[node name="CardAnimatorTest" type="Node"]
+script = ExtResource( 1 )

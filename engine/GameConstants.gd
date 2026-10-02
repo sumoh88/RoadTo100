@@ -9,9 +9,9 @@ enum GamePhase { SETUP, PLAYING, FINISHED }
 # ---------------------------------------------------------------------------
 # Card categories (mirrors Python card_database.py constant strings)
 # ---------------------------------------------------------------------------
-const CATEGORY_NORMAL = "normale"
+const CATEGORY_NORMAL = "increment"
 const CATEGORY_GOLD = "gold"
-const CATEGORY_SPECIAL = "speciale"
+const CATEGORY_SPECIAL = "special"
 
 # Card types (mirrors Python CARD_TYPE_* constants)
 const CARD_TYPE_INCREMENT = "increment"

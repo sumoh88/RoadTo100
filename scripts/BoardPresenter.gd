@@ -106,7 +106,12 @@ func _ready():
 		_setup_pile_shadows(brd)
 
 
-	# Opponent seats: find CardsLayers, store seat data
+	# Opponent seats: find CardsLayers, store seat data.
+	# Order must match the player↔seat contract used everywhere else
+	# (CardAnimator.OPPONENT_SEATS / GameController._OPPONENT_SEATS /
+	# _create_sr_badges): player_2→LeftSeat, player_3→TopSeat,
+	# player_4→RightSeat, because _update_opponents pairs players[idx+1]
+	# with _opp_seats[idx].
 	# NOTE: Do NOT set rect_pivot_offset or rect_rotation here in _ready,
 	# because rect_size may not be finalized yet (can be 0,0) leading to
 	# an incorrect pivot and visual misalignment.
@@ -116,8 +121,8 @@ func _ready():
 
 	if ol != null:
 		for pair in [
-			["TopSeat", 180],
 			["LeftSeat", 90],
+			["TopSeat", 180],
 			["RightSeat", -90]
 		]:
 			var s = _ch(
@@ -726,6 +731,8 @@ func _update_plateau(stack):
 
 
 func _update_opponents(players):
+	var currCard = null
+	var currCardIndex = ""
 	for idx in range(
 		min(
 			_opp_seats.size(),
@@ -749,10 +756,17 @@ func _update_opponents(players):
 			0
 		)
 
+
 		for c in layer.get_children():
-			if c.name.begins_with("OP"):
+			if c.name.begins_with("OP") and not c.name.begins_with("OPS"):
+				currCard = c.duplicate()
+				c.free()
+			elif c.name.begins_with("OPS"):
 				c.free()
 
+		if currCard != null:
+			currCardIndex = currCard.name.substr(2, 1)
+			
 		if count == 0:
 			continue
 
@@ -827,10 +841,11 @@ func _update_opponents(players):
 					"_" +
 					str(idx)
 				)
-
 				layer.add_child(sh)
-
+#				if str(i) == "2":
+#					layer.get_node("OPS"+str(i)+"_"+str(idx)).visible = false
 		# Pass 2: the cards themselves.
+		
 		for i in range(cfgs.size()):
 			var c = CARD_FACE.instance()
 

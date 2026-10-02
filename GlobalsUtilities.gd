@@ -16,7 +16,7 @@ onready var demoStarted = false
 onready var tutorialStarted = false
 onready var plateValue = 0
 onready var language = ["Italiano", "English"]
-onready var currLanguage = "Italiano"
+onready var currLanguage = "English"
 
 var splash_shown = false
 
@@ -123,13 +123,22 @@ func setBtnStyle(currNode):
 	currNode.add_stylebox_override("focus", styleF)
 	
 	
-	
+
+
+func checkOS():
+	if OS.get_name() == "Android":
+		config_path = "user://RT100.cfg"
+	else:
+		config_path = OS.get_executable_path().get_base_dir().plus_file("RT100.cfg")
+
 func DeleteSavedData():
+	checkOS()
 	var dir = Directory.new()
 	if dir.file_exists(config_path):
 		dir.remove(config_path)
 
-	# Ripristina anche i dati attualmente caricati in memoria
+	config.clear()
+
 	stats = {
 		"games_played": 0,
 		"games_won": 0,
@@ -142,17 +151,12 @@ func DeleteSavedData():
 	unlocked_achievements = {}
 
 func SaveData():
-	print("SAVE")
+	checkOS()
 	_write_stats_to_config()
 	config.save(config_path)
 
 func LoadSavedData():
-	print("G LOAD IF ", OS.get_name())
-	
-	if OS.get_name() == "Android":
-		config_path = "user://RT100.cfg"
-	else:
-		config_path = OS.get_executable_path().get_base_dir().plus_file("RT100.cfg")
+	checkOS()
 	var data = config.load(config_path)
 	if data == OK:
 		var lang = config.get_value("LANGUAGE", "language", currLanguage)

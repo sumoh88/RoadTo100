@@ -47,7 +47,7 @@ func make_increment_card(value, copy_index = 0):
 		"+" + str(value),
 		value,
 		"arancione",
-		{"card_type": "increment", "category": "normale", "destination": "scarti"}
+		{"card_type": "increment", "category": "increment", "destination": "scarti"}
 	)
 
 func make_jolly_card(copy_index = 0):
@@ -57,7 +57,7 @@ func make_jolly_card(copy_index = 0):
 		"Jolly",
 		null,
 		"arancione",
-		{"card_type": "jolly", "category": "normale", "destination": "scarti"}
+		{"card_type": "jolly", "category": "increment", "destination": "scarti"}
 	)
 
 func make_gold_card(value):
@@ -77,7 +77,7 @@ func make_89_card(copy_index = 0):
 		"89",
 		89,
 		"viola",
-		{"card_type": "special", "category": "speciale", "destination": "piatto"}
+		{"card_type": "special", "category": "gold", "destination": "piatto"}
 	)
 
 func make_plus11_card(copy_index = 0):
@@ -87,7 +87,7 @@ func make_plus11_card(copy_index = 0):
 		"+11",
 		11,
 		"rosso",
-		{"card_type": "special", "category": "speciale", "destination": "scarti"}
+		{"card_type": "special", "category": "increment", "destination": "scarti"}
 	)
 
 func make_imbroglio_card(copy_index = 0):
@@ -97,5 +97,5 @@ func make_imbroglio_card(copy_index = 0):
 		"Imbroglio",
 		null,
 		"verde",
-		{"card_type": "imbroglio", "category": "speciale", "destination": "scarti"}
+		{"card_type": "imbroglio", "category": "imbroglio", "destination": "scarti"}
 	)

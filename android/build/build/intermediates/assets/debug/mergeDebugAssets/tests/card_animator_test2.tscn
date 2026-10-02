@@ -1,0 +1,8 @@
+[gd_scene format=2]
+
+[ext_resource path="res://tests/card_animator_test2.gd" type="Script" id=1]
+[ext_resource path="res://scripts/CardAnimator.gd" type="Script" id=2]
+[ext_resource path="res://scenes/CardFace.tscn" type="PackedScene" id=3]
+
+[node name="CardAnimatorTest2" type="Node"]
+script = ExtResource( 1 )

@@ -103,10 +103,8 @@ func find_reset_hand_seed():
 
 
 func start_game():
-#	if running:
-#		return
-	var bgImage = "res://imgs/tableBG"+str((randi() % BGsQnty) + 1)+".png"
 	var main = get_tree().get_root().find_node("Main",true, false)
+	var bgImage = "res://imgs/tableBG"+str((randi() % BGsQnty) + 1)+".png"
 	if main != null:
 		var bgImagePath = main.get_node_or_null("Background/BackgroundImage")
 		if bgImagePath != null:
