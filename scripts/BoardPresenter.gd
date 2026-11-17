@@ -390,7 +390,6 @@ func _create_sr_badges(ga, ol):
 	var badges = {}
 
 	if ol == null:
-		print("ol null")
 		return badges
 
 	# Opponent seats:
@@ -425,7 +424,6 @@ func _create_sr_badges(ga, ol):
 				badge.mouse_filter = 2
 				badges[seat_map[i]] = badge
 
-				print("YES OPP")
 
 	# Local player (player_1): badge near the hand area
 	var lpa = _ch(
@@ -442,10 +440,6 @@ func _create_sr_badges(ga, ol):
 			badge.visible = false
 			badge.mouse_filter = 2
 			badges["player_1"] = badge
-
-			print("YES pla")
-
-	print("return badges")
 
 	return badges
 

@@ -63,12 +63,12 @@ func _ready():
 	if _gc != null and _gc.has_signal("action_applied"):
 		_gc.connect("action_applied", self, "_on_gc_action_applied")
 
-	print("\n===== DEMO DIAGNOSTIC =====")
-	if _gc != null:
-		print("[Demo] GameController: " + str(_gc) + " path=" + str(_gc.get_path()))
-	else:
-		print("[Demo] CRITICAL: GameController not found!")
-	print("===========================\n")
+	# print("\n===== DEMO DIAGNOSTIC =====")
+	# if _gc != null:
+	# 	print("[Demo] GameController: " + str(_gc) + " path=" + str(_gc.get_path()))
+	# else:
+	# 	print("[Demo] CRITICAL: GameController not found!")
+	# print("===========================\n")
 
 
 func _schedule_next_step():
@@ -80,10 +80,10 @@ func _schedule_next_step():
 
 func start_demo():
 	if running:
-		print("[Demo] Already running.")
+		#print("[Demo] Already running.")
 		return
 	if _gc == null:
-		print("[Demo] CRITICAL: No GameController reference.")
+		#print("[Demo] CRITICAL: No GameController reference.")
 		return
 
 	short_demo_turns = -1  # Normal demo: no short limit.
@@ -91,7 +91,7 @@ func start_demo():
 	# Stop any sibling automation (e.g. ManualGame) so only one drives the game.
 	_stop_sibling_automation()
 
-	print("\n========== DEMO AUTOMATICA ==========")
+	# print("\n========== DEMO AUTOMATICA ==========")
 	running = true
 	turn_count = 0
 	stats = {"play_card":0,"change_card":0,"reset_hand":0,"advantage_turns":0}
@@ -106,7 +106,7 @@ func start_demo():
 # machinery as start_demo(); emits short_demo_completed when the limit is hit.
 func start_short_demo(n, focus_types=null):
 	if _gc == null:
-		print("[Demo] CRITICAL: No GameController reference.")
+		#print("[Demo] CRITICAL: No GameController reference.")
 		return
 	short_demo_turns = n
 	short_demo_focus_types = focus_types if focus_types != null else []
@@ -122,7 +122,7 @@ func start_short_demo(n, focus_types=null):
 		_tutorial_rng = RandomNumberGenerator.new()
 	_tutorial_rng.seed = TUTORIAL_DEMO_SEED
 
-	print("[Demo] Short demo — max turns: " + str(n))
+	#print("[Demo] Short demo — max turns: " + str(n))
 	running = true
 	turn_count = 0
 	stats = {"play_card":0,"change_card":0,"reset_hand":0,"advantage_turns":0}
@@ -138,7 +138,7 @@ func start_short_demo(n, focus_types=null):
 # (rewind). Emits short_demo_completed when all segments finish.
 func start_scripted_demo(scenario):
 	if _gc == null:
-		print("[Demo] CRITICAL: No GameController reference.")
+		#print("[Demo] CRITICAL: No GameController reference.")
 		return
 	scripted_mode = true
 	short_demo_turns = -1
@@ -151,7 +151,7 @@ func start_scripted_demo(scenario):
 	_script_index = 0
 	_scripted_ticks = 0
 	
-	print("[Demo] Scripted demo — segments: " + str(_segments.size()))
+	#print("[Demo] Scripted demo — segments: " + str(_segments.size()))
 	running = true
 	turn_count = 0
 	stats = {"play_card":0,"change_card":0,"reset_hand":0,"advantage_turns":0}
@@ -190,7 +190,7 @@ func stop_demo():
 	if not running: return
 	running = false
 	timer.stop()
-	print("[Demo] Stopped.")
+	#print("[Demo] Stopped.")
 
 
 func _on_timer_timeout():
@@ -277,7 +277,7 @@ func _on_timer_timeout():
 func _on_scripted_tick():
 	# Safety: never run forever on a misconfigured/stalled script.
 	if _scripted_ticks > MAX_SCRIPTED_TICKS:
-		print("[Demo] WARN: scripted tick cap reached, finishing.")
+		#print("[Demo] WARN: scripted tick cap reached, finishing.")
 		_finish_scripted()
 		return
 	_scripted_ticks += 1
@@ -323,11 +323,11 @@ func _on_scripted_tick():
 	else:
 		cid = _resolve_hand_card_id(str(step.get("card", "")))
 
-	print("____________________ cid: |", cid, "|")
+	# print("____________________ cid: |", cid, "|")
 
 	if cid == "":
 		var requested = step.get("card_id", step.get("card", ""))
-		print("[Demo] WARN: could not resolve scripted card '" + str(requested) + "'")
+		#print("[Demo] WARN: could not resolve scripted card '" + str(requested) + "'")
 		_script_index += 1
 		_schedule_next_step()
 		return
@@ -541,10 +541,10 @@ func _on_gc_action_applied(result):
 			es += "[" + str(e["card_id"]) + "]"
 		event_summary.append(es)
 
-	print("[Demo] Turn " + str(snapshot["turn_number"]) + " — " + PoolStringArray(event_summary).join(", "))
+	#print("[Demo] Turn " + str(snapshot["turn_number"]) + " — " + PoolStringArray(event_summary).join(", "))
 
 	# Print CPU hands for debugging
-	print("[Demo] CPU hands:")
+	#print("[Demo] CPU hands:")
 	for p in snapshot["players"]:
 		if p["id"] == "player_1":
 			continue  # Skip human player
@@ -553,7 +553,7 @@ func _on_gc_action_applied(result):
 		for c in p["hand"]:
 			card_ids.append(str(c["card_id"]))
 
-		print("  " + str(p["id"]) + ": [" + PoolStringArray(card_ids).join(", ") + "]")
+		# print("  " + str(p["id"]) + ": [" + PoolStringArray(card_ids).join(", ") + "]")
 
 	# Track stats
 	for e in events:
@@ -604,19 +604,19 @@ func _handle_scripted_action_applied(result):
 		elif t == "advantage_started":
 			stats["advantage_turns"] += 1
 
-	print("[Demo] scripted turn=" + str(snapshot.get("turn_number", "?")) +
-		" piatto=" + str(snapshot.get("piatto", 0)) +
-		" winner=" + str(snapshot.get("winner", null)))
+	#print("[Demo] scripted turn=" + str(snapshot.get("turn_number", "?")) +
+		# " piatto=" + str(snapshot.get("piatto", 0)) +
+		# " winner=" + str(snapshot.get("winner", null)))
 
 
 func _on_game_won(snapshot):
-	print("\n========================================")
-	print("[Demo] GAME OVER — " + str(snapshot["winner"]) + " wins!")
-	print("       Turns: " + str(snapshot["turn_number"]))
-	print("       Final piatto: " + str(snapshot["piatto"]))
-	print("       Stats: play=" + str(stats["play_card"]) + " change=" + str(stats["change_card"]) +
-		" reset=" + str(stats["reset_hand"]) +
-		" adv=" + str(stats["advantage_turns"]))
-	print("========================================\n")
+	# print("\n========================================")
+	# print("[Demo] GAME OVER — " + str(snapshot["winner"]) + " wins!")
+	# print("       Turns: " + str(snapshot["turn_number"]))
+	# print("       Final piatto: " + str(snapshot["piatto"]))
+	# print("       Stats: play=" + str(stats["play_card"]) + " change=" + str(stats["change_card"]) +
+	# 	" reset=" + str(stats["reset_hand"]) +
+	# 	" adv=" + str(stats["advantage_turns"]))
+	# print("========================================\n")
 
 	running = false

@@ -192,23 +192,31 @@ func get_last_events():
 	return _last_events
 
 
+
+
 func perform_action(action_dict):
 	"""Send an action directly through the provider (for debug/auto-demo use).
 	Bypasses user input flow. Returns after the synchronous action cycle."""
+
 	if _provider == null:
 		print("[GC] ERROR: No provider set")
 		return
+
 	# If this action has a resolved value (Jolly/Imbroglio), propagate it to
 	# GlobalsUtilities so BoardPresenter can display it on the discard pile.
 	# This is necessary for CPU plays which don't go through _on_value_chosen().
 	if action_dict.has("selected_value"):
 		GlobalsUtilities.selected_value = str(action_dict["selected_value"])
+
 	# Close the specific popup if this direct call resolves it (demo/CPU path)
 	var at = action_dict.get("action_type", "")
+
 	if at == "play_card" and _value_choice_popup != null and _value_choice_popup.visible:
 		_value_choice_popup.hide()
+
 	if at == "reset_hand" and _hand_reset_popup != null and _hand_reset_popup.visible:
 		_hand_reset_popup.hide()
+
 	_update_choice_blocker()
 	_state = State.ACTION_PENDING
 	_provider.send_action(action_dict)
@@ -329,27 +337,30 @@ func _update_choice_blocker():
 # ---------------------------------------------------------------------------
 # Card selection handler
 # ---------------------------------------------------------------------------
-
 func _on_card_selected(card_id):
 	if _state == State.READY_FOR_INPUT:
 		_turn._warning_label.text = ""
+
 		_selected_card_id = card_id
+
 		if _hand != null and _hand.has_method("set_selected"):
-			_turn._warning_label.text = ""
 			_hand.set_selected(card_id)
+
 		_state = State.CARD_SELECTED
+
 		if _turn != null and _turn.has_method("show_tip"):
 			_turn.show_tip("")
+
 	elif _state == State.CARD_SELECTED:
 		if card_id == _selected_card_id:
-			#_clear_selection()
-			#_state = State.READY_FOR_INPUT
 			_on_play_pressed()
 		else:
 			if _hand != null and _hand.has_method("clear_selection"):
 				_turn._warning_label.text = ""
 				_hand.clear_selection()
+
 			_selected_card_id = card_id
+
 			if _hand != null and _hand.has_method("set_selected"):
 				_hand.set_selected(card_id)
 
@@ -358,6 +369,7 @@ func _on_card_selected(card_id):
 
 func _clear_selection():
 	_selected_card_id = ""
+
 	if _hand != null and _hand.has_method("clear_selection"):
 		_hand.clear_selection()
 
@@ -378,7 +390,6 @@ func _on_play_pressed():
 			return
 		if _is_selected_card_blocked_by_sr():
 			if _turn != null and _turn.has_method("show_tip"):
-				print("AAAAAAAAA CARDTYPE:", str(cc))
 				if cc == "increment":
 					_turn.show_tip(tr("TIP_BLOCKED_SAF")+tr("INCREMENT"))
 				elif cc == "imbroglio":
@@ -407,7 +418,6 @@ func _on_play_pressed():
 			perform_action({"action_type": "play_card", "card_id": _selected_card_id})
 	elif _state == State.READY_FOR_INPUT:
 		if _turn != null and _turn.has_method("show_tip"):
-			print("AAAAAAAAAAAAAAAAAA")
 			_turn.show_tip(tr("TIP_SELECT_CARD"))
 
 
@@ -416,7 +426,6 @@ func _on_change_pressed():
 		perform_action({"action_type": "change_card", "card_id": _selected_card_id})
 	elif _state == State.READY_FOR_INPUT:
 		if _turn != null and _turn.has_method("show_tip"):
-			print("BBBBBBBBBBBBBBBBBB")
 			_turn.show_tip(tr("TIP_SELECT_CARD"))
 
 
@@ -1249,7 +1258,6 @@ func _get_selected_card_type(category = ""):
 			for c in p.get("hand", []):
 				if c.get("card_id", "") == _selected_card_id:
 					if category == "category":
-						print("BBBBBBBB: ", c.get("category", ""))
 						return c.get("category", "")
 					else:
 						return c.get("card_type", "")

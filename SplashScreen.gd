@@ -5,6 +5,7 @@ const DISPLAY_TIME = 1.5
 const FADE_OUT_TIME = 0.7
 
 onready var logo = $LogoCont/Logo
+onready var logo2 = $LogoCont/Logo2
 onready var bg = $LogoCont/bg
 
 var skip = false
@@ -13,6 +14,7 @@ var playing = false
 
 func _ready():
 	logo.modulate.a = 0
+	logo2.modulate.a = 0
 	fade_in()
 
 
@@ -34,14 +36,11 @@ func is_any_key_pressed():
 
 func fade_in():
 	playing = true
-
 	if skip:
 		finish_splash()
 		return
-
 	var tween = Tween.new()
 	add_child(tween)
-
 	tween.interpolate_property(
 		logo,
 		"modulate:a",
@@ -51,7 +50,6 @@ func fade_in():
 		Tween.TRANS_LINEAR,
 		Tween.EASE_IN
 	)
-
 	tween.connect("tween_all_completed", self, "_on_fade_in_complete")
 	tween.start()
 
@@ -60,20 +58,16 @@ func _on_fade_in_complete():
 	if skip:
 		finish_splash()
 		return
-
 	yield(get_tree().create_timer(DISPLAY_TIME), "timeout")
-
 	if skip:
 		finish_splash()
 		return
-
 	fade_out()
 
 
 func fade_out():
 	var tween = Tween.new()
 	add_child(tween)
-
 	tween.interpolate_property(
 		logo,
 		"modulate:a",
@@ -83,9 +77,68 @@ func fade_out():
 		Tween.TRANS_LINEAR,
 		Tween.EASE_OUT
 	)
+#	tween.connect("tween_all_completed", self, "fade2_in")
+	fade2_in()
+	tween.start()
 
+
+
+
+
+
+func fade2_in():
+	playing = true
+	if skip:
+		finish_splash()
+		return
+	var tween = Tween.new()
+	add_child(tween)
+	tween.interpolate_property(
+		logo2,
+		"modulate:a",
+		0,
+		1,
+		FADE_IN_TIME,
+		Tween.TRANS_LINEAR,
+		Tween.EASE_IN
+	)
+	tween.connect("tween_all_completed", self, "_on_fade2_in_complete")
+	tween.start()
+
+
+func _on_fade2_in_complete():
+	if skip:
+		finish_splash()
+		return
+	yield(get_tree().create_timer(DISPLAY_TIME), "timeout")
+	if skip:
+		finish_splash()
+		return
+	fade2_out()
+
+
+func fade2_out():
+	var tween = Tween.new()
+	add_child(tween)
+	tween.interpolate_property(
+		logo2,
+		"modulate:a",
+		1,
+		0,
+		FADE_OUT_TIME,
+		Tween.TRANS_LINEAR,
+		Tween.EASE_OUT
+	)
 	tween.connect("tween_all_completed", self, "finish_splash")
 	tween.start()
+
+
+
+
+
+
+
+
 
 
 func finish_splash():

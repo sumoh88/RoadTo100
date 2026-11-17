@@ -133,3 +133,13 @@ ACH_IMBATTIBILE_DESC,Inizia un turno con tre carte\n+11 in mano.,Start a turn wi
 INCREMENT,Incremento,Increment
 GOLD,Gold,Gold
 IMBROGLIO,Imbroglio,Imbroglio
+INIT_TUT_PHASE0,"Per giocare o cambiare una carta, prima devi selezionarla.","To play a card, you first need to select it."
+INIT_TUT_PHASE1,Ora tocca di nuovo la carta selezionata per giocarla.,Now tap the selected card again to play it.
+INIT_TUT_PHASE2,Per cambiare una carta selezionala e premi il tasto Cambia.,"To change a card, select it and press the Change button."
+INIT_TUT_PHASE3,Per cambiare una carta selezionala e premi il tasto Cambia.,"To change a card, select it and press the Change button."
+INIT_TUT_PHASE4,Alcune carte ti permettono di scegliere il valore con cui giocarle.,Some cards let you choose the value you want to play them with.
+INIT_TUT_PHASE5,Adesso prova a giocare un Imbroglio.,Now try playing an Imbroglio.
+INIT_TUT_PHASE6,Scegli un valore.,Choose a value.
+INIT_TUT_PHASE7,Combina le carte per avvantaggiarti o per svantaggiare gli avversari in modo che sia tu a portare il Piatto a 100.,Combine cards to help yourself or to hurt your opponents so that it is you who bring the Plate to 100.
+INIT_TUT_PHASE8,"Ma fai attenzione, se il valore del piatto supera 100 si attiverà il Rimbalzo.","But be careful: if the value of the Plate exceeds 100, the Bounce will be activated."
+INIT_TUT_PHASE9,"L'introduzione è finita, per maggiori informazioni consulta il manuale ""Come si Gioca"" nel menu principale. Adesso prova a finire la partita e a vincere!","The introduction is over. For more information, consult the “How to Play” manual in the main menu. Now try to finish the game and win!"

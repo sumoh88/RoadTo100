@@ -1,4 +1,4 @@
-[gd_scene load_steps=35 format=2]
+[gd_scene load_steps=46 format=2]
 
 [ext_resource path="res://imgs/mainMenu.png" type="Texture" id=1]
 [ext_resource path="res://fonts/menuFont.tres" type="DynamicFont" id=2]
@@ -10,6 +10,9 @@
 [ext_resource path="res://imgs/optionIcon.png" type="Texture" id=8]
 [ext_resource path="res://imgs/shopIcon.png" type="Texture" id=9]
 [ext_resource path="res://imgs/onlineIcon.png" type="Texture" id=10]
+[ext_resource path="res://imgs/en.png" type="Texture" id=11]
+[ext_resource path="res://imgs/it.png" type="Texture" id=12]
+[ext_resource path="res://fonts/gameFont.tres" type="DynamicFont" id=13]
 
 [sub_resource type="StyleBoxFlat" id=20]
 bg_color = Color( 1, 0.921569, 0.745098, 0.27451 )
@@ -105,6 +108,44 @@ content_margin_top = 2.0
 [sub_resource type="StyleBoxEmpty" id=14]
 
 [sub_resource type="StyleBoxEmpty" id=10]
+
+[sub_resource type="StyleBoxTexture" id=35]
+texture = ExtResource( 11 )
+region_rect = Rect2( 0, 0, 400, 250 )
+modulate_color = Color( 1.5, 1.5, 1.5, 1 )
+
+[sub_resource type="StyleBoxTexture" id=36]
+texture = ExtResource( 11 )
+region_rect = Rect2( 0, 0, 400, 250 )
+modulate_color = Color( 1, 0.980392, 0.803922, 1 )
+
+[sub_resource type="StyleBoxTexture" id=38]
+texture = ExtResource( 11 )
+region_rect = Rect2( 0, 0, 400, 250 )
+modulate_color = Color( 0.305882, 0.305882, 0.305882, 1 )
+
+[sub_resource type="StyleBoxTexture" id=32]
+texture = ExtResource( 11 )
+region_rect = Rect2( 0, 0, 400, 250 )
+
+[sub_resource type="StyleBoxTexture" id=39]
+texture = ExtResource( 12 )
+region_rect = Rect2( 0, 0, 400, 250 )
+modulate_color = Color( 1.5, 1.5, 1.5, 1 )
+
+[sub_resource type="StyleBoxTexture" id=40]
+texture = ExtResource( 12 )
+region_rect = Rect2( 0, 0, 400, 250 )
+modulate_color = Color( 1, 0.980392, 0.803922, 1 )
+
+[sub_resource type="StyleBoxTexture" id=42]
+texture = ExtResource( 12 )
+region_rect = Rect2( 0, 0, 400, 250 )
+modulate_color = Color( 0.305882, 0.305882, 0.305882, 1 )
+
+[sub_resource type="StyleBoxTexture" id=34]
+texture = ExtResource( 12 )
+region_rect = Rect2( 0, 0, 400, 250 )
 
 [node name="MainMenu" type="Control"]
 anchor_right = 1.0
@@ -317,6 +358,52 @@ custom_styles/disabled = SubResource( 14 )
 custom_styles/normal = SubResource( 10 )
 text = "ESCI DAL GIOCO"
 
+[node name="LanguageSelection" type="ColorRect" parent="."]
+visible = false
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color( 0, 0, 0, 0.666667 )
+
+[node name="langBtnContainer" type="Control" parent="LanguageSelection"]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -450.0
+margin_top = -125.0
+margin_right = 450.0
+margin_bottom = 125.0
+
+[node name="En" type="Button" parent="LanguageSelection/langBtnContainer"]
+margin_right = 400.0
+margin_bottom = 250.0
+custom_styles/hover = SubResource( 35 )
+custom_styles/pressed = SubResource( 36 )
+custom_styles/disabled = SubResource( 38 )
+custom_styles/normal = SubResource( 32 )
+
+[node name="It" type="Button" parent="LanguageSelection/langBtnContainer"]
+margin_left = 500.0
+margin_right = 900.0
+margin_bottom = 250.0
+custom_styles/hover = SubResource( 39 )
+custom_styles/pressed = SubResource( 40 )
+custom_styles/disabled = SubResource( 42 )
+custom_styles/normal = SubResource( 34 )
+
+[node name="LanguageSelectionLabel" type="Label" parent="LanguageSelection"]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -300.0
+margin_top = -340.0
+margin_right = 300.0
+margin_bottom = -254.0
+custom_fonts/font = ExtResource( 13 )
+text = "Scegli una lingua:"
+valign = 1
+
 [connection signal="pressed" from="ButtonsArea/Play" to="." method="_on_Play_pressed"]
 [connection signal="pressed" from="ButtonsArea/Stats" to="." method="_on_Stats_pressed"]
 [connection signal="pressed" from="ButtonsArea/Online" to="." method="_on_Online_pressed"]
@@ -324,3 +411,5 @@ text = "ESCI DAL GIOCO"
 [connection signal="pressed" from="ButtonsArea/Shop" to="." method="_on_Shop_pressed"]
 [connection signal="pressed" from="ButtonsArea/Options" to="." method="_on_Options_pressed"]
 [connection signal="pressed" from="ExitGame" to="." method="_on_ExitGame_pressed"]
+[connection signal="pressed" from="LanguageSelection/langBtnContainer/En" to="." method="_on_En_pressed"]
+[connection signal="pressed" from="LanguageSelection/langBtnContainer/It" to="." method="_on_It_pressed"]

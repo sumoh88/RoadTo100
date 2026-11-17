@@ -56,20 +56,27 @@ func _ready():
 	if _overlay_root != null:
 		_overlay_root.visible = false
 	_localize()
-
+	
 func _input(event):
 	if not _demo_mouse_blocked:
 		return
-	if event is InputEventMouseButton:
-		if event.button_index == BUTTON_LEFT and event.doubleclick:
-				_stop_demo()
-				_unblock_demo_mouse()
-				_show_popup_content()
-				return
-				
-	if event is InputEventMouseButton or event is InputEventMouseMotion:
-		get_tree().set_input_as_handled()
 
+	if event is InputEventMouseButton:
+		if event.button_index == BUTTON_LEFT and event.pressed:
+			_stop_demo()
+			_unblock_demo_mouse()
+			_show_popup_content()
+			return
+
+	elif event is InputEventScreenTouch:
+		if event.pressed:
+			_stop_demo()
+			_unblock_demo_mouse()
+			_show_popup_content()
+			return
+
+	if event is InputEventMouseButton or event is InputEventMouseMotion or event is InputEventScreenTouch:
+		get_tree().set_input_as_handled()
 
 
 func _localize():
@@ -149,7 +156,7 @@ func on_proceed_pressed():
 		_prev_btn.disabled = false
 
 func on_prev_pressed():
-	print("__________ current_step_index: ", current_step_index)
+	# print("__________ current_step_index: ", current_step_index)
 	if _is_first_step():
 		return
 	else:
@@ -247,7 +254,7 @@ func _game_started():
 
 
 func _is_first_step():
-	print("__________ current_step_index: ", current_step_index)
+	# print("__________ current_step_index: ", current_step_index)
 	return current_step_index == 0
 
 func _is_last_step():

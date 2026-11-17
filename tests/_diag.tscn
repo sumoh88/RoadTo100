@@ -1,0 +1,6 @@
+[gd_scene format=2]
+
+[ext_resource path="res://tests/_diag.gd" type="Script" id=1]
+
+[node name="Diag" type="Node"]
+script = ExtResource( 1 )

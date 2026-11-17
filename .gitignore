@@ -25,6 +25,11 @@ Thumbs.db
 .godot/
 export_presets.cfg
 
+# Android build artifacts and large binaries
+android/build/
+*.aab
+*.apk
+
 # Symlink locale Godot
 Godot3
 *.import

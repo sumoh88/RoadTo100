@@ -141,10 +141,10 @@ func start_scenario(spec):
 		if k == "plateau":
 			continue
 		game_state.metadata[k] = meta[k]
-	print("[SCENARIO] special_round_active = ", game_state.metadata.get("special_round_active"))
-	print("[SCENARIO] special_round_player_id = ", game_state.metadata.get("special_round_player_id"))
-	print("[SCENARIO] _activator_has_played_next = ", game_state.metadata.get("_activator_has_played_next"))
-	print("[SCENARIO] current_player_index = ", game_state.current_player_index)
+	# print("[SCENARIO] special_round_active = ", game_state.metadata.get("special_round_active"))
+	# print("[SCENARIO] special_round_player_id = ", game_state.metadata.get("special_round_player_id"))
+	# print("[SCENARIO] _activator_has_played_next = ", game_state.metadata.get("_activator_has_played_next"))
+	# print("[SCENARIO] current_player_index = ", game_state.current_player_index)
 	emit_signal("game_started", _build_snapshot())
 
 
@@ -195,25 +195,25 @@ func send_action(action_dict):
 		var current_player = game_state.players[game_state.current_player_index]
 
 		card = _resolve_card(card_id)
-		print("[CHANGE DEBUG] requested id = ", card_id)
+		# print("[CHANGE DEBUG] requested id = ", card_id)
 
-		if card == null:
-			print("[CHANGE DEBUG] RESOLVE FAILED")
-		else:
-			print(
-				"[CHANGE DEBUG] RESOLVE OK: ",
-				card.card_id,
-				" value=",
-				card.value
-			)
+		# if card == null:
+		# 	print("[CHANGE DEBUG] RESOLVE FAILED")
+		# else:
+		# 	print(
+		# 		"[CHANGE DEBUG] RESOLVE OK: ",
+		# 		card.card_id,
+		# 		" value=",
+		# 		card.value
+		# 	)
 
-		for c in current_player.hand.cards:
-			print(
-				"[CHANGE DEBUG] HAND: ",
-				c.card_id,
-				" value=",
-				c.value
-			)
+		# for c in current_player.hand.cards:
+		# 	print(
+		# 		"[CHANGE DEBUG] HAND: ",
+		# 		c.card_id,
+		# 		" value=",
+		# 		c.value
+		# 	)
 		
 		if card == null:
 			emit_signal("action_rejected", "Card not found: " + str(card_id))

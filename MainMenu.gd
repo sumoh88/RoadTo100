@@ -1,5 +1,8 @@
 extends Control
 
+
+var optionMenu = preload("res://OptionMenu.tscn").instance()
+
 func _ready():
 	GlobalsUtilities.tutorialStarted = false
 	if not GlobalsUtilities.splash_shown:
@@ -7,7 +10,14 @@ func _ready():
 		get_tree().change_scene("res://SplashScreen.tscn")
 		return
 	AudioManager.set_menu_music()
-	var optionMenu = load("res://OptionMenu.tscn").instance()
+	print("currLANGUAGE : ", GlobalsUtilities.currLanguage)
+	var language = false
+	for lang in GlobalsUtilities.language:
+		if GlobalsUtilities.currLanguage == lang:
+			language = true
+			break
+	if not language:
+		$LanguageSelection.visible = true
 	var langNode = optionMenu.get_node("VBoxContainer/Language/HBoxContainer/currLanguage")
 	langNode.text = GlobalsUtilities.currLanguage
 	print("__________________ LANG: ", langNode.text)
@@ -55,3 +65,16 @@ func _on_Options_pressed():
 
 func _on_ExitGame_pressed():
 	get_tree().quit()
+
+
+func _on_En_pressed():
+	set_language("English")
+
+
+func _on_It_pressed():
+	set_language("Italiano")
+
+
+func set_language(lang):
+	optionMenu._on_set_language(0, lang)
+	$LanguageSelection.visible = false

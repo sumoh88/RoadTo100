@@ -4,6 +4,7 @@ extends Control
 const NOTIFICATION_DURATION := 4.0
 const FADE_IN_DURATION := 0.35
 const FADE_OUT_DURATION := 0.35
+const InteractiveTutorialController = preload("res://scenes/InteractiveTutorial.gd")
 
 
 # --- Achievement unlock notification (uses ONLY existing nodes:
@@ -26,6 +27,10 @@ func _ready():
 			if tc.has_signal("tutorial_finished"):
 				tc.connect("tutorial_finished", self, "_on_tutorial_finished")
 			tc.start_tutorial()
+	elif GlobalsUtilities.gameStarted and not GlobalsUtilities.interactive_tutorial_done:
+		# First run: interactive "select then play" tutorial instead of a normal game.
+		#_start_interactive_tutorial()
+		$StartGameButton.emit_signal("pressed")
 	elif GlobalsUtilities.gameStarted:
 		GlobalsUtilities.gameStarted = true
 		GlobalsUtilities.demoStarted = false
@@ -65,6 +70,10 @@ func _process(delta):
 		_notif_time_left -= delta
 		if _notif_time_left <= 0.0:
 			_hide_current_unlock()
+	if GlobalsUtilities.demoStarted or GlobalsUtilities.tutorialStarted or GlobalsUtilities.interactive_tutorial_done != true:
+		$OverlayLayer/ValueChoicePopup/VBox/CancelBtn.disabled = true
+	else:
+		$OverlayLayer/ValueChoicePopup/VBox/CancelBtn.disabled = false
 
 
 func _on_achievement_unlocked(achievement_id):
@@ -181,6 +190,17 @@ func _ensure_tutorial_controller():
 	return tc
 
 
+# First-run interactive tutorial. Independent of the "Come si gioca" mode:
+# it is a real 4-player game (seeded RNG so the dealt hand is stable) in which
+# a mask forces exactly one interaction: select the target card, then play it.
+func _start_interactive_tutorial():
+	GlobalsUtilities.gameStarted = false
+	var itc = InteractiveTutorialController.new()
+	itc.name = "InteractiveTutorialController"
+	add_child(itc)
+	itc.start()
+
+
 func _on_tutorial_finished():
 	get_tree().change_scene("res://MainMenu.tscn")
 	GlobalsUtilities.gameStarted = false
@@ -196,4 +216,5 @@ func _on_BackMenuButton_pressed():
 func _on_bg_gui_input(event):
 	if event is InputEventMouseButton:
 		if event.button_index == BUTTON_LEFT and event.pressed:
+			print("THEREEE")
 			$TurnPresenter._game_over_popup.hide()

@@ -7,6 +7,7 @@ extends Node
 # Human player (local_player_id): automation pauses, UI input handles the turn.
 # After the human completes their action, CPU resumes automatically.
 
+onready var main = get_tree().get_root().find_node("Main",true, false)
 var _gc = null
 var timer = null
 var running = false
@@ -65,45 +66,56 @@ func _ready():
 
 
 
-func find_reset_hand_seed():
-	print("\n========== RESET HAND TEST ==========")
 
-	var scenario = {
+
+func start_staged_game():
+	var ShuffleDeal = AudioManager.get_node("SFXPlayer/ShuffleDeal")
+	AudioManager.play_sfx(ShuffleDeal)
+
+	var spec = {
 		"player_count": 4,
-		"current_player_index": 1,
-
+		"current_player_index": 0,
 		"hands": {
-			"player_2": ["+1", "+2", "+3"],
-			"player_3": ["+4", "+5", "+6"],
-			"player_4": ["+7", "+8", "+9"],
-			"player_1": ["Gold67", "Gold23", "Gold89"]
+			"player_1": ["+7", "+6", "+10"],
+			"player_2": ["+3", "+3", "+3"],
+			"player_3": ["+1", "+1", "+1"],
+			"player_4": ["+2", "+2", "+2"]
 		},
-
-		# L'ultimo elemento viene pescato per primo.
 		"draw_pile": [
-			"+7",
-			"+7",
-			"+7",
-			"+7",
-			"Imbroglio"
+			"+1",
+			"+2",
+			"+3",
+			"+10",
+			"+9",
+			"+3",
+			"+10",
+			"+9",
+			"+3",
+			"+10",
+			"+9",
+			"+3",
+			"+10",
+			"+9",
+			"+3"
 		],
-
 		"meta": {
 			"piatto": 0,
-			"allow89": true
+			"allow89": false,
+			"staged_draws_player_1": [
+				"Imbroglio",
+				"+7",
+				"+4",
+				"Jolly"
+			]
 		}
 	}
 
-	_gc.start_scenario(scenario)
-
-	print("[RESET TEST] Scenario avviato.")
-	print("[RESET TEST] P1 dovrebbe avere 89, Imbroglio, Imbroglio.")
+	_gc.start_scenario(spec)
 
 
 
 
 func start_game():
-	var main = get_tree().get_root().find_node("Main",true, false)
 	var bgImage = "res://imgs/tableBG"+str((randi() % BGsQnty) + 1)+".png"
 	if main != null:
 		var bgImagePath = main.get_node_or_null("Background/BackgroundImage")
@@ -125,9 +137,11 @@ func start_game():
 	print("\n========== PARTITA 1 UMANO + 3 CPU ==========")
 	running = true
 	stats = {"play_card":0,"change_card":0,"reset_hand":0,"advantage_turns":0}
-
-	_gc.start_game(GlobalsUtilities.gamePlayers)
-#	find_reset_hand_seed()
+	if get_parent().get_parent().name == "Main":
+		if GlobalsUtilities.interactive_tutorial_done:
+			_gc.start_game(GlobalsUtilities.gamePlayers)
+		else:
+			start_staged_game()
 	# Capture the generation AFTER start_game increments it, so that any
 	# timer scheduled from a previous game (with the old generation) will
 	# be detected as stale in _on_timer_timeout.

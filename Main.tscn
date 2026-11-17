@@ -1,4 +1,4 @@
-[gd_scene load_steps=77 format=2]
+[gd_scene load_steps=78 format=2]
 
 [ext_resource path="res://imgs/table.png" type="Texture" id=1]
 [ext_resource path="res://imgs/plate.png" type="Texture" id=2]
@@ -37,6 +37,7 @@
 [ext_resource path="res://fonts/gameOverFont.tres" type="DynamicFont" id=35]
 [ext_resource path="res://fonts/popupFont.tres" type="DynamicFont" id=36]
 [ext_resource path="res://imgs/popupUnlock.png" type="Texture" id=37]
+[ext_resource path="res://scenes/InteractiveTutorialControl.tscn" type="PackedScene" id=38]
 
 [sub_resource type="Theme" id=1]
 
@@ -74,7 +75,7 @@ use_mipmaps = true
 use_filter = true
 font_data = ExtResource( 5 )
 
-[sub_resource type="DynamicFontData" id=56]
+[sub_resource type="DynamicFontData" id=97]
 font_path = "res://fonts/Dyuthi.ttf"
 
 [sub_resource type="DynamicFont" id=23]
@@ -86,7 +87,7 @@ use_filter = true
 extra_spacing_top = 5
 extra_spacing_char = -1
 extra_spacing_space = -2
-font_data = SubResource( 56 )
+font_data = SubResource( 97 )
 
 [sub_resource type="StyleBoxTexture" id=29]
 texture = ExtResource( 22 )
@@ -229,14 +230,13 @@ region_rect = Rect2( 0, 0, 70, 70 )
 anchor_right = 1.0
 anchor_bottom = 1.0
 rect_min_size = Vector2( 1920, 1080 )
-mouse_filter = 1
 theme = SubResource( 1 )
 script = ExtResource( 16 )
 
 [node name="Background" type="TextureRect" parent="."]
 anchor_right = 1.0
 anchor_bottom = 1.0
-mouse_filter = 2
+mouse_filter = 0
 texture = ExtResource( 1 )
 expand = true
 stretch_mode = 2
@@ -251,7 +251,6 @@ texture = ExtResource( 14 )
 anchor_right = 1.0
 anchor_bottom = 1.0
 rect_min_size = Vector2( 1920, 1080 )
-mouse_filter = 1
 
 [node name="OpponentsLayer" type="Control" parent="GameArea"]
 anchor_right = 1.0
@@ -616,7 +615,6 @@ anchor_bottom = 1.0
 mouse_filter = 2
 
 [node name="OverlayLayer" type="Control" parent="."]
-visible = false
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
@@ -689,6 +687,7 @@ custom_styles/pressed = SubResource( 37 )
 custom_styles/focus = SubResource( 42 )
 custom_styles/disabled = SubResource( 39 )
 custom_styles/normal = SubResource( 35 )
+disabled = true
 text = "Annulla"
 
 [node name="CardDetailsPopup" type="PopupPanel" parent="OverlayLayer"]
@@ -954,6 +953,8 @@ margin_top = 56.0
 margin_right = 260.0
 margin_bottom = 92.0
 text = "Demo Automatica (Debug)"
+
+[node name="InteractiveTutorialControl" parent="." instance=ExtResource( 38 )]
 
 [connection signal="pressed" from="GameArea/HUDLayer/ActionPanel/BackMenuButton" to="." method="_on_BackMenuButton_pressed"]
 [connection signal="pressed" from="StartGameButton" to="GameController/ManualGame" method="start_game"]

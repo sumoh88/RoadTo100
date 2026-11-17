@@ -14,9 +14,11 @@ onready var selected_value = ""
 onready var gameStarted = false
 onready var demoStarted = false
 onready var tutorialStarted = false
+# First-run interactive tutorial ("select then play"). Persisted so it runs once.
+onready var interactive_tutorial_done = false
 onready var plateValue = 0
 onready var language = ["Italiano", "English"]
-onready var currLanguage = "English"
+onready var currLanguage = ""
 
 var splash_shown = false
 
@@ -169,6 +171,8 @@ func LoadSavedData():
 		options._on_CheckMusic_value_changed(music_volume * 10)
 		options._on_CheckSFX_value_changed(sfx_volume * 10)
 		_load_stats_from_config()
+		if config.has_section("FLAGS"):
+			interactive_tutorial_done = bool(config.get_value("FLAGS", "interactive_tutorial_done", false))
 	else:
 		print("G LOAD ELSE")
 		set_language(currLanguage)
@@ -203,6 +207,8 @@ func _write_stats_to_config():
 		config.set_value("STATS", k, stats[k])
 	for id in unlocked_achievements.keys():
 		config.set_value("ACHIEVEMENTS", id, true)
+	# Persist the first-run interactive tutorial flag.
+	config.set_value("FLAGS", "interactive_tutorial_done", bool(interactive_tutorial_done))
 
 
 func _load_stats_from_config():
@@ -374,10 +380,10 @@ func apply_action_result(snapshot, events):
 		eff_sr_active = true
 		eff_sr_type = str(game_tmp.get("sr_type", "advantage"))
 		eff_sr_pid = str(game_tmp.get("sr_player_id", ""))
-	print("SR DEBUG | had_adv_started=", had_adv_started,
-		" adv_start_pid=", adv_start_pid,
-		" local_player_id=", local_player_id,
-		" eff_sr_type=", eff_sr_type)
+	# print("SR DEBUG | had_adv_started=", had_adv_started,
+	# 	" adv_start_pid=", adv_start_pid,
+	# 	" local_player_id=", local_player_id,
+	# 	" eff_sr_type=", eff_sr_type)
 	# --- 1) Special-round counters + activation achievement (LOCAL only). ---
 	var local_plus11_activated_gdv = false
 

@@ -116,12 +116,31 @@ func _draw_cards(game, count):
 	return drawn
 
 func _draw_or_reshuffle(game):
-	"""Draw a card, reshuffling discard into deck if the deck is empty."""
+	var staged_draws = game.metadata.get("staged_draws_player_1", [])
+	var current_player = game.current_player()
+
+	if not staged_draws.empty() and current_player != null:
+		if current_player.player_id == "player_1":
+			var wanted = str(staged_draws[0])
+			staged_draws.remove(0)
+			game.metadata["staged_draws_player_1"] = staged_draws
+
+			var CardDatabase = load("res://engine/CardDatabase.gd").new()
+
+			if wanted == "Imbroglio":
+				return CardDatabase.make_imbroglio_card(0)
+			elif wanted == "Jolly":
+				return CardDatabase.make_jolly_card(0)
+			elif wanted.begins_with("+"):
+				return CardDatabase.make_increment_card(
+					int(wanted.substr(1)),
+					0
+				)
+
 	var drawn = _draw_cards(game, 1)
 	if drawn.empty():
 		return null
 	return drawn[0]
-
 # ---------------------------------------------------------------------------
 # RuleSet interface
 # ---------------------------------------------------------------------------
